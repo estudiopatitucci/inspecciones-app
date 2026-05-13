@@ -1,0 +1,138 @@
+const SHEET_ID = '1_socHaF14orZbtqiMxI5SKYMWEEGShw4gY_SEtMNN0w';
+const SHEET_NAME = 'Inspecciones';
+
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+    var action = data.action;
+    if (action === 'guardar') return guardarInspeccion(data);
+    if (action === 'actualizar') return actualizarInspeccion(data);
+    if (action === 'eliminar') return eliminarInspeccion(data);
+    if (action === 'listar') return listarInspecciones();
+    return resp({ok:false, msg:'Accion desconocida'});
+  } catch(err) {
+    return resp({ok:false, msg:err.toString()});
+  }
+}
+
+function doGet(e) {
+  return listarInspecciones();
+}
+
+function getSheet() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(SHEET_NAME);
+    sheet.appendRow(['ID','Siniestro','Compania','Tipo','FechaInsp','FechaSin','Patente','Modelo','Anio','Chasis','Motor','Km','Asegurado','Tel','Direccion','Localidad','Danos','Inspector','MailInspector','Estado','MailEnviado','Relevamiento','Devoluciones','CreadaEn']);
+  }
+  return sheet;
+}
+
+function guardarInspeccion(data) {
+  var sheet = getSheet();
+  var id = Date.now().toString();
+  sheet.appendRow([
+    id, data.sin, data.cia, data.tipo, data.finsp, data.fsin,
+    data.pat, data.mod, data.anio, data.chasis, data.motor, data.km,
+    data.aseg, data.tel, data.dir, data.localidad, data.danos,
+    data.inspector, data.mail, data.estado || 'Asignada',
+    data.mailEnviado ? 'Si' : 'No',
+    '', '', new Date().toISOString()
+  ]);
+  if (data.enviarMail && data.mail) {
+    enviarMail(data);
+  }
+  return resp({ok:true, id:id});
+}
+
+function actualizarInspeccion(data) {
+  var sheet = getSheet();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == data.id) {
+      if (data.estado !== undefined) sheet.getRange(i+1, 20).setValue(data.estado);
+      if (data.relevamiento !== undefined) sheet.getRange(i+1, 22).setValue(JSON.stringify(data.relevamiento));
+      if (data.devoluciones !== undefined) sheet.getRange(i+1, 23).setValue(JSON.stringify(data.devoluciones));
+      if (data.mailEnviado !== undefined) sheet.getRange(i+1, 21).setValue(data.mailEnviado ? 'Si' : 'No');
+      return resp({ok:true});
+    }
+  }
+  return resp({ok:false, msg:'No encontrado'});
+}
+
+function eliminarInspeccion(data) {
+  var sheet = getSheet();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == data.id) {
+      sheet.deleteRow(i+1);
+      return resp({ok:true});
+    }
+  }
+  return resp({ok:false, msg:'No encontrado'});
+}
+
+function listarInspecciones() {
+  var sheet = getSheet();
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return resp({ok:true, data:[]});
+  var headers = rows[0];
+  var result = [];
+  for (var i = 1; i < rows.length; i++) {
+    var obj = {};
+    for (var j = 0; j < headers.length; j++) {
+      obj[headers[j]] = rows[i][j];
+    }
+    if (obj.Relevamiento) {
+      try { obj.Relevamiento = JSON.parse(obj.Relevamiento); }
+      catch(e) { obj.Relevamiento = null; }
+    }
+    if (obj.Devoluciones) {
+      try { obj.Devoluciones = JSON.parse(obj.Devoluciones); }
+      catch(e) { obj.Devoluciones = []; }
+    }
+    result.push(obj);
+  }
+  return resp({ok:true, data:result});
+}
+
+function enviarMail(data) {
+  var asunto = 'Inspeccion asignada - Siniestro ' + data.sin;
+  var cuerpo = 'ESTUDIO PATITUCCI\n'
+    + 'Pericias - Danos Materiales - Homologacion CESVI\n\n'
+    + 'Hola ' + data.inspector + ',\n\n'
+    + 'Te asignamos la siguiente inspeccion para el ' + data.finsp + ':\n\n'
+    + 'SINIESTRO\n'
+    + 'N Siniestro: ' + data.sin + '\n'
+    + 'Compania: ' + data.cia + '\n'
+    + 'Tipo: ' + data.tipo + '\n'
+    + 'Fecha siniestro: ' + data.fsin + '\n\n'
+    + 'VEHICULO\n'
+    + 'Patente: ' + data.pat + '\n'
+    + 'Marca/Modelo: ' + data.mod + ' (' + data.anio + ')\n'
+    + 'N Chasis: ' + data.chasis + '\n'
+    + 'N Motor: ' + data.motor + '\n'
+    + 'Kilometraje: ' + data.km + '\n\n'
+    + 'LUGAR\n'
+    + 'Asegurado/Taller: ' + data.aseg + '\n'
+    + 'Telefono: ' + data.tel + '\n'
+    + 'Direccion: ' + data.dir + ', ' + data.localidad + '\n\n'
+    + 'DANOS DECLARADOS\n'
+    + data.danos + '\n\n'
+    + 'Recorda que el plazo maximo para registrar el resultado es de 48 hs.\n\n'
+    + 'Tene en cuenta que realizar correctamente la carga sera condicion indispensable para cobrar la totalidad de tus honorarios.\n\n'
+    + 'Saludos,\n'
+    + 'Estudio Patitucci';
+
+  MailApp.sendEmail({
+    to: data.mail,
+    subject: asunto,
+    body: cuerpo
+  });
+}
+
+function resp(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}

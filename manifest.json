@@ -1,0 +1,35 @@
+{
+  "name": "Estudio Patitucci",
+  "short_name": "EP Inspecciones",
+  "description": "Sistema de gestión de inspecciones vehiculares",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0f1117",
+  "theme_color": "#1a1a6e",
+  "lang": "es",
+  "categories": ["business", "utilities"],
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": []
+}

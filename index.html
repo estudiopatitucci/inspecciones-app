@@ -1,0 +1,2000 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Estudio Patitucci</title>
+<!-- PWA -->
+<link rel="manifest" href="./manifest.json"/>
+<meta name="theme-color" content="#1a1a6e"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="EP Inspecciones"/>
+<link rel="apple-touch-icon" id="apple-touch-icon" href="./icon.svg"/>
+<link rel="icon" type="image/svg+xml" href="./icon.svg"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--bg2:#171b26;--bg3:#1e2333;--border:#2a2f42;
+  --text:#e8eaf0;--text2:#8b92a8;--text3:#4a5068;
+  --accent:#4f7cff;--accent2:#3d63cc;
+  --green:#2ecc71;--yellow:#f0b429;--red:#e55353;--orange:#f07c2e;
+  --sidebar:220px;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+input,select,textarea{font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:8px;outline:none;transition:border .2s;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+input::placeholder,textarea::placeholder{color:var(--text3)}
+button{font-family:'DM Sans',sans-serif;cursor:pointer;border:none;border-radius:8px;font-size:13px;font-weight:500;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff;padding:9px 18px}
+.btn-primary:hover{background:var(--accent2)}
+.btn-secondary{background:var(--bg3);color:var(--text2);padding:9px 18px;border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--border);color:var(--text)}
+.btn-success{background:rgba(46,204,113,.15);color:var(--green);padding:9px 18px;border:1px solid rgba(46,204,113,.3)}
+.btn-danger{background:rgba(229,83,83,.15);color:var(--red);padding:6px 12px;border:1px solid rgba(229,83,83,.3)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+.pill{font-size:11px;padding:3px 10px;border-radius:999px;font-weight:500;display:inline-block;white-space:nowrap}
+.pill-blue{background:rgba(79,124,255,.15);color:#7ba3ff}
+.pill-green{background:rgba(46,204,113,.15);color:#2ecc71}
+.pill-yellow{background:rgba(240,180,41,.15);color:#f0b429}
+.pill-red{background:rgba(229,83,83,.15);color:#e55353}
+.pill-orange{background:rgba(240,124,46,.15);color:#f07c2e}
+.pill-gray{background:rgba(139,146,168,.1);color:var(--text2)}
+#screen-login{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:var(--bg);z-index:200}
+.login-box{width:100%;max-width:380px}
+.login-logo{margin-bottom:28px}
+.login-logo h1{font-size:26px;font-weight:600;letter-spacing:-.5px}
+.login-logo h1 span{color:var(--accent)}
+.login-logo p{font-size:13px;color:var(--text2);margin-top:4px}
+.login-box label{display:block;font-size:11px;color:var(--text2);margin-bottom:6px;margin-top:14px;text-transform:uppercase;letter-spacing:.05em}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50}
+.topbar-logo{font-size:15px;font-weight:600}
+.topbar-logo span{color:var(--accent)}
+.sidebar{width:var(--sidebar);background:var(--bg2);border-right:1px solid var(--border);padding:16px 12px;flex-shrink:0;position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto}
+.sidebar-logo{font-size:12px;font-weight:600;color:var(--text2);padding:8px 12px;margin-bottom:4px}
+.sidebar-logo span{color:var(--accent)}
+.sidebar-section{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;padding:12px 12px 4px;margin-top:4px}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);transition:all .15s;margin-bottom:2px;border:none;background:transparent;width:100%;text-align:left}
+.sidebar-item:hover{background:var(--bg3);color:var(--text)}
+.sidebar-item.active{background:rgba(79,124,255,.12);color:#7ba3ff}
+.sidebar-item .badge{background:var(--accent);color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:999px;margin-left:auto}
+.sidebar-item .badge.yellow{background:var(--yellow);color:#111}
+.main-content{flex:1;padding:24px;overflow-y:auto}
+.form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.field label{display:block;font-size:11px;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.section-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.insp-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.insp-btn{padding:8px 16px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:8px;font-size:13px;cursor:pointer;transition:all .15s}
+.insp-btn.sel{background:rgba(79,124,255,.15);border-color:var(--accent);color:#7ba3ff}
+.tabla-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;min-width:700px}
+thead tr{background:var(--bg3)}
+th{padding:11px 14px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.mono{font-family:'DM Mono',monospace;font-size:12px}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:100;display:none;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;position:relative}
+.modal-box h3{font-size:16px;font-weight:600;margin-bottom:18px}
+.modal-close{position:absolute;top:16px;right:16px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:8px;font-size:16px;cursor:pointer}
+.pdf-zone{border:2px dashed var(--border);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px}
+.pdf-zone:hover,.pdf-zone.drag{border-color:var(--accent);background:rgba(79,124,255,.05)}
+.pdf-zone .icon{font-size:32px;margin-bottom:8px}
+.mail-prev{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:'DM Mono',monospace;font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:200px;overflow-y:auto;line-height:1.6}
+.notif-bar{background:rgba(240,180,41,.08);border:1px solid rgba(240,180,41,.3);border-radius:10px;padding:12px 16px;margin-bottom:16px;display:none;align-items:center;gap:12px}
+.notif-bar.show{display:flex}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--yellow);animation:pulse 1.5s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.dev-burbuja{background:rgba(79,124,255,.08);border:1px solid rgba(79,124,255,.2);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:13px;color:#7ba3ff}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center}
+.stat-num{font-size:36px;font-weight:600;color:var(--text)}
+.stat-lbl{font-size:12px;color:var(--text2);margin-top:4px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px}
+.loading{text-align:center;padding:40px;color:var(--text2)}
+.spinner{width:32px;height:32px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 12px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.msg{font-size:13px;min-height:18px;margin-top:10px}
+.msg.ok{color:var(--green)}.msg.err{color:var(--red)}
+@media(max-width:768px){.sidebar{display:none}.form-grid-2,.form-grid-3{grid-template-columns:1fr}.main-content{padding:16px}}
+/* ── Toast ── */
+.toast{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;color:var(--text);min-width:220px;max-width:360px;box-shadow:0 6px 24px rgba(0,0,0,.5);animation:toastIn .22s ease;pointer-events:auto;display:flex;align-items:center;gap:10px}
+.toast.ok{border-left:3px solid var(--green)}.toast.err{border-left:3px solid var(--red)}.toast.info{border-left:3px solid var(--accent)}
+@keyframes toastIn{from{transform:translateX(48px);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes toastOut{to{transform:translateX(48px);opacity:0}}
+/* ── Loading overlay ── */
+#screen-loading{position:fixed;inset:0;background:var(--bg);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+#screen-loading .spinner{width:44px;height:44px;border-width:4px;margin:0}
+/* ── Banner de instalación PWA ── */
+#pwa-banner{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--accent);border-radius:14px;padding:14px 18px;display:none;align-items:center;gap:14px;z-index:550;box-shadow:0 8px 32px rgba(0,0,0,.6);max-width:340px;width:calc(100% - 32px);animation:toastIn .3s ease}
+#pwa-banner .pwa-icon{width:42px;height:42px;border-radius:10px;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+#pwa-banner .pwa-text{flex:1}
+#pwa-banner .pwa-text strong{display:block;font-size:13px;color:var(--text);margin-bottom:2px}
+#pwa-banner .pwa-text span{font-size:11px;color:var(--text2)}
+#pwa-banner .pwa-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+#pwa-banner .pwa-btns button{font-size:11px;padding:5px 10px;border-radius:6px}
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="screen-loading">
+  <div class="spinner"></div>
+  <p style="color:var(--text2);font-size:14px;letter-spacing:.02em" id="loading-msg">Cargando sistema...</p>
+  <p style="color:var(--text3);font-size:12px">Estudio Patitucci</p>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container" style="position:fixed;bottom:24px;right:24px;z-index:600;display:flex;flex-direction:column;gap:8px;pointer-events:none"></div>
+
+<!-- BANNER INSTALACIÓN PWA -->
+<div id="pwa-banner">
+  <div class="pwa-icon">⚖</div>
+  <div class="pwa-text">
+    <strong>Instalar app</strong>
+    <span>Agregá EP Inspecciones a tu pantalla de inicio</span>
+  </div>
+  <div class="pwa-btns">
+    <button class="btn-primary btn-sm" id="pwa-install-btn">Instalar</button>
+    <button class="btn-secondary btn-sm" id="pwa-dismiss-btn">Ahora no</button>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="login-box">
+    <div class="login-logo"><h1>Estudio <span>Patitucci</span></h1><p>Sistema de gestión de inspecciones</p></div>
+    <div class="card">
+      <label>Usuario</label>
+      <select id="login-nombre">
+        <option value="">Seleccionar...</option>
+        <option>Administrador</option>
+        <option>Ignacio</option><option>Matías</option><option>Valentino</option>
+        <option>Sebastián</option><option>Mariano</option><option>Bruno</option>
+      </select>
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <button class="btn-primary" onclick="doLogin()" style="width:100%;margin-top:20px;padding:12px;font-size:14px">Ingresar</button>
+      <div id="login-error" class="msg err" style="text-align:center"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div id="screen-admin" style="display:none;flex-direction:column;min-height:100vh">
+  <div class="topbar">
+    <div class="topbar-logo">Estudio <span>Patitucci</span></div>
+    <div style="flex:1"></div>
+    <span style="font-size:11px;color:var(--text3)" id="last-update"></span>
+    <button class="btn-secondary btn-sm" style="margin-left:10px;font-size:11px;padding:4px 10px" onclick="refrescarManual()" title="Actualizar ahora">🔄</button>
+    <span style="font-size:12px;color:var(--text2);margin-left:12px" id="admin-user-label"></span>
+    <button class="btn-secondary btn-sm" style="margin-left:12px" onclick="logout()">Salir</button>
+  </div>
+  <div style="display:flex;flex:1">
+    <div class="sidebar">
+      <div class="sidebar-logo">Panel <span>Admin</span></div>
+      <div class="sidebar-section">Principal</div>
+      <button class="sidebar-item active" id="amenu-dashboard" onclick="adminTab('dashboard')">📊 Dashboard</button>
+      <div class="sidebar-section">Inspecciones</div>
+      <button class="sidebar-item" id="amenu-nueva" onclick="adminTab('nueva')">➕ Nueva inspección</button>
+      <button class="sidebar-item" id="amenu-pendientes" onclick="adminTab('pendientes')">
+        📋 Pend. de carga <span class="badge" id="badge-pend" style="display:none">0</span>
+      </button>
+      <button class="sidebar-item" id="amenu-revision" onclick="adminTab('revision')">
+        🔍 Pend. de verificar <span class="badge yellow" id="badge-rev" style="display:none">0</span>
+      </button>
+      <button class="sidebar-item" id="amenu-resolver" onclick="adminTab('resolver')">
+        🔄 Pend. de resolver <span class="badge" id="badge-resolver" style="display:none;background:var(--orange);color:#111">0</span>
+      </button>
+      <button class="sidebar-item" id="amenu-cerradas" onclick="adminTab('cerradas')">✅ Cerradas</button>
+      <div class="sidebar-section">Reportes</div>
+      <button class="sidebar-item" id="amenu-stats" onclick="adminTab('stats')">📈 Estadísticas</button>
+      <div class="sidebar-section">Cuenta</div>
+      <button class="sidebar-item" id="amenu-perfil" onclick="adminTab('perfil')">👤 Mi Perfil</button>
+    </div>
+    <div class="main-content">
+
+      <!-- DASHBOARD -->
+      <div id="asec-dashboard">
+        <h2 style="font-size:20px;font-weight:600;margin-bottom:20px">Dashboard</h2>
+        <div class="stats-grid" id="kpi-grid">
+          <div class="stat-card"><p class="stat-num" id="kpi-total">0</p><p class="stat-lbl">Total</p></div>
+          <div class="stat-card"><p class="stat-num" style="color:var(--accent)" id="kpi-asig">0</p><p class="stat-lbl">Pend. de carga</p></div>
+          <div class="stat-card"><p class="stat-num" style="color:var(--yellow)" id="kpi-rev">0</p><p class="stat-lbl">En revisión</p></div>
+          <div class="stat-card"><p class="stat-num" style="color:var(--green)" id="kpi-cerr">0</p><p class="stat-lbl">Cerradas</p></div>
+          <div class="stat-card" style="cursor:pointer" onclick="adminTab('pendientes')" title="Ver pendientes vencidas">
+            <p class="stat-num" style="color:var(--red)" id="kpi-venc">0</p>
+            <p class="stat-lbl">⚠ Vencidas (+48hs)</p>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:260px 1fr;gap:16px;margin-bottom:20px">
+          <div class="card" style="margin-bottom:0">
+            <p class="section-title">Por estado</p>
+            <canvas id="chart-torta" width="220" height="220" style="display:block;margin:0 auto 16px"></canvas>
+            <div id="chart-leyenda" style="display:flex;flex-direction:column;gap:6px"></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <p class="section-title">Por inspector</p>
+            <div id="chart-insp" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"></div>
+          </div>
+        </div>
+        <div class="card">
+          <p class="section-title">Últimas inspecciones</p>
+          <div id="dash-recientes"></div>
+        </div>
+      </div>
+
+      <!-- NUEVA -->
+      <div id="asec-nueva" style="display:none">
+        <h2 style="font-size:20px;font-weight:600;margin-bottom:20px">Nueva inspección</h2>
+        <div id="paso-pdf">
+          <div class="card">
+            <p class="section-title">Subir PDF del pedido de inspección</p>
+            <div style="display:flex;gap:8px;margin-bottom:16px">
+              <button id="cia-riv" onclick="selCia('rivadavia')" class="insp-btn sel">Seguros Rivadavia</button>
+              <button id="cia-prov" onclick="selCia('provincia')" class="insp-btn">Provincia Seguros</button>
+              <button id="cia-auto" onclick="selCia('manual')" class="insp-btn">Carga manual</button>
+            </div>
+            <div class="pdf-zone" id="pdf-zone" onclick="document.getElementById('pdf-input').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
+              <div class="icon">📄</div>
+              <strong id="pdf-zone-title" style="color:var(--text)">Subir PDF de Seguros Rivadavia</strong>
+              <p style="color:var(--text2);font-size:13px;margin-top:6px">Hacé clic o arrastrá el archivo aquí</p>
+            </div>
+            <input type="file" id="pdf-input" accept="application/pdf" style="display:none" onchange="procesarPDF(this.files[0])"/>
+            <div id="pdf-loading" style="display:none;text-align:center;padding:16px;color:var(--text2)"><div class="spinner" style="margin:0 auto 8px"></div>Analizando PDF...</div>
+            <div id="pdf-error" class="msg err"></div>
+          </div>
+        </div>
+        <div id="paso-form" style="display:none">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <button class="btn-secondary btn-sm" onclick="adminTab('dashboard')">← Volver</button>
+            <button class="btn-secondary btn-sm" onclick="limpiarForm()">🗑 Limpiar</button>
+            <button class="btn-secondary btn-sm" onclick="volverPDF()">📄 Subir nuevo PDF</button>
+            <p style="font-size:13px;color:var(--text2);margin-left:4px" id="paso-form-titulo">Revisá los datos</p>
+          </div>
+          <div class="card">
+            <p class="section-title">Siniestro</p>
+            <div class="form-grid-3" style="margin-bottom:12px">
+              <div class="field"><label>Nº siniestro *</label><input type="text" id="f-sin"/></div>
+              <div class="field"><label>Compañía *</label><select id="f-cia"><option value="">Seleccionar...</option><option>Seguros Rivadavia</option><option>Provincia Seguros</option><option>Auto Reclamo</option></select></div>
+              <div class="field"><label>Tipo</label><input type="text" id="f-tipo"/></div>
+            </div>
+            <div class="form-grid-2">
+              <div class="field"><label>Fecha inspección *</label><input type="date" id="f-finsp"/></div>
+              <div class="field"><label>Fecha siniestro</label><input type="date" id="f-fsin"/></div>
+            </div>
+          </div>
+          <div class="card">
+            <p class="section-title">Vehículo</p>
+            <div class="form-grid-3" style="margin-bottom:12px">
+              <div class="field"><label>Patente *</label><input type="text" id="f-pat" style="text-transform:uppercase"/></div>
+              <div class="field"><label>Marca y modelo</label><input type="text" id="f-mod"/></div>
+              <div class="field"><label>Año</label><input type="text" id="f-anio"/></div>
+            </div>
+            <div class="form-grid-3">
+              <div class="field"><label>Nº chasis</label><input type="text" id="f-chasis"/></div>
+              <div class="field"><label>Nº motor</label><input type="text" id="f-motor"/></div>
+              <div class="field"><label>Kilometraje</label><input type="text" id="f-km"/></div>
+            </div>
+          </div>
+          <div class="card">
+            <p class="section-title">Asegurado y lugar</p>
+            <div class="form-grid-2" style="margin-bottom:12px">
+              <div class="field"><label>Asegurado / taller</label><input type="text" id="f-aseg"/></div>
+              <div class="field"><label>Teléfono</label><input type="text" id="f-tel"/></div>
+            </div>
+            <div class="form-grid-2" style="margin-bottom:12px">
+              <div class="field"><label>Dirección</label><input type="text" id="f-dir"/></div>
+              <div class="field"><label>Localidad</label><input type="text" id="f-localidad"/></div>
+            </div>
+            <div class="field"><label>Daños declarados</label><textarea id="f-danos" rows="2" style="resize:vertical"></textarea></div>
+            <div class="field" style="margin-top:12px"><label>Daños denunciados (ocurrencia del siniestro)</label><textarea id="f-danos-den" rows="4" style="resize:vertical"></textarea></div>
+          </div>
+          <div class="card">
+            <p class="section-title">Asignar inspector</p>
+            <div class="insp-grid" id="insp-btns">
+              <button class="insp-btn" onclick="selInsp('Ignacio')">Ignacio</button>
+              <button class="insp-btn" onclick="selInsp('Matías')">Matías</button>
+              <button class="insp-btn" onclick="selInsp('Valentino')">Valentino</button>
+              <button class="insp-btn" onclick="selInsp('Sebastián')">Sebastián</button>
+              <button class="insp-btn" onclick="selInsp('Mariano')">Mariano</button>
+              <button class="insp-btn" onclick="selInsp('Bruno')">Bruno</button>
+            </div>
+            <div id="bloque-mail" style="display:none">
+              <div class="form-grid-2" style="margin-bottom:12px">
+                <div class="field"><label>Inspector</label><input type="text" id="f-insp-nombre" readonly style="background:var(--bg)"/></div>
+                <div class="field"><label>Mail</label><input type="email" id="f-mail"/></div>
+              </div>
+              <div class="field" style="margin-bottom:12px"><label>Vista previa del mail</label><div class="mail-prev" id="mail-prev"></div></div>
+              <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Se enviará desde: <strong style="color:var(--text)">patitucciestudio@gmail.com</strong></p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-primary" onclick="guardar(true)">✉️ Guardar y enviar mail</button>
+                <button class="btn-secondary" onclick="guardar(false)">Guardar sin mail</button>
+              </div>
+            </div>
+            <div id="msg-guard" class="msg"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PENDIENTES DE CARGA -->
+      <div id="asec-pendientes" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:10px">
+          <h2 style="font-size:20px;font-weight:600">📋 Pendientes de carga <span style="font-size:13px;font-weight:400;color:var(--text2)">(Inspecciones pendientes de cargar)</span></h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="text" id="buscar-pend" oninput="renderTablaAdmin('pendientes')" placeholder="Buscar..." style="width:160px"/>
+            <select id="fil-insp-pend" onchange="renderTablaAdmin('pendientes')" style="width:110px">
+              <option value="">Todos</option>
+              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option>
+            </select>
+            <select id="fil-cia-pend" onchange="renderTablaAdmin('pendientes')" style="width:150px">
+              <option value="">Todas las compañías</option>
+              <option>Seguros Rivadavia</option><option>Provincia Seguros</option><option>Auto Reclamo</option>
+            </select>
+            <input type="date" id="fil-desde-pend" onchange="renderTablaAdmin('pendientes')" style="width:135px" title="Desde"/>
+            <input type="date" id="fil-hasta-pend" onchange="renderTablaAdmin('pendientes')" style="width:135px" title="Hasta"/>
+            <button class="btn-secondary btn-sm" onclick="limpiarFiltros('pend')">✕ Limpiar</button>
+          </div>
+        </div>
+        <div id="tabla-pend"></div>
+      </div>
+
+      <!-- PENDIENTE DE VERIFICAR -->
+      <div id="asec-revision" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:10px">
+          <h2 style="font-size:20px;font-weight:600">🔍 Pendiente de verificar <span style="font-size:13px;font-weight:400;color:var(--text2)">(Inspecciones cargadas, pendientes de controlar)</span></h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="text" id="buscar-rev" oninput="renderTablaAdmin('revision')" placeholder="Buscar..." style="width:160px"/>
+            <select id="fil-insp-rev" onchange="renderTablaAdmin('revision')" style="width:110px">
+              <option value="">Todos</option>
+              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option>
+            </select>
+            <select id="fil-cia-rev" onchange="renderTablaAdmin('revision')" style="width:150px">
+              <option value="">Todas las compañías</option>
+              <option>Seguros Rivadavia</option><option>Provincia Seguros</option><option>Auto Reclamo</option>
+            </select>
+            <input type="date" id="fil-desde-rev" onchange="renderTablaAdmin('revision')" style="width:135px" title="Desde"/>
+            <input type="date" id="fil-hasta-rev" onchange="renderTablaAdmin('revision')" style="width:135px" title="Hasta"/>
+            <button class="btn-secondary btn-sm" onclick="limpiarFiltros('rev')">✕ Limpiar</button>
+          </div>
+        </div>
+        <div id="tabla-rev"></div>
+      </div>
+
+      <!-- PENDIENTES DE RESOLVER -->
+      <div id="asec-resolver" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:10px">
+          <h2 style="font-size:20px;font-weight:600">🔄 Pendientes de resolver <span style="font-size:13px;font-weight:400;color:var(--text2)">(Inspecciones con devoluciones de la compañía)</span></h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="text" id="buscar-resolver" oninput="renderTablaAdmin('resolver')" placeholder="Buscar..." style="width:160px"/>
+            <select id="fil-insp-resolver" onchange="renderTablaAdmin('resolver')" style="width:110px">
+              <option value="">Todos</option>
+              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option>
+            </select>
+            <select id="fil-cia-resolver" onchange="renderTablaAdmin('resolver')" style="width:150px">
+              <option value="">Todas las compañías</option>
+              <option>Seguros Rivadavia</option><option>Provincia Seguros</option><option>Auto Reclamo</option>
+            </select>
+            <input type="date" id="fil-desde-resolver" onchange="renderTablaAdmin('resolver')" style="width:135px" title="Desde"/>
+            <input type="date" id="fil-hasta-resolver" onchange="renderTablaAdmin('resolver')" style="width:135px" title="Hasta"/>
+            <button class="btn-secondary btn-sm" onclick="limpiarFiltros('resolver')">✕ Limpiar</button>
+          </div>
+        </div>
+        <div id="tabla-resolver"></div>
+      </div>
+
+      <!-- CERRADAS -->
+      <div id="asec-cerradas" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:10px">
+          <h2 style="font-size:20px;font-weight:600">✅ Cerradas <span style="font-size:13px;font-weight:400;color:var(--text2)">(Inspecciones terminadas y liquidadas)</span></h2>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input type="text" id="buscar-cerr" oninput="renderTablaAdmin('cerradas')" placeholder="Buscar..." style="width:160px"/>
+            <select id="fil-cia-cerr" onchange="renderTablaAdmin('cerradas')" style="width:150px">
+              <option value="">Todas las compañías</option>
+              <option>Seguros Rivadavia</option><option>Provincia Seguros</option><option>Auto Reclamo</option>
+            </select>
+            <input type="date" id="fil-desde-cerr" onchange="renderTablaAdmin('cerradas')" style="width:135px" title="Desde"/>
+            <input type="date" id="fil-hasta-cerr" onchange="renderTablaAdmin('cerradas')" style="width:135px" title="Hasta"/>
+            <button class="btn-secondary btn-sm" onclick="limpiarFiltros('cerr')">✕ Limpiar</button>
+            <button class="btn-success btn-sm" onclick="exportarExcel()">⬇ Excel (todas)</button>
+          </div>
+        </div>
+        <div id="tabla-cerr"></div>
+      </div>
+
+      <!-- STATS -->
+      <div id="asec-stats" style="display:none">
+        <h2 style="font-size:20px;font-weight:600;margin-bottom:20px">📈 Estadísticas</h2>
+        <div id="stats-container"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+      </div>
+
+      <!-- MI PERFIL ADMIN -->
+      <div id="asec-perfil" style="display:none">
+        <h2 style="font-size:20px;font-weight:600;margin-bottom:20px">👤 Mi Perfil</h2>
+        <div class="card" style="max-width:460px">
+          <div style="width:64px;height:64px;border-radius:50%;background:rgba(79,124,255,.2);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;color:var(--accent);margin-bottom:16px" id="aperfil-avatar">A</div>
+          <div style="margin-bottom:14px"><span style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Nombre</span><p style="font-size:16px;font-weight:500" id="aperfil-nombre">Administrador</p></div>
+          <div style="margin-bottom:14px"><span style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Rol</span><p style="font-size:14px;color:var(--accent)">Administrador del sistema</p></div>
+          <div style="border-top:1px solid var(--border);padding-top:16px">
+            <p class="section-title">Cambiar contraseña</p>
+            <div class="form-grid-2" style="margin-bottom:10px">
+              <div class="field"><label>Nueva</label><input type="password" id="aperfil-pass1"/></div>
+              <div class="field"><label>Confirmar</label><input type="password" id="aperfil-pass2"/></div>
+            </div>
+            <button class="btn-secondary btn-sm" onclick="cambiarPassAdmin()">Guardar</button>
+            <span id="aperfil-msg" class="msg" style="margin-left:10px;display:inline-block"></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- INSPECTOR -->
+<div id="screen-inspector" style="display:none;flex-direction:column;min-height:100vh">
+  <div class="topbar">
+    <div class="topbar-logo">Estudio <span>Patitucci</span></div>
+    <div style="flex:1"></div>
+    <span style="font-size:12px;color:var(--text2)" id="insp-user-label"></span>
+    <button class="btn-secondary btn-sm" style="margin-left:12px" onclick="logout()">Salir</button>
+  </div>
+  <div style="display:flex;flex:1">
+    <div class="sidebar">
+      <div class="sidebar-logo">Inspector</div>
+      <div class="sidebar-section">Mis inspecciones</div>
+      <button class="sidebar-item active" id="smenu-abiertas" onclick="inspTab('abiertas')">
+        📋 Pend. de carga <span class="badge" id="badge-abiertas">0</span>
+      </button>
+      <button class="sidebar-item" id="smenu-carga" onclick="inspTab('carga')">
+        🔍 Pend. de verificar <span class="badge yellow" id="badge-carga" style="display:none">0</span>
+      </button>
+      <button class="sidebar-item" id="smenu-revision" onclick="inspTab('revision')">
+        🔄 Pend. de resolver <span class="badge" id="badge-revision" style="display:none;background:var(--orange);color:#111">0</span>
+      </button>
+      <button class="sidebar-item" id="smenu-cerradas" onclick="inspTab('cerradas')">✅ Cerradas</button>
+      <div class="sidebar-section">Cuenta</div>
+      <button class="sidebar-item" id="smenu-perfil" onclick="inspTab('perfil')">👤 Mi Perfil</button>
+    </div>
+    <div class="main-content">
+      <div id="notif-bar" class="notif-bar">
+        <div class="notif-dot"></div>
+        <div>
+          <p style="font-weight:500;font-size:13px;color:var(--yellow)">Tenés devoluciones nuevas del Admin</p>
+          <p style="font-size:12px;color:var(--text2)" id="notif-detalle"></p>
+        </div>
+      </div>
+      <div id="isec-abiertas">
+        <h2 style="font-size:18px;font-weight:600;margin-bottom:6px">📋 Pendientes de carga <span style="font-size:13px;font-weight:400;color:var(--text2)">(Inspecciones pendientes de cargar)</span></h2>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Inspecciones asignadas — cargá el relevamiento cuando realices la inspección.</p>
+        <div id="lista-abiertas"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+        <div id="vacio-abiertas" style="display:none;text-align:center;padding:40px;color:var(--text2)">Sin inspecciones pendientes de carga.</div>
+      </div>
+      <div id="isec-carga" style="display:none">
+        <h2 style="font-size:18px;font-weight:600;margin-bottom:6px">🔍 Pendiente de verificar <span style="font-size:13px;font-weight:400;color:var(--text2)">(Inspecciones pendientes de controlar)</span></h2>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Relevamiento enviado — en espera de verificación del administrador.</p>
+        <div id="lista-carga"></div>
+        <div id="vacio-carga" style="display:none;text-align:center;padding:40px;color:var(--text2)">Sin inspecciones pendientes de carga.</div>
+      </div>
+      <div id="isec-revision" style="display:none">
+        <h2 style="font-size:18px;font-weight:600;margin-bottom:6px">🔄 Pendientes de resolver <span style="font-size:13px;font-weight:400;color:var(--text2)">(Inspecciones con tareas pendientes)</span></h2>
+        <p style="font-size:13px;color:var(--orange);margin-bottom:16px">El administrador realizó una devolución. Revisá los comentarios.</p>
+        <div id="lista-revision"></div>
+        <div id="vacio-revision" style="display:none;text-align:center;padding:40px;color:var(--text2)">Sin inspecciones pendientes de resolver.</div>
+      </div>
+      <div id="isec-cerradas" style="display:none">
+        <h2 style="font-size:18px;font-weight:600;margin-bottom:16px">✅ Cerradas <span style="font-size:13px;font-weight:400;color:var(--text2)">(Inspecciones terminadas)</span></h2>
+        <div id="lista-cerradas"></div>
+        <div id="vacio-cerradas" style="display:none;text-align:center;padding:40px;color:var(--text2)">Sin inspecciones cerradas.</div>
+      </div>
+      <div id="isec-perfil" style="display:none">
+        <h2 style="font-size:18px;font-weight:600;margin-bottom:20px">Mi Perfil</h2>
+        <div class="card" style="max-width:460px">
+          <div style="width:64px;height:64px;border-radius:50%;background:rgba(79,124,255,.2);display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:600;color:var(--accent);margin-bottom:16px" id="perfil-avatar">?</div>
+          <div style="margin-bottom:14px"><span style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Nombre</span><p style="font-size:16px;font-weight:500" id="perfil-nombre">-</p></div>
+          <div style="margin-bottom:14px"><span style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Mail</span><p style="font-size:14px" id="perfil-mail">-</p></div>
+          <div style="margin-bottom:14px"><label style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">Teléfono</label><input type="text" id="perfil-tel" placeholder="Tu teléfono" style="width:100%"/></div>
+          <div style="border-top:1px solid var(--border);padding-top:16px">
+            <p class="section-title">Cambiar contraseña</p>
+            <div class="form-grid-2" style="margin-bottom:10px">
+              <div class="field"><label>Nueva</label><input type="password" id="nueva-pass1"/></div>
+              <div class="field"><label>Confirmar</label><input type="password" id="nueva-pass2"/></div>
+            </div>
+            <button class="btn-secondary btn-sm" onclick="cambiarPass()">Guardar</button>
+            <span id="msg-pass" class="msg" style="margin-left:10px;display:inline-block"></span>
+          </div>
+        </div>
+      </div>
+      <div id="panel-rel" style="display:none">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+          <button class="btn-secondary btn-sm" onclick="cerrarRel()">← Volver</button>
+          <h3 style="font-size:15px;font-weight:600" id="rel-titulo">Relevamiento</h3>
+        </div>
+        <div id="rel-devs" style="display:none"></div>
+        <div class="card">
+          <p class="section-title">Vehículo verificado</p>
+          <div style="margin-bottom:12px"><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Kilometraje real *</label><input type="number" id="rel-km" style="width:200px"/></div>
+          <div style="margin-bottom:12px"><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Daños verificados *</label><textarea id="rel-danos" rows="3" style="resize:vertical"></textarea></div>
+          <div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Mano de obra</label><textarea id="rel-notas" rows="2" style="resize:vertical"></textarea></div>
+        </div>
+        <div class="card">
+          <p class="section-title">Taller / asegurado</p>
+          <div class="form-grid-2" style="margin-bottom:12px">
+            <div class="field"><label>Nombre</label><input type="text" id="rel-taller"/></div>
+            <div class="field"><label>Teléfono</label><input type="text" id="rel-tel"/></div>
+          </div>
+          <div class="form-grid-2">
+            <div class="field"><label>Mail</label><input type="email" id="rel-mail"/></div>
+            <div class="field"><label>CUIT</label><input type="text" id="rel-cuit" placeholder="XX-XXXXXXXX-X"/></div>
+          </div>
+        </div>
+        <div class="card">
+          <p class="section-title">Fotos *</p>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Solo JPG · Máx 4 MB por foto</p>
+          <input type="file" id="rel-fotos" accept=".jpg,.jpeg,image/jpeg" multiple style="font-size:13px;color:var(--text2)"/>
+          <div id="rel-errores" style="font-size:12px;color:var(--red);margin-top:8px;min-height:16px"></div>
+          <div id="rel-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+        </div>
+        <button class="btn-primary" onclick="enviarRel()" style="padding:10px 24px;font-size:14px">Enviar relevamiento</button>
+        <div id="msg-rel" class="msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETALLE -->
+<div id="modal" class="modal-overlay" onclick="if(event.target===this)cerrarModal()">
+  <div class="modal-box">
+    <button class="modal-close" onclick="cerrarModal()">✕</button>
+    <h3 id="modal-titulo">Detalle</h3>
+    <div id="modal-cuerpo"></div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div id="modal-editar" class="modal-overlay" onclick="if(event.target===this)cerrarEditar()">
+  <div class="modal-box" style="max-width:700px">
+    <button class="modal-close" onclick="cerrarEditar()">✕</button>
+    <h3>✏ Editar inspección</h3>
+    <div class="card">
+      <p class="section-title">Siniestro</p>
+      <div class="form-grid-3" style="margin-bottom:12px">
+        <div class="field"><label>Nº siniestro</label><input type="text" id="e-sin"/></div>
+        <div class="field"><label>Compañía</label><select id="e-cia"><option>Seguros Rivadavia</option><option>Provincia Seguros</option><option>Auto Reclamo</option></select></div>
+        <div class="field"><label>Tipo</label><input type="text" id="e-tipo"/></div>
+      </div>
+      <div class="form-grid-2">
+        <div class="field"><label>Fecha inspección</label><input type="date" id="e-finsp"/></div>
+        <div class="field"><label>Fecha siniestro</label><input type="date" id="e-fsin"/></div>
+      </div>
+    </div>
+    <div class="card">
+      <p class="section-title">Vehículo</p>
+      <div class="form-grid-3" style="margin-bottom:12px">
+        <div class="field"><label>Patente</label><input type="text" id="e-pat" style="text-transform:uppercase"/></div>
+        <div class="field"><label>Marca y modelo</label><input type="text" id="e-mod"/></div>
+        <div class="field"><label>Año</label><input type="text" id="e-anio"/></div>
+      </div>
+      <div class="form-grid-3">
+        <div class="field"><label>Nº chasis</label><input type="text" id="e-chasis"/></div>
+        <div class="field"><label>Nº motor</label><input type="text" id="e-motor"/></div>
+        <div class="field"><label>Km declarado</label><input type="text" id="e-km"/></div>
+      </div>
+    </div>
+    <div class="card">
+      <p class="section-title">Asegurado y lugar</p>
+      <div class="form-grid-2" style="margin-bottom:12px">
+        <div class="field"><label>Asegurado</label><input type="text" id="e-aseg"/></div>
+        <div class="field"><label>Teléfono</label><input type="text" id="e-tel"/></div>
+      </div>
+      <div class="form-grid-2" style="margin-bottom:12px">
+        <div class="field"><label>Dirección</label><input type="text" id="e-dir"/></div>
+        <div class="field"><label>Localidad</label><input type="text" id="e-localidad"/></div>
+      </div>
+      <div class="field" style="margin-bottom:10px"><label>Daños declarados</label><textarea id="e-danos" rows="2" style="resize:vertical"></textarea></div>
+      <div class="field"><label>Daños denunciados</label><textarea id="e-danos-den" rows="3" style="resize:vertical"></textarea></div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn-primary" onclick="guardarEdicion()">💾 Guardar cambios</button>
+      <button class="btn-secondary" onclick="cerrarEditar()">Cancelar</button>
+      <span id="msg-editar" class="msg" style="display:inline-block"></span>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const API='https://script.google.com/macros/s/AKfycbydGeeqetF_xId9whfb72BImfsk-IeQg03IYlXv-eGVN-FaEemYEmXhus9n1KHuEbyW/exec';
+const INSP_MAILS={'Ignacio':'Patitucci.mp@gmail.com','Matías':'Patitucci.mp@gmail.com','Valentino':'valentinopatitucci5@gmail.com','Sebastián':'Patitucci.mp@gmail.com','Mariano':'Patitucci.mp@gmail.com','Bruno':'bruno@estudiopatitucci.com'};
+// Contraseñas: defaults + lo que esté guardado en localStorage
+var _passDefaults={'Administrador':'123456','Ignacio':'123456','Matías':'123456','Valentino':'123456','Sebastián':'123456','Mariano':'123456','Bruno':'123456'};
+var passwords=(function(){
+  var obj=Object.assign({},_passDefaults);
+  try{var s=localStorage.getItem('ep_pw');if(s){var p=JSON.parse(s);Object.keys(p).forEach(function(k){obj[k]=p[k];});}}catch(e){}
+  return obj;
+})();
+let usuarioActual=null,inspActual=null,inspecciones=[],relId=null,editId=null,fotosPendientes=[],notifVistas={},ciaActual='rivadavia';
+let autoRefreshTimer=null;
+const PLAZO_HRS=48;
+
+function esVencida(i){
+  if(i.Estado!=='Pendientes de carga')return false;
+  if(!i.FechaInsp)return false;
+  var d=new Date(i.FechaInsp);
+  if(isNaN(d.getTime()))return false;
+  return(Date.now()-d.getTime())/(1000*60*60)>PLAZO_HRS;
+}
+
+function limpiarFiltros(sufijo){
+  var ids=['buscar-'+sufijo,'fil-insp-'+sufijo,'fil-cia-'+sufijo,'fil-desde-'+sufijo,'fil-hasta-'+sufijo];
+  ids.forEach(function(id){var el=s(id);if(el)el.value='';});
+  var tipo={pend:'pendientes',rev:'revision',resolver:'resolver',cerr:'cerradas'}[sufijo];
+  if(tipo)renderTablaAdmin(tipo);
+}
+
+async function refrescarManual(){
+  if(s('last-update'))s('last-update').textContent='Actualizando...';
+  await cargarInspecciones();
+  var activeTab=['dashboard','pendientes','revision','resolver','cerradas','stats'].find(function(t){var el=s('asec-'+t);return el&&el.style.display!=='none';});
+  if(activeTab==='dashboard')renderDashboard();
+  else if(activeTab&&['pendientes','revision','resolver','cerradas'].includes(activeTab))renderTablaAdmin(activeTab);
+  else if(activeTab==='stats')renderStats();
+}
+
+function iniciarAutoRefresh(){
+  if(autoRefreshTimer)clearInterval(autoRefreshTimer);
+  autoRefreshTimer=setInterval(refrescarManual,2*60*1000);
+}
+
+async function enviarRecordatorio(id){
+  var i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
+  var mail=INSP_MAILS[i.Inspector]||'';
+  if(!mail){alert('No hay mail registrado para '+i.Inspector+'.');return;}
+  if(!confirm('¿Enviar recordatorio de vencimiento a '+i.Inspector+' ('+mail+')?'))return;
+  try{
+    await apiCall({action:'recordatorio',id:id,inspector:i.Inspector,mail:mail,
+      siniestro:i.Siniestro,patente:i.Patente,direccion:(i.Direccion||'')+', '+(i.Localidad||''),finsp:i.FechaInsp});
+    toast('Recordatorio enviado a '+i.Inspector+'.','ok');
+  }catch(e){toast('Error al enviar recordatorio.','err');}
+}
+
+const s=id=>document.getElementById(id);
+const show=id=>{const e=s(id);if(e)e.style.display='block';};
+const hide=id=>{const e=s(id);if(e)e.style.display='none';};
+const g=id=>s(id)?.value?.trim()||'';
+const esc=v=>{if(!v)return'';return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));};
+const estadoPill=e=>{const m={'Pendientes de carga':'blue','Pendiente de verificar':'yellow','Pendientes de resolver':'orange',Cerradas:'green'};return '<span class="pill pill-'+(m[e]||'gray')+'">'+esc(e)+'</span>';};
+const formatFecha=f=>{if(!f)return'-';try{const d=new Date(f);if(!isNaN(d.getTime()))return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});}catch(e){}return String(f).split('T')[0];};
+async function apiCall(data){const r=await fetch(API,{method:'POST',body:JSON.stringify(data)});return r.json();}
+async function apiGet(){const r=await fetch(API);return r.json();}
+
+async function doLogin(){
+  const nombre=s('login-nombre').value,pass=s('login-pass').value,err=s('login-error');
+  if(!nombre){err.textContent='Seleccioná tu nombre.';return;}
+  if(!pass){err.textContent='Ingresá tu contraseña.';return;}
+  err.textContent='';
+  // Validación local de contraseña
+  if(pass!==passwords[nombre]){err.textContent='Contraseña incorrecta.';return;}
+  const btn=s('screen-login').querySelector('button.btn-primary');
+  btn.textContent='Cargando...';btn.disabled=true;
+  hide('screen-login');
+  const ls=s('screen-loading');ls.style.display='flex';
+  s('loading-msg').textContent='Cargando inspecciones...';
+  if(nombre==='Administrador'){
+    usuarioActual='Administrador';
+    try{localStorage.setItem('ep_session',nombre);}catch(e){}
+    const sa=s('screen-admin');sa.style.display='flex';sa.style.flexDirection='column';
+    s('admin-user-label').textContent='Administrador';
+    await cargarInspecciones();
+    ls.style.display='none';
+    btn.textContent='Ingresar';btn.disabled=false;
+    adminTab('dashboard');
+    iniciarAutoRefresh();
+  } else {
+    usuarioActual=nombre;
+    try{localStorage.setItem('ep_session',nombre);}catch(e){}
+    const si=s('screen-inspector');si.style.display='flex';si.style.flexDirection='column';
+    s('insp-user-label').textContent=nombre;
+    s('perfil-nombre').textContent=nombre;
+    s('perfil-avatar').textContent=nombre[0].toUpperCase();
+    s('perfil-mail').textContent=INSP_MAILS[nombre]||'-';
+    await cargarInspector();
+    ls.style.display='none';
+    btn.textContent='Ingresar';btn.disabled=false;
+  }
+}
+
+function logout(){
+  try{localStorage.removeItem('ep_session');}catch(e){}
+  usuarioActual=null;inspActual=null;relId=null;fotosPendientes=[];
+  if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
+  ['screen-admin','screen-inspector'].forEach(x=>{s(x).style.display='none';});
+  s('screen-login').style.display='flex';
+  s('login-nombre').value='';s('login-pass').value='';
+}
+
+function cambiarPassAdmin(){
+  const p1=s('aperfil-pass1').value,p2=s('aperfil-pass2').value,msg=s('aperfil-msg');
+  if(p1.length<4){msg.className='msg err';msg.textContent='Mínimo 4 caracteres.';return;}
+  if(p1!==p2){msg.className='msg err';msg.textContent='No coinciden.';return;}
+  passwords['Administrador']=p1;
+  try{localStorage.setItem('ep_pw',JSON.stringify(passwords));}catch(e){}
+  msg.className='msg ok';msg.textContent='✓ Actualizada.';
+  toast('Contraseña actualizada. Se mantendrá en este dispositivo.','ok');
+  setTimeout(()=>{msg.textContent='';s('aperfil-pass1').value='';s('aperfil-pass2').value='';},2000);
+}
+
+function cambiarPass(){
+  const p1=s('nueva-pass1').value,p2=s('nueva-pass2').value,msg=s('msg-pass');
+  if(p1.length<4){msg.className='msg err';msg.textContent='Mínimo 4 caracteres.';return;}
+  if(p1!==p2){msg.className='msg err';msg.textContent='No coinciden.';return;}
+  passwords[usuarioActual]=p1;
+  try{localStorage.setItem('ep_pw',JSON.stringify(passwords));}catch(e){}
+  msg.className='msg ok';msg.textContent='✓ Actualizada.';
+  toast('Contraseña actualizada. Se mantendrá en este dispositivo.','ok');
+  setTimeout(()=>{msg.textContent='';s('nueva-pass1').value='';s('nueva-pass2').value='';},2000);
+}
+
+// ─── ADMIN ────────────────────────────────────────────────────────────────────
+function adminTab(t){
+  ['dashboard','nueva','pendientes','revision','resolver','cerradas','stats','perfil'].forEach(x=>{
+    const btn=s('amenu-'+x);if(btn)btn.className='sidebar-item'+(t===x?' active':'');
+    const sec=s('asec-'+x);if(sec)sec.style.display=t===x?'block':'none';
+  });
+  if(t==='dashboard')renderDashboard();
+  if(t==='pendientes')renderTablaAdmin('pendientes');
+  if(t==='revision')renderTablaAdmin('revision');
+  if(t==='resolver')renderTablaAdmin('resolver');
+  if(t==='cerradas')renderTablaAdmin('cerradas');
+  if(t==='stats')renderStats();
+}
+
+async function cargarInspecciones(){
+  try{
+    const res=await apiGet();
+    if(res.ok){
+      inspecciones=res.data||[];
+      actualizarBadgesAdmin();
+      var lu=s('last-update');
+      if(lu)lu.textContent='Act. '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
+    }
+  }catch(e){}
+}
+
+function actualizarBadgesAdmin(){
+  const pend=inspecciones.filter(i=>i.Estado==='Pendientes de carga').length;
+  const rev=inspecciones.filter(i=>i.Estado==='Pendiente de verificar').length;
+  const resol=inspecciones.filter(i=>i.Estado==='Pendientes de resolver').length;
+  const bp=s('badge-pend'),br=s('badge-rev'),bres=s('badge-resolver');
+  if(pend>0){bp.style.display='inline';bp.textContent=pend;}else bp.style.display='none';
+  if(rev>0){br.style.display='inline';br.textContent=rev;}else br.style.display='none';
+  if(resol>0){bres.style.display='inline';bres.textContent=resol;}else bres.style.display='none';
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function renderDashboard(){
+  const total=inspecciones.length;
+  const asig=inspecciones.filter(i=>i.Estado==='Pendientes de carga').length;
+  const rev=inspecciones.filter(i=>i.Estado==='Pendiente de verificar'||i.Estado==='Pendientes de resolver').length;
+  const cerr=inspecciones.filter(i=>i.Estado==='Cerradas').length;
+  const venc=inspecciones.filter(i=>esVencida(i)).length;
+  s('kpi-total').textContent=total;
+  s('kpi-asig').textContent=asig;s('kpi-asig').closest('.stat-card').querySelector('.stat-lbl').textContent='Pend. de carga';
+  s('kpi-rev').textContent=rev;
+  s('kpi-cerr').textContent=cerr;
+  if(s('kpi-venc'))s('kpi-venc').textContent=venc;
+  // Torta
+  dibujarTorta([
+    {label:'Pend. carga',val:asig,color:'#4f7cff'},
+    {label:'En proceso',val:rev,color:'#f0b429'},
+    {label:'Cerradas',val:cerr,color:'#2ecc71'}
+  ]);
+  // Por inspector
+  const porInsp={};
+  inspecciones.forEach(i=>{porInsp[i.Inspector]=(porInsp[i.Inspector]||0)+1;});
+  const maxV=Math.max(...Object.values(porInsp),1);
+  s('chart-insp').innerHTML=Object.entries(porInsp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="font-size:12px;color:var(--text2);width:80px;flex-shrink:0">${esc(k)}</span>
+      <div style="flex:1;background:var(--bg3);border-radius:4px;height:8px;overflow:hidden">
+        <div style="width:${Math.round((v/maxV)*100)}%;background:var(--accent);height:100%;border-radius:4px;transition:width .4s"></div>
+      </div>
+      <span style="font-size:12px;font-weight:600;color:var(--text);width:20px;text-align:right">${v}</span>
+    </div>`).join('')||'<p style="font-size:13px;color:var(--text2)">Sin datos</p>';
+  // Recientes
+  const recientes=inspecciones.slice(0,5);
+  s('dash-recientes').innerHTML=recientes.length?`
+    <div class="tabla-wrap"><table>
+      <thead><tr><th>Fecha</th><th>Siniestro</th><th>Patente</th><th>Inspector</th><th>Estado</th></tr></thead>
+      <tbody>${recientes.map(i=>`<tr>
+        <td><strong>${formatFecha(i.FechaInsp)}</strong></td>
+        <td class="mono">${esc(i.Siniestro||'-')}</td>
+        <td><strong>${esc(i.Patente||'-')}</strong></td>
+        <td><span class="pill pill-blue">${esc(i.Inspector||'-')}</span></td>
+        <td>${estadoPill(i.Estado)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`:'<p style="font-size:13px;color:var(--text2)">Sin inspecciones recientes.</p>';
+}
+
+function dibujarTorta(datos){
+  const canvas=s('chart-torta');
+  const ctx=canvas.getContext('2d');
+  const cx=110,cy=110,r=90;
+  ctx.clearRect(0,0,220,220);
+  const total=datos.reduce((a,b)=>a+b.val,0);
+  if(total===0){
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.fillStyle='#2a2f42';ctx.fill();
+    s('chart-leyenda').innerHTML='<p style="font-size:12px;color:var(--text2)">Sin datos</p>';
+    return;
+  }
+  let startAngle=-Math.PI/2;
+  datos.forEach(function(d){
+    const slice=(d.val/total)*Math.PI*2;
+    ctx.beginPath();ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,startAngle,startAngle+slice);
+    ctx.closePath();ctx.fillStyle=d.color;ctx.fill();
+    startAngle+=slice;
+  });
+  // Hueco central
+  ctx.beginPath();ctx.arc(cx,cy,55,0,Math.PI*2);
+  ctx.fillStyle='#171b26';ctx.fill();
+  // Total en centro
+  ctx.fillStyle='#e8eaf0';ctx.font='bold 22px DM Sans,sans-serif';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText(total,cx,cy-8);
+  ctx.font='11px DM Sans,sans-serif';ctx.fillStyle='#8b92a8';
+  ctx.fillText('total',cx,cy+12);
+  // Leyenda
+  s('chart-leyenda').innerHTML=datos.map(d=>`
+    <div style="display:flex;align-items:center;gap:8px;font-size:13px">
+      <div style="width:10px;height:10px;border-radius:3px;background:${d.color};flex-shrink:0"></div>
+      <span style="color:var(--text2);flex:1">${esc(d.label)}</span>
+      <strong style="color:var(--text)">${d.val}</strong>
+      <span style="color:var(--text3);font-size:11px">${total?Math.round((d.val/total)*100):0}%</span>
+    </div>`).join('');
+}
+
+// ─── TABLA ADMIN ──────────────────────────────────────────────────────────────
+function renderTablaAdmin(tipo){
+  const filtros={pendientes:function(i){return i.Estado==='Pendientes de carga';},revision:function(i){return i.Estado==='Pendiente de verificar';},resolver:function(i){return i.Estado==='Pendientes de resolver';},cerradas:function(i){return i.Estado==='Cerradas';}};
+  const sufijoMap={pendientes:'pend',revision:'rev',resolver:'resolver',cerradas:'cerr'};
+  const sf=sufijoMap[tipo];
+  const tablaId={pendientes:'tabla-pend',revision:'tabla-rev',resolver:'tabla-resolver',cerradas:'tabla-cerr'};
+  const filtro=(g('buscar-'+sf)||'').toLowerCase();
+  const fInsp=s('fil-insp-'+sf)?s('fil-insp-'+sf).value||'':(s('fil-insp-pend')?'':'');
+  const fCia=s('fil-cia-'+sf)?s('fil-cia-'+sf).value||'':'';
+  const fDesde=s('fil-desde-'+sf)?s('fil-desde-'+sf).value||'':'';
+  const fHasta=s('fil-hasta-'+sf)?s('fil-hasta-'+sf).value||'':'';
+  let lista=inspecciones.filter(filtros[tipo]).filter(function(i){
+    const txt=((i.Siniestro||'')+(i.Patente||'')+(i.Asegurado||'')+(i.Localidad||'')).toLowerCase();
+    if(!txt.includes(filtro))return false;
+    if(fInsp&&i.Inspector!==fInsp)return false;
+    if(fCia&&i.Compania!==fCia)return false;
+    if(fDesde&&i.FechaInsp&&i.FechaInsp<fDesde)return false;
+    if(fHasta&&i.FechaInsp&&i.FechaInsp>fHasta)return false;
+    return true;
+  });
+  // Urgentes primero
+  lista.sort(function(a,b){return (b.Urgente?1:0)-(a.Urgente?1:0);});
+  const contenedor=s(tablaId[tipo]);
+  if(!lista.length){contenedor.innerHTML='<div class="loading">No hay inspecciones.</div>';return;}
+  contenedor.innerHTML='<div class="tabla-wrap"><table>'
+    +'<thead><tr><th>Fecha</th><th>Siniestro</th><th>Patente</th><th>Dirección</th><th>Localidad</th><th>Compañía</th><th>Inspector</th><th>Estado</th><th>Acción</th></tr></thead>'
+    +'<tbody>'+lista.map(function(i){
+      var venc=esVencida(i);
+      return '<tr style="'+(venc?'background:rgba(229,83,83,.04)':'')+'">'
+        +'<td><strong>'+formatFecha(i.FechaInsp)+'</strong></td>'
+        +'<td class="mono">'+esc(i.Siniestro||'-')+(i.Relevamiento&&i.Relevamiento.km?' <span style="color:var(--green);font-size:10px">●</span>':'')+'</td>'
+        +'<td><strong>'+esc(i.Patente||'-')+'</strong>'+(i.Urgente?' <span style="color:var(--red);font-size:12px;font-weight:700" title="Urgente">🔴</span>':'')+(venc?' <span class="pill pill-red" style="font-size:10px;padding:2px 7px">⚠ +48hs</span>':'')+'</td>'
+        +'<td>'+esc(i.Direccion||'-')+'</td>'
+        +'<td>'+esc(i.Localidad||'-')+'</td>'
+        +'<td style="font-size:12px">'+esc(i.Compania||'-')+'</td>'
+        +'<td><span class="pill pill-blue">'+esc(i.Inspector||'-')+'</span></td>'
+        +'<td>'+estadoPill(i.Estado)+'</td>'
+        +'<td style="display:flex;gap:6px;flex-wrap:wrap">'
+        +'<button class="btn-secondary btn-sm" onclick="abrirModal(\''+esc(i.ID)+'\')">Ver detalle</button>'
+        +(venc?'<button class="btn-sm" style="background:rgba(229,83,83,.12);color:var(--red);border:1px solid rgba(229,83,83,.3)" onclick="enviarRecordatorio(\''+esc(i.ID)+'\')">✉ Recordatorio</button>':'')
+        +'</td></tr>';
+    }).join('')+'</tbody></table></div>';
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function abrirModal(id){
+  const i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
+  var rel=i.Relevamiento;
+  if(typeof rel==='string'){try{rel=JSON.parse(rel);}catch(e){rel=null;}}
+  s('modal-titulo').innerHTML=(i.Urgente?'<span style="color:var(--red);margin-right:6px">🔴</span>':'')
+    +esc(i.Siniestro||'')+' · '+esc(i.Patente||'');
+  var html='';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:13px;margin-bottom:16px">';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Compañía</span>'+esc(i.Compania||'-')+'</div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Tipo</span>'+esc(i.Tipo||'-')+'</div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Fecha inspección</span>'+formatFecha(i.FechaInsp)+'</div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Fecha siniestro</span>'+formatFecha(i.FechaSin)+'</div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Vehículo</span>'+esc(i.Modelo||'-')+' '+(i.Anio?'('+esc(i.Anio)+')':'')+'</div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Km declarado</span>'+esc(i.Km||'-')+'</div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Nº Chasis</span><span class="mono">'+esc(i.Chasis||'-')+'</span></div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Nº Motor</span><span class="mono">'+esc(i.Motor||'-')+'</span></div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Asegurado</span>'+esc(i.Asegurado||'-')+'</div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Teléfono</span>'+esc(i.Tel||'-')+'</div>';
+  html+='<div style="grid-column:1/-1"><span style="font-size:11px;color:var(--text2);display:block">Daños declarados</span>'+esc(i.Danos||'-')+'</div>';
+  if(i.DanosDen)html+='<div style="grid-column:1/-1;background:rgba(79,124,255,.06);border:1px solid rgba(79,124,255,.2);border-radius:8px;padding:10px;margin-top:4px"><span style="font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Daños denunciados (ocurrencia del siniestro)</span><span style="font-size:13px;line-height:1.5">'+esc(i.DanosDen)+'</span></div>';
+  html+='</div>';
+  if(rel&&rel.km){
+    html+='<div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.2);border-radius:10px;padding:14px;margin-bottom:16px">';
+    html+='<p style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:12px">✓ Relevamiento recibido</p>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:12px">';
+    html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Km verificado</span><strong style="color:var(--text)">'+esc(rel.km)+'</strong></div>';
+    if(rel.taller)html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Taller</span><strong style="color:var(--text)">'+esc(rel.taller)+'</strong></div>';
+    if(rel.cuit)html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">CUIT</span><strong style="color:var(--text)">'+esc(rel.cuit)+'</strong></div>';
+    if(rel.telTaller)html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Tel. taller</span><strong style="color:var(--text)">'+esc(rel.telTaller)+'</strong></div>';
+    if(rel.mailTaller)html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Mail taller</span><strong style="color:var(--text)">'+esc(rel.mailTaller)+'</strong></div>';
+    if(rel.fechaEnvio)html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Fecha envío</span><strong style="color:var(--text)">'+formatFecha(rel.fechaEnvio)+'</strong></div>';
+    html+='</div>';
+    html+='<div style="margin-bottom:10px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Daños verificados</span>';
+    html+='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.danos||'-')+'</div></div>';
+    if(rel.notas){
+      html+='<div style="margin-bottom:10px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Mano de obra</span>';
+      html+='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.notas)+'</div></div>';
+    }
+    html+=renderFotos(rel);
+    html+='</div>';
+  } else {
+    html+='<p style="font-size:13px;color:var(--text2);margin-bottom:16px">Relevamiento pendiente.</p>';
+  }
+  html+='<div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px">';
+  html+='<p class="section-title">Cambiar estado</p>';
+  html+='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+  html+='<select id="sel-estado-modal" style="width:220px">';
+  html+='<option '+(i.Estado==='Pendientes de carga'?'selected':'')+'>Pendientes de carga</option>';
+  html+='<option '+(i.Estado==='Pendiente de verificar'?'selected':'')+'>Pendiente de verificar</option>';
+  html+='<option '+(i.Estado==='Pendientes de resolver'?'selected':'')+'>Pendientes de resolver</option>';
+  html+='<option '+(i.Estado==='Cerradas'?'selected':'')+'>Cerradas</option>';
+  html+='</select>';
+  html+='<button class="btn-primary btn-sm" onclick="guardarEstadoModal(\''+esc(i.ID)+'\')">Guardar</button>';
+  html+='<span id="msg-estado-modal" class="msg" style="display:inline-block"></span>';
+  html+='</div></div>';
+  html+='<div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px">';
+  html+='<p class="section-title">Devolución al inspector</p>';
+  var devs=i.Devoluciones||[];
+  devs.forEach(function(d){html+='<div class="dev-burbuja">'+esc(d.texto)+' <span style="font-size:11px;opacity:.6">· '+d.fecha+'</span></div>';});
+  html+='<div style="display:flex;gap:8px;margin-top:8px">';
+  html+='<input type="text" id="dev-input" placeholder="Escribí una devolución..." style="flex:1"/>';
+  html+='<button class="btn-secondary btn-sm" onclick="guardarDevolucion(\''+esc(i.ID)+'\')">Enviar</button>';
+  html+='</div><span id="dev-aviso" class="msg" style="display:inline-block;margin-top:4px"></span></div>';
+  // ─── Reasignar inspector
+  html+='<div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px">';
+  html+='<p class="section-title">Reasignar inspector</p>';
+  html+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+  html+='<select id="reasig-sel-'+esc(i.ID)+'" style="width:140px"><option value="">Seleccionar...</option>'
+    +['Ignacio','Matías','Valentino','Sebastián','Mariano','Bruno'].map(function(n){return'<option'+(i.Inspector===n?' selected':'')+'>'+esc(n)+'</option>';}).join('')
+    +'</select>';
+  html+='<button class="btn-secondary btn-sm" onclick="confirmarReasignar(\''+esc(i.ID)+'\')">Reasignar</button>';
+  html+='<span style="font-size:12px;color:var(--text2)">Actual: <strong style="color:var(--text)">'+esc(i.Inspector||'-')+'</strong></span>';
+  html+='</div></div>';
+  // ─── Historial
+  var hist=i.Historial||[];
+  html+='<div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px">';
+  html+='<p class="section-title">Historial de estados</p>';
+  if(hist.length){
+    html+='<div style="display:flex;flex-direction:column;gap:6px">';
+    hist.forEach(function(h){
+      html+='<div style="display:flex;gap:10px;align-items:flex-start;font-size:12px">';
+      html+='<div style="width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:4px;flex-shrink:0"></div>';
+      html+='<div><span style="color:var(--text)">'+esc(h.estado||'')+'</span>';
+      html+=' <span style="color:var(--text3)">· '+esc(h.fecha||'')+'</span>';
+      if(h.usuario)html+=' <span style="color:var(--text3);font-size:11px">por '+esc(h.usuario)+'</span>';
+      html+='</div></div>';
+    });
+    html+='</div>';
+  }else{html+='<p style="font-size:12px;color:var(--text3)">Sin historial disponible.</p>';}
+  html+='</div>';
+  // ─── Botones
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  html+='<button class="btn-secondary btn-sm" onclick="abrirEditar(\''+esc(i.ID)+'\')">✏ Editar</button>';
+  var urgStyle=i.Urgente?'background:rgba(229,83,83,.15);color:var(--red);border:1px solid rgba(229,83,83,.3)':'background:var(--bg3);color:var(--text2);border:1px solid var(--border)';
+  html+='<button class="btn-sm" style="'+urgStyle+'" onclick="toggleUrgente(\''+esc(i.ID)+'\')">'+(i.Urgente?'🔴 Quitar urgencia':'⚪ Marcar urgente')+'</button>';
+  html+='<button class="btn-secondary btn-sm" onclick="generarPDF(\''+esc(i.ID)+'\')">📄 PDF Inspección</button>';
+  html+='<button class="btn-secondary btn-sm" onclick="generarPDFRel(\''+esc(i.ID)+'\')">📋 PDF Relevamiento</button>';
+  html+='<button class="btn-danger btn-sm" onclick="eliminarInsp(\''+esc(i.ID)+'\')">Eliminar</button>';
+  html+='<button class="btn-secondary btn-sm" onclick="cerrarModal()" style="margin-left:auto">✕ Cerrar</button>';
+  html+='</div>';
+  s('modal-cuerpo').innerHTML=html;
+  s('modal').classList.add('open');
+}
+
+function renderFotos(r){
+  if(!r)return'';
+  var fl=r.fotosLinks||[];var cu=r.carpetaUrl||'';
+  var fb=r.fotos||[];// base64 fallback (enviadas por el inspector, aún no procesadas por Drive)
+  var cant=r.cantFotos||fl.length||fb.length||0;
+  // Sin fotos en absoluto
+  if(!cant&&!fl.length&&!cu&&!fb.length)return'<p style="font-size:12px;color:var(--text2)">Sin fotos adjuntas.</p>';
+  var html='<div>';
+  html+='<div style="margin-bottom:10px">';
+  html+='<span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Fotos ('+cant+')</span>';
+  html+='</div>';
+  if(fl.length){
+    // Caso A: el GAS devolvió links de Drive — mostrar miniaturas con link
+    html+='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px">';
+    fl.forEach(function(f){
+      var thumbUrl=f.thumbUrl||'';
+      if(!thumbUrl){var fileId=f.id||'';if(!fileId&&f.viewUrl&&f.viewUrl.includes('/file/d/')){try{fileId=f.viewUrl.split('/file/d/')[1].split('/')[0];}catch(e){}}if(fileId)thumbUrl='https://drive.google.com/thumbnail?id='+fileId+'&sz=w200';}
+      html+='<div style="text-align:center">';
+      html+='<a href="'+f.viewUrl+'" target="_blank" style="display:block;width:100px;height:100px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg3);text-decoration:none">';
+      if(thumbUrl){
+        html+='<img src="'+thumbUrl+'" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.innerHTML=\'<div style=\\\'width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px\\\'>🖼️</div>\'">';
+      } else {
+        html+='<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px">🖼️</div>';
+      }
+      html+='</a>';
+      html+='<a href="'+(f.url||f.viewUrl)+'" target="_blank" style="font-size:10px;color:var(--accent);text-decoration:none;display:block;margin-top:4px">⬇ Descargar</a>';
+      html+='</div>';
+    });
+    html+='</div>';
+    if(cu)html+='<a href="'+cu+'" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none">📁 Ver carpeta en Drive</a>';
+  } else if(fb.length){
+    // Caso B: fotos en base64 (Drive aún no procesó o no devolvió links) — mostrar inline
+    html+='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px">';
+    fb.forEach(function(src,idx){
+      html+='<div style="text-align:center">';
+      html+='<a href="'+src+'" target="_blank" style="display:block;width:100px;height:100px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg3);text-decoration:none">';
+      html+='<img src="'+src+'" style="width:100%;height:100%;object-fit:cover">';
+      html+='</a>';
+      html+='<span style="font-size:10px;color:var(--text2);display:block;margin-top:4px">Foto '+(idx+1)+'</span>';
+      html+='</div>';
+    });
+    html+='</div>';
+    if(cu)html+='<a href="'+cu+'" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none">📁 Ver en Drive</a>';
+  } else if(cant>0){
+    // Caso C: el GAS registró la cantidad pero sin links ni base64
+    html+='<div style="background:rgba(240,180,41,.08);border:1px solid rgba(240,180,41,.2);border-radius:8px;padding:10px;font-size:12px;color:var(--yellow)">';
+    html+='⚠️ '+cant+' foto'+(cant>1?'s':'')+' recibida'+(cant>1?'s':'')+' pero los links de Drive no están disponibles.';
+    if(cu)html+=' <a href="'+cu+'" target="_blank" style="color:var(--accent);text-decoration:none">Ver en Drive</a>';
+    html+='</div>';
+  }
+  html+='</div>';return html;
+}
+
+function cerrarModal(){s('modal').classList.remove('open');}
+
+async function cambiarEstado(id,estado){
+  const i=inspecciones.find(function(x){return x.ID==id;});if(i)i.Estado=estado;
+  await apiCall({action:'actualizar',id:id,estado:estado});
+  actualizarBadgesAdmin();
+  renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+}
+
+async function guardarEstadoModal(id){
+  var sel=s('sel-estado-modal');var msg=s('msg-estado-modal');
+  if(!sel)return;
+  var estado=sel.value;
+  msg.className='msg';msg.textContent='Guardando...';
+  try{
+    const i=inspecciones.find(function(x){return x.ID==id;});
+    if(i){
+      i.Estado=estado;
+      if(!i.Historial)i.Historial=[];
+      i.Historial.push({estado:estado,fecha:new Date().toLocaleString('es-AR'),usuario:'Administrador'});
+    }
+    await apiCall({action:'actualizar',id:id,estado:estado,historial:i?i.Historial:[]});
+    actualizarBadgesAdmin();
+    renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+    msg.className='msg ok';msg.textContent='✓ Estado actualizado.';
+    toast('Estado actualizado correctamente.','ok');
+  }catch(e){msg.className='msg err';msg.textContent='Error al guardar.';}
+}
+
+async function guardarDevolucion(id){
+  const txt=s('dev-input')?.value?.trim();if(!txt)return;
+  const i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
+  if(!i.Devoluciones)i.Devoluciones=[];
+  i.Devoluciones.push({texto:txt,fecha:new Date().toLocaleString('es-AR')});
+  // Auto-cambiar estado a "Pendientes de resolver"
+  i.Estado='Pendientes de resolver';
+  await apiCall({action:'actualizar',id:id,devoluciones:i.Devoluciones,estado:'Pendientes de resolver'});
+  actualizarBadgesAdmin();
+  renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+  const av=s('dev-aviso');av.className='msg ok';av.textContent='✓ Enviada. Estado → Pendientes de resolver.';
+  setTimeout(function(){abrirModal(id);},1000);
+}
+
+async function eliminarInsp(id){
+  if(!confirm('¿Eliminar esta inspección?'))return;
+  await apiCall({action:'eliminar',id:id});
+  inspecciones=inspecciones.filter(function(x){return x.ID!=id;});
+  actualizarBadgesAdmin();cerrarModal();
+  renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('cerradas');
+}
+
+function exportarExcel(){
+  if(!inspecciones.length){alert('No hay inspecciones.');return;}
+  try{
+    const filas=inspecciones.map(function(i){return{
+      'Siniestro':String(i.Siniestro||''),'Compania':String(i.Compania||''),
+      'Fecha':String(i.FechaInsp||''),'Patente':String(i.Patente||''),
+      'Modelo':String(i.Modelo||''),'Chasis':String(i.Chasis||''),
+      'Motor':String(i.Motor||''),'Asegurado':String(i.Asegurado||''),
+      'Tel':String(i.Tel||''),'Direccion':String(i.Direccion||''),
+      'Localidad':String(i.Localidad||''),'Danos':String(i.Danos||''),
+      'Inspector':String(i.Inspector||''),'Estado':String(i.Estado||''),
+      'Km verificado':i.Relevamiento&&i.Relevamiento.km?String(i.Relevamiento.km):'',
+      'Danos verificados':i.Relevamiento&&i.Relevamiento.danos?String(i.Relevamiento.danos):'',
+      'Mano de obra':i.Relevamiento&&i.Relevamiento.notas?String(i.Relevamiento.notas):''
+    };});
+    const ws=XLSX.utils.json_to_sheet(filas);
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,'Inspecciones',ws);
+    XLSX.writeFile(wb,'Inspecciones_EstudioPatitucci.xlsx');
+  }catch(e){alert('Error: '+e.message);}
+}
+
+function renderStats(){
+  var total=inspecciones.length;
+  var venc=inspecciones.filter(function(i){return esVencida(i);}).length;
+  var porEstado={'Pendientes de carga':0,'Pendiente de verificar':0,'Pendientes de resolver':0,Cerradas:0};
+  var porInsp={},porCia={},porTipo={'Daño Total':0,'Daño Parcial':0,'Otros':0};
+  inspecciones.forEach(function(i){
+    if(porEstado[i.Estado]!==undefined)porEstado[i.Estado]++;
+    porInsp[i.Inspector]=(porInsp[i.Inspector]||0)+1;
+    if(i.Compania)porCia[i.Compania]=(porCia[i.Compania]||0)+1;
+    var t=(i.Tipo||'').toLowerCase();
+    if(t.includes('total'))porTipo['Daño Total']++;
+    else if(t.includes('parcial'))porTipo['Daño Parcial']++;
+    else porTipo['Otros']++;
+  });
+  function barList(obj){
+    var max=Math.max.apply(null,Object.values(obj).concat([1]));
+    return Object.entries(obj).sort(function(a,b){return b[1]-a[1];}).map(function(e){
+      var pct=Math.round((e[1]/max)*100);
+      return'<div style="margin-bottom:10px">'
+        +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:var(--text2)">'+esc(e[0])+'</span><strong>'+e[1]+'</strong></div>'
+        +'<div style="background:var(--bg3);border-radius:4px;height:6px"><div style="width:'+pct+'%;background:var(--accent);height:100%;border-radius:4px"></div></div>'
+        +'</div>';
+    }).join('');
+  }
+  s('stats-container').innerHTML='<div class="stats-grid" style="margin-bottom:20px">'
+    +'<div class="stat-card"><p class="stat-num">'+total+'</p><p class="stat-lbl">Total</p></div>'
+    +'<div class="stat-card"><p class="stat-num" style="color:var(--accent)">'+porEstado['Pendientes de carga']+'</p><p class="stat-lbl">Pend. de carga</p></div>'
+    +'<div class="stat-card"><p class="stat-num" style="color:var(--yellow)">'+(porEstado['Pendiente de verificar']+porEstado['Pendientes de resolver'])+'</p><p class="stat-lbl">En proceso</p></div>'
+    +'<div class="stat-card"><p class="stat-num" style="color:var(--green)">'+porEstado.Cerradas+'</p><p class="stat-lbl">Cerradas</p></div>'
+    +'<div class="stat-card"><p class="stat-num" style="color:var(--red)">'+venc+'</p><p class="stat-lbl">⚠ Vencidas</p></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">'
+    +'<div class="card"><p class="section-title">Por inspector</p>'+barList(porInsp)+'</div>'
+    +'<div class="card"><p class="section-title">Por compañía</p>'+barList(porCia)+'</div>'
+    +'<div class="card"><p class="section-title">Por tipo de siniestro</p>'+barList(porTipo)+'</div>'
+    +'</div>';
+}
+
+// ─── PDF ──────────────────────────────────────────────────────────────────────
+function selCia(cia){
+  ciaActual=cia;
+  ['riv','prov','auto'].forEach(function(x){s('cia-'+x).className='insp-btn';});
+  s('cia-'+{rivadavia:'riv',provincia:'prov',manual:'auto'}[cia]).className='insp-btn sel';
+  const titulos={rivadavia:'Subir PDF de Seguros Rivadavia',provincia:'Subir PDF de Provincia Seguros',manual:'Carga manual'};
+  s('pdf-zone-title').textContent=titulos[cia];
+  if(cia==='manual'){hide('paso-pdf');show('paso-form');limpiarForm();}
+}
+
+function handleDrop(e){
+  e.preventDefault();s('pdf-zone').classList.remove('drag');
+  const file=e.dataTransfer.files[0];
+  if(file&&file.type==='application/pdf')procesarPDF(file);
+  else s('pdf-error').textContent='Solo se aceptan PDFs.';
+}
+
+async function procesarPDF(file){
+  if(!file)return;
+  show('pdf-loading');s('pdf-error').textContent='';
+  try{
+    const ab=await file.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+    let txt='';
+    for(let i=1;i<=Math.min(pdf.numPages,3);i++){
+      const page=await pdf.getPage(i);
+      const c=await page.getTextContent();
+      txt+=c.items.map(function(it){return it.str;}).join(' ')+'\n';
+    }
+    const datos=ciaActual==='rivadavia'?extraerRivadavia(txt):extraerProvincia(txt);
+    if(ciaActual==='provincia'){console.log('PDF_TXT_DEBUG\n'+txt);}
+    llenarFormulario(datos);
+    hide('pdf-loading');hide('paso-pdf');show('paso-form');
+    s('paso-form-titulo').textContent='Revisá los datos — editá lo que necesites';
+  }catch(err){hide('pdf-loading');s('pdf-error').textContent='Error al leer PDF: '+err.message;}
+}
+
+function extraerRivadavia(txt){
+  function find(ps){for(var j=0;j<ps.length;j++){var m=txt.match(ps[j]);if(m&&m[1])return m[1].trim();}return'';}
+  function findDate(ps){for(var j=0;j<ps.length;j++){var m=txt.match(ps[j]);if(m&&m[1]){var d=m[1].trim(),pts=d.split('/');if(pts.length===3)return pts[2]+'-'+pts[1].padStart(2,'0')+'-'+pts[0].padStart(2,'0');return d;}}return'';}
+
+  // Nº siniestro: formato DD/DD/DDDDD+/DD (único en el doc)
+  var sin=find([/(\d{2}\/\d{2}\/\d{5,6}\/\d{2})/]);
+
+  // Tipo: empieza con '01-' y termina antes del próximo '02-' o 'Domicilio'
+  var tipo=find([/(01-[^\n]+?)(?=\s+02-|\s+Domicilio|\s+\d{2}\/\d{2}\/)/i]);
+
+  // Fecha inspección: primera DD/MM/YYYY tras 'Domicilio'
+  var finsp=findDate([/Domicilio\s+(\d{2}\/\d{2}\/\d{4})/i,/(\d{2}\/\d{2}\/\d{4})/]);
+
+  // Fecha siniestro: DD/MM/YYYY que aparece justo antes del Nº siniestro
+  var fsin=findDate([/(\d{2}\/\d{2}\/\d{4})\s+\d{2}\/\d{2}\/\d{5,6}\/\d{2}/]);
+
+  // Patente + Motor + Chasis en la misma línea
+  var pat='',motor='',chasis='';
+  var mVeh=txt.match(/\b([A-Z]{2}\d{3}[A-Z]{2}|[A-Z]{3}\d{3})\b\s+([A-Z0-9]{8,16})\s+([A-Z0-9]{17})\b/);
+  if(mVeh){pat=mVeh[1];motor=mVeh[2];chasis=mVeh[3];}
+
+  // Modelo y Año: línea con INFOAUTO (0XXXXXX modelo 4-digit-year)
+  var mod='',anio='';
+  var mMod=txt.match(/0\d{6}\s+([A-Z][A-Z0-9\s\.\/\-]+?)\s+(\d{4})\b/);
+  if(mMod){mod=mMod[1].trim();anio=mMod[2];}
+
+  // Asegurado: mayúsculas antes de 'DNI'
+  var aseg=find([/\b([A-Z][A-Z,\s\.]{5,50}?)\s+DNI\s+\d{7,8}/]);
+
+  // Teléfono: número tras 'DNI XXXXXXXX'
+  var tel=find([/DNI\s+\d{7,8}\s+([\d]{6,12})/i]);
+
+  // Dirección: CALLE NÚMERO antes de FILCAR
+  var dir='';
+  var mDir=txt.match(/([A-Z][A-Z'\s]{1,30}?)\s+(\d{1,5})\s+FILCAR/i);
+  if(mDir) dir=mDir[1].trim()+' '+mDir[2].trim();
+
+  // Localidad: texto antes de 'Buenos Aires'
+  var localidad=find([/([A-Z][A-Z\s]{2,20}?)\s+Buenos\s+Aires/i]);
+
+  // Daños: texto tras la segunda repetición de la narrativa ('DEL LUGAR.')
+  var danos=find([
+    /DEL\s+LUGAR\.[\s\S]{0,300}?DEL\s+LUGAR\.?\s+((?:PUERTA|PARAGOLPE|CAPOT|GUARDABARROS)[^]+?(?:VERIFICAR\.?|VERIFICAR\s))/i,
+    /((?:PUERTA|PARAGOLPE|CAPOT|GUARDABARROS)[^.]+\.(?:[^.]+\.)?)/i
+  ]);
+
+  // Daños denunciados: narrativa de ocurrencia del siniestro (antes del primer 'DEL LUGAR.')
+  var danosDen='';
+  var mOcurr=txt.match(/\b(VENIA|VENÍ|CIRCULABA|CONDUCÍA|CONDUCIENDO|TRANSITABA|ESTABA|ESTACIONADO|CIRCULANDO|MANEJABA|MANEJANDO|IBAN|IBA)\b/i);
+  if(mOcurr){
+    var posIni=txt.indexOf(mOcurr[0]);
+    var posFin=txt.indexOf('DEL LUGAR.');
+    if(posFin>posIni) danosDen=txt.substring(posIni,posFin+10).trim();
+    else danosDen=txt.substring(posIni,posIni+600).trim();
+    // Limpiar espacios dobles y saltos innecesarios
+    danosDen=danosDen.replace(/\s{2,}/g,' ');
+  }
+
+  return{sin,cia:'Seguros Rivadavia',tipo,finsp,fsin,pat:pat?pat.toUpperCase():'',mod,anio,chasis,motor,km:'',aseg,tel,dir,localidad,danos,danosDen};
+}
+
+function extraerProvincia(txt){
+  function findDate(d){
+    var pts=d.split('-');
+    if(pts.length===3&&pts[0].length===2)return pts[2]+'-'+pts[1].padStart(2,'0')+'-'+pts[0].padStart(2,'0');
+    var pts2=d.split('/');
+    if(pts2.length===3)return pts2[2]+'-'+pts2[1].padStart(2,'0')+'-'+pts2[0].padStart(2,'0');
+    return d;
+  }
+
+  // SINIESTRO
+  var sin='';
+  var mSin=txt.match(/(\d{1,3})\s*-\s*(\d{1,3})\s*-\s*(\d{5,})/);
+  if(mSin) sin=mSin[1]+'-'+mSin[2]+'-'+mSin[3];
+
+  // FECHAS
+  // Formato A: "DATE1 Fecha entrada: DATE2" (ambas en la misma línea, PDF.js)
+  // Formato B: "Fecha Ocurrencia: DATE1" y "Fecha entrada: DATE2" separadas
+  var fsin='',finsp='';
+  var mF1=txt.match(/(\d{2}-\d{2}-\d{4})\s+Fecha\s+entrada[:\s]+([\d]{2}-[\d]{2}-[\d]{4})/i);
+  if(mF1){ fsin=findDate(mF1[1]); finsp=findDate(mF1[2]); }
+  else{
+    var mFsin=txt.match(/(\d{2}-\d{2}-\d{4})[\s\S]{0,5}?Fecha\s+Ocurrencia\s*:/i);
+    if(mFsin) fsin=findDate(mFsin[1]);
+    var mFinsp=txt.match(/Fecha\s+entrada\s*:\s*(\d{2}-\d{2}-\d{4})/i);
+    if(mFinsp) finsp=findDate(mFinsp[1]);
+    if(!fsin&&finsp) fsin=finsp;
+  }
+
+  // TIPO — detección por keyword (robusto para ambos formatos)
+  var tipo='';
+  if(/DA[NÑ]O\s+TOTAL/i.test(txt)) tipo='DAÑO TOTAL';
+  else if(/DA[NÑ]O\s+PARCIAL/i.test(txt)) tipo='DAÑO PARCIAL';
+  else{
+    var mTipo=txt.match(/C[oó]d\.?\s*Riesgo\s*:\s*[A-Z]{2,4}\s+([A-Z][A-Z\s]+?)(?=C[oó]d\.?\s*Causa|Autorizado|\n)/i);
+    tipo=mTipo?mTipo[1].trim():'DAÑO PARCIAL';
+  }
+
+  // VEHÍCULO
+  // Formato A (primer PDF): inline "Empresa Rastreo MOTOR PATENTE CHASIS MARCA USO OFICIAL AÑO MODELO"
+  // Formato B (segundo PDF): PDF.js genera "Numero De Motor VALUE Patente VALUE Marca VALUE Año Del Vehiculo VALUE Modelo VALUE"
+  var motor='',pat='',chasis='',marca='',anio='',mod='';
+  var mVeh=txt.match(/Empresa\s+Rastreo\s+([A-Z0-9]{6,20})\s+([A-Z]{2}\d{3}[A-Z]{2}|[A-Z]{3}\d{3})\s+([A-Z0-9]{14,20})\s+([A-Z]{4,})/i);
+  if(mVeh){
+    // Formato A: motor/pat/chasis/marca del bloque inline o dos columnas
+    motor=mVeh[1]; pat=mVeh[2]; chasis=mVeh[3]; marca=mVeh[4];
+    // Intentar año vía "USO OFICIAL XXXX" (vehículos oficiales)
+    var mAnioMod=txt.match(/USO\s+OFICIAL\s+(20\d{2})\s+([A-Z0-9][A-Z0-9\s\.\/\-]+?)\s+(?:AUTOMOVIL|CAMION|CAMIONETA|SEDAN|PICKUP|SUV|FURGON)/i);
+    if(mAnioMod){ anio=mAnioMod[1]; mod=(marca?marca+' ':'')+mAnioMod[2].replace(/\s{2,}/g,' ').trim(); }
+    else{
+      // Formato navegador (dos columnas): valores en bloque tras "Empresa Rastreo"
+      // Secuencia: MOTOR(sep)PAT CHASIS(sep)MARCA USO(sep)AÑO MODELO(sep)TIPO
+      // Los separadores de columna son 2+ espacios, dentro de valor hay 1 espacio
+      var mExt=txt.match(/Empresa\s+Rastreo\s+[A-Z0-9]+\s+[A-Z0-9]+\s+[A-Z0-9]+\s+[A-Z]+\s+[A-Z][A-Z ]*?\s+(20\d{2})\s+([A-Z0-9][A-Z0-9\s\.\/\-]+?)\s{2,}[A-Z]{4,}/i);
+      if(mExt){ anio=mExt[1]; mod=(marca?marca+' ':'')+mExt[2].replace(/\s{2,}/g,' ').trim(); }
+      else mod=marca;
+    }
+  } else if(/Numero\s+De\s+Motor/i.test(txt)){
+    // Formato B: cada campo viene como "Label Valor" en el texto de PDF.js
+    var mMot=txt.match(/Numero\s+De\s+Motor\s+([A-Z0-9]+)/i);
+    var mChas=txt.match(/Numero\s+De\s+Chasis\s+([A-Z0-9]+)/i);
+    var mPatB=txt.match(/Patente\s+([A-Z]{2}\d{3}[A-Z]{2}|[A-Z]{3}\d{3})/i);
+    var mMarcaB=txt.match(/\bMarca\s+([A-Z]+)\s+(?:Uso|A[ñn]o)/i);
+    var mAnioB=txt.match(/A[ñn]o\s+Del\s+Vehiculo\s+(\d{4})/i);
+    var mModB=txt.match(/Modelo\s+([A-Z0-9][A-Z0-9\s\.\/\-]+?)\s+Tipo\s+De\s+Vehiculo/i);
+    if(mMot) motor=mMot[1].trim();
+    if(mChas) chasis=mChas[1].trim();
+    if(mPatB) pat=mPatB[1].trim();
+    if(mMarcaB) marca=mMarcaB[1].trim();
+    if(mAnioB) anio=mAnioB[1].trim();
+    if(mModB) mod=(marca?marca+' ':'')+mModB[1].replace(/\s{2,}/g,' ').trim();
+    else mod=marca;
+  }
+  // Fallbacks independientes: intentar extraer cada campo por su cuenta si quedó vacío
+  // (cubre variantes de renderizado de PDF.js en el navegador)
+  if(!motor){var mM=txt.match(/Numero\s+De\s+Motor\s+([A-Z0-9]{6,20})/i);if(mM)motor=mM[1].trim();}
+  if(!chasis){var mC=txt.match(/Numero\s+De\s+Chasis\s+([A-Z0-9]{14,20})/i);if(mC)chasis=mC[1].trim();}
+  if(!pat){var mP=txt.match(/Patente\s+([A-Z]{2}\d{3}[A-Z]{2}|[A-Z]{3}\d{3})/i);if(mP)pat=mP[1].trim();}
+  if(!marca){var mMb=txt.match(/\bMarca\s+([A-Z]{2,})/i);if(mMb)marca=mMb[1].trim();}
+  // Año: múltiples estrategias, de más a menos específica
+  if(!anio){var mA=txt.match(/A[ñnÑNñÑ].o\s+Del\s+Vehiculo\s+(\d{4})/i);if(mA)anio=mA[1].trim();}
+  if(!anio){var mA2=txt.match(/A.o\s+Del\s+Vehiculo\s+(\d{4})/i);if(mA2)anio=mA2[1].trim();}
+  // Fallback sin depender de "Año": busca 4 dígitos entre "Vehiculo" y "Modelo/Tipo"
+  if(!anio){var mA3=txt.match(/Vehiculo\s+(20\d{2})\s+(?:Modelo|Tipo)/i);if(mA3)anio=mA3[1].trim();}
+  if(!mod&&marca){var mMd=txt.match(/Modelo\s+([A-Z0-9][A-Z0-9\s\.\/\-]+?)\s+Tipo\s+De\s+Vehiculo/i);if(mMd)mod=marca+' '+mMd[1].replace(/\s{2,}/g,' ').trim();else mod=marca;}
+
+  // DAÑOS DEL VEHÍCULO (campo amarillo)
+  // Prioridad 1: anclar en "Motivo" + códigos numéricos que preceden el listado de daños
+  // Prioridad 2: boundary lowercase→Uppercase (evita capturar texto del detalle)
+  // Fallback: cualquier texto antes del label con flag i
+  var danos='';
+  var mDanos=txt.match(/Motivo\s+[\d\s]+([A-Za-z][\s\S]+?)\s+Da[nñ]os\s+del\s+Veh[íi]culo\s*:/i);
+  if(!mDanos) mDanos=txt.match(/[a-z] ([A-Z][A-Za-z0-9\s,\.\/]+?)\s+Da[nñ]os\s+del\s+Veh[íi]culo\s*:/);
+  if(!mDanos) mDanos=txt.match(/([A-Z][A-Z0-9\s,\.\/]+?)\s+Da[nñ]os\s+del\s+Veh[íi]culo\s*:/i);
+  if(mDanos) danos=mDanos[1].replace(/\s{2,}/g,' ').trim();
+
+  // DETALLE DEL SINIESTRO (campo azul / daños denunciados)
+  // Formato A: valor DESPUÉS del label hasta \n\n
+  // Formato B (PDF.js): valor inmediatamente después del label hasta "IMPUTACIONES" o "Daños del Vehiculo:"
+  var danosDen='';
+  var mDen=txt.match(/Detalle\s+del\s+siniestro\s*:\s*([\s\S]+?)(?=\s+IMPUTACIONES|\s+Da[nñ]os\s+del\s+Veh|Endoso\s+Cobertura|Porc\.\s+Franquicia|\n\n)/i);
+  if(mDen){
+    var v=mDen[1].replace(/\s{2,}/g,' ').trim();
+    if(v.length>3) danosDen=v;
+  }
+
+  // ASEGURADO
+  // Formato A: nombre ANTES de "Asegurado:"
+  // Formato B: nombre DESPUÉS de "Asegurado:" (PDF.js: "Asegurado: NOMBRE CUIT/CUIL:")
+  var aseg='';
+  var mAseg=txt.match(/([A-Z][A-Z\s]{4,50}?)\s+Asegurado\s*:/i);
+  if(mAseg) aseg=mAseg[1].trim();
+  if(!aseg){
+    var mAseg2=txt.match(/Asegurado\s*:\s*([A-Z][A-Z\s]+?)(?=\s+CUIT|\s+Base\s+de|\s*\n|$)/i);
+    if(mAseg2) aseg=mAseg2[1].trim();
+  }
+
+  // DOMICILIO: sin saltos de línea para no capturar datos del productor
+  var dir='';
+  var mDir=txt.match(/([A-Z][A-Z0-9 ]{5,60} \d{1,5}) +C\.P\./i);
+  if(mDir) dir=mDir[1].replace(/\s{2,}/g,' ').trim();
+
+  // LOCALIDAD: "Ciudad: FLORENCIO VARELA Detalle..." — termina al próximo label (minúsc.)
+  var localidad='';
+  var mLoc=txt.match(/Ciudad\s*:\s*([A-Z][A-Z\s]{2,30}?)(?=\s+[A-Z][a-z]|\s{2,}|\n|$)/);
+  if(mLoc) localidad=mLoc[1].trim();
+
+  // TELÉFONO
+  var tel='';
+  var mTel=txt.match(/Tel\.\s*:\s*([\d\-]+)/i);
+  if(mTel) tel=mTel[1].trim();
+
+  return{
+    sin:sin,
+    cia:'Provincia Seguros',
+    tipo:tipo,
+    finsp:finsp,
+    fsin:fsin,
+    pat:pat?pat.toUpperCase():'',
+    mod:mod.trim(),
+    anio:anio,
+    chasis:chasis,
+    motor:motor,
+    km:'',
+    aseg:aseg,
+    tel:tel,
+    dir:dir,
+    localidad:localidad,
+    danos:danos,
+    danosDen:danosDen
+  };
+}
+
+function llenarFormulario(d){
+  function set(id,val){var el=s(id);if(el&&val)el.value=val;}
+  set('f-sin',d.sin);set('f-tipo',d.tipo);set('f-finsp',d.finsp);set('f-fsin',d.fsin);
+  set('f-pat',d.pat?d.pat.toUpperCase():d.pat);set('f-mod',d.mod);set('f-anio',d.anio);
+  set('f-chasis',d.chasis);set('f-motor',d.motor);set('f-km',d.km);
+  set('f-aseg',d.aseg);set('f-tel',d.tel);set('f-dir',d.dir);set('f-localidad',d.localidad);
+  set('f-danos',d.danos);set('f-danos-den',d.danosDen);
+  if(d.cia){var sel=s('f-cia');for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===d.cia){sel.selectedIndex=i;break;}}}
+}
+
+function limpiarForm(){
+  ['f-sin','f-cia','f-tipo','f-finsp','f-fsin','f-pat','f-mod','f-anio','f-chasis','f-motor','f-km','f-aseg','f-tel','f-dir','f-localidad','f-danos','f-danos-den'].forEach(function(id){var el=s(id);if(el)el.value='';});
+  hide('bloque-mail');s('mail-prev').textContent='';
+  document.querySelectorAll('#insp-btns .insp-btn').forEach(function(b){b.className='insp-btn';});
+  inspActual=null;if(s('msg-guard'))s('msg-guard').textContent='';
+}
+
+function volverPDF(){hide('paso-form');show('paso-pdf');s('pdf-input').value='';s('pdf-error').textContent='';limpiarForm();}
+
+function selInsp(nombre){
+  inspActual=nombre;
+  document.querySelectorAll('#insp-btns .insp-btn').forEach(function(b){b.className='insp-btn'+(b.textContent===nombre?' sel':'');});
+  show('bloque-mail');
+  s('f-insp-nombre').value=nombre;
+  s('f-mail').value=INSP_MAILS[nombre]||'';
+  actualizarPreview();
+}
+
+function actualizarPreview(){
+  if(!inspActual)return;
+  var _den=g('f-danos-den');
+  s('mail-prev').textContent='ESTUDIO PATITUCCI\nPericias - Danos Materiales - Homologacion CESVI\n\nHola '+inspActual+',\n\nTe asignamos la inspeccion para el '+(g('f-finsp')||'-')+':\n\nSiniestro: '+(g('f-sin')||'-')+'\nCompania: '+(g('f-cia')||'-')+'\nTipo: '+(g('f-tipo')||'-')+'\n\nPatente: '+(g('f-pat')||'-')+'\nModelo: '+(g('f-mod')||'-')+' ('+(g('f-anio')||'-')+')\nChasis: '+(g('f-chasis')||'-')+'\nMotor: '+(g('f-motor')||'-')+'\n\nAsegurado: '+(g('f-aseg')||'-')+'\nTel: '+(g('f-tel')||'-')+'\nDireccion: '+(g('f-dir')||'-')+', '+(g('f-localidad')||'-')+'\n\nDANOS DECLARADOS\n'+(g('f-danos')||'-')+(_den?'\n\nDENUNCIA DEL SINIESTRO\n'+_den:'')+'\n\nPlazo maximo: 48 hs.\n\nSaludos,\nEstudio Patitucci';
+}
+
+['f-sin','f-cia','f-tipo','f-finsp','f-fsin','f-pat','f-mod','f-anio','f-chasis','f-motor','f-km','f-aseg','f-tel','f-dir','f-localidad','f-danos','f-danos-den'].forEach(function(id){
+  s(id)?.addEventListener('input',function(){if(inspActual)actualizarPreview();});
+  s(id)?.addEventListener('change',function(){if(inspActual)actualizarPreview();});
+});
+
+async function guardar(enviarMail){
+  const sin=g('f-sin'),pat=g('f-pat'),msg=s('msg-guard');
+  if(!sin){msg.className='msg err';msg.textContent='Nº siniestro obligatorio.';return;}
+  if(!pat){msg.className='msg err';msg.textContent='Patente obligatoria.';return;}
+  if(!inspActual){msg.className='msg err';msg.textContent='Seleccioná un inspector.';return;}
+  // Validación de duplicados
+  if(inspecciones.some(function(i){return String(i.Siniestro).trim()===String(sin).trim();})){
+    if(!confirm('⚠ Ya existe una inspección con el siniestro "'+sin+'".\n¿Querés guardar de todas formas?'))return;
+  }
+  msg.className='msg';msg.textContent='Guardando...';
+  try{
+    const res=await apiCall({action:'guardar',sin,cia:g('f-cia'),tipo:g('f-tipo'),finsp:g('f-finsp'),fsin:g('f-fsin'),pat:pat.toUpperCase(),mod:g('f-mod'),anio:g('f-anio'),chasis:g('f-chasis'),motor:g('f-motor'),km:g('f-km'),aseg:g('f-aseg'),tel:g('f-tel'),dir:g('f-dir'),localidad:g('f-localidad'),danos:g('f-danos'),danosDen:g('f-danos-den'),inspector:inspActual,mail:s('f-mail').value,estado:'Pendientes de carga',mailEnviado:enviarMail,enviarMail,historial:[{estado:'Pendientes de carga',fecha:new Date().toLocaleString('es-AR'),usuario:'Administrador'}]});
+    if(res.ok){
+      msg.className='msg ok';msg.textContent=enviarMail?'✓ Guardada y mail enviado.':'✓ Guardada.';
+      toast(enviarMail?'Inspección guardada. Mail enviado al inspector.':'Inspección guardada correctamente.','ok');
+      await cargarInspecciones();
+      limpiarForm();volverPDF();
+      setTimeout(function(){adminTab('dashboard');},1500);
+    } else {msg.className='msg err';msg.textContent='Error: '+res.msg;}
+  }catch(e){msg.className='msg err';msg.textContent='Error de conexión.';}
+}
+
+// ─── INSPECTOR ────────────────────────────────────────────────────────────────
+async function cargarInspector(){
+  try{
+    const res=await apiGet();
+    if(res.ok){
+      inspecciones=(res.data||[]).filter(function(i){return i.Inspector===usuarioActual;});
+      actualizarBadgesInspector();renderSeccionInsp('abiertas');
+    }
+  }catch(e){s('lista-abiertas').innerHTML='<div class="loading">Error de conexión.</div>';}
+}
+
+function actualizarBadgesInspector(){
+  const ab=inspecciones.filter(function(i){return i.Estado==='Pendientes de carga';}).length;
+  const carga=inspecciones.filter(function(i){return i.Estado==='Pendiente de verificar';}).length;
+  const rev=inspecciones.filter(function(i){return i.Estado==='Pendientes de resolver';}).length;
+  const noVistas=inspecciones.filter(function(i){return i.Devoluciones&&i.Devoluciones.length&&!notifVistas[i.ID];});
+  s('badge-abiertas').textContent=ab;
+  var bc=s('badge-carga');
+  if(carga>0){bc.style.display='inline';bc.textContent=carga;}else bc.style.display='none';
+  if(rev>0){s('badge-revision').style.display='inline';s('badge-revision').textContent=rev;}else s('badge-revision').style.display='none';
+  const nb=s('notif-bar');
+  if(rev>0){nb.classList.add('show');s('notif-detalle').textContent=rev+' inspeccion(es) con devolución del administrador.';}
+  else nb.classList.remove('show');
+}
+
+function inspTab(tab){
+  ['abiertas','carga','revision','cerradas','perfil'].forEach(function(x){
+    s('smenu-'+x).className='sidebar-item'+(tab===x?' active':'');
+    var el=s('isec-'+x);if(el)el.style.display=tab===x?'block':'none';
+  });
+  hide('panel-rel');
+  if(tab!=='perfil')renderSeccionInsp(tab);
+}
+
+function renderSeccionInsp(tipo){
+  var filtros={
+    abiertas:function(i){return i.Estado==='Pendientes de carga';},
+    carga:function(i){return i.Estado==='Pendiente de verificar';},
+    revision:function(i){return i.Estado==='Pendientes de resolver';},
+    cerradas:function(i){return i.Estado==='Cerradas';}
+  };
+  var lista=inspecciones.filter(filtros[tipo]);
+  var contenedor=s('lista-'+tipo);if(!contenedor)return;
+  var vac=s('vacio-'+tipo);
+  if(!lista.length){contenedor.innerHTML='';if(vac)vac.style.display='block';return;}
+  if(vac)vac.style.display='none';
+  contenedor.innerHTML='<div class="tabla-wrap"><table><thead><tr><th>Fecha</th><th>Siniestro</th><th>Patente</th><th>Asegurado</th><th>Dirección</th><th>Compañía</th><th>Estado</th><th>Acción</th></tr></thead><tbody>'
+    +lista.map(function(i){
+      // Botón según estado
+      var btn='';
+      if(i.Estado==='Pendientes de carga'){
+        btn='<button class="btn-primary btn-sm" onclick="abrirRel(\''+esc(i.ID)+'\')">Cargar relevamiento</button>';
+      } else if(i.Estado==='Pendientes de resolver'){
+        btn='<button class="btn-sm" style="background:rgba(240,124,46,.15);color:var(--orange);border:1px solid rgba(240,124,46,.3)" onclick="abrirRel(\''+esc(i.ID)+'\')">Ver devolución y recargar</button>';
+      } else {
+        btn='<button class="btn-secondary btn-sm" onclick="verDetalleInsp(\''+esc(i.ID)+'\')">Ver detalle</button>';
+      }
+      return'<tr>'
+        +'<td><strong>'+formatFecha(i.FechaInsp)+'</strong></td>'
+        +'<td class="mono">'+esc(i.Siniestro||'-')+'</td>'
+        +'<td><strong>'+esc(i.Patente||'-')+'</strong></td>'
+        +'<td>'+esc(i.Asegurado||'-')+'</td>'
+        +'<td style="font-size:12px">'+esc(i.Direccion||'-')+(i.Localidad?', '+esc(i.Localidad):'')+'</td>'
+        +'<td style="font-size:12px">'+esc(i.Compania||'-')+'</td>'
+        +'<td>'+estadoPill(i.Estado)+'</td>'
+        +'<td>'+btn+'</td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table></div>';
+}
+
+function verDetalleInsp(id){
+  var i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
+  var rel=i.Relevamiento;
+  if(typeof rel==='string'){try{rel=JSON.parse(rel);}catch(e){rel=null;}}
+  s('modal-titulo').textContent=(i.Siniestro||'')+' · '+(i.Patente||'');
+  var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;font-size:13px;margin-bottom:16px">'
+    +'<div><span style="font-size:11px;color:var(--text2);display:block">Vehículo</span>'+esc(i.Modelo||'-')+' '+(i.Anio?'('+esc(i.Anio)+')':'')+'</div>'
+    +'<div><span style="font-size:11px;color:var(--text2);display:block">Fecha</span>'+formatFecha(i.FechaInsp)+'</div>'
+    +'<div style="grid-column:1/-1"><span style="font-size:11px;color:var(--text2);display:block">Daños declarados</span>'+esc(i.Danos||'-')+'</div>'
+    +'</div>';
+  if(i.Devoluciones&&i.Devoluciones.length){
+    html+='<div style="border-left:3px solid var(--yellow);padding-left:12px;margin-bottom:14px">';
+    html+='<p style="font-size:11px;font-weight:600;color:var(--yellow);margin-bottom:8px">🔔 Devoluciones del Admin</p>';
+    i.Devoluciones.forEach(function(d){html+='<div class="dev-burbuja">'+esc(d.texto)+' <span style="font-size:11px;opacity:.6">· '+d.fecha+'</span></div>';});
+    html+='</div>';
+  }
+  if(rel&&rel.km){
+    html+='<div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.2);border-radius:10px;padding:14px">';
+    html+='<p style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:10px">✓ Relevamiento enviado</p>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-bottom:10px">';
+    html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:2px">Km verificado</span><strong style="color:var(--text)">'+esc(rel.km)+'</strong></div>';
+    if(rel.taller)html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:2px">Taller</span><strong style="color:var(--text)">'+esc(rel.taller)+'</strong></div>';
+    html+='</div>';
+    html+='<div style="margin-bottom:8px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Daños verificados</span>';
+    html+='<div style="background:var(--bg3);border-radius:6px;padding:8px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.danos||'-')+'</div></div>';
+    if(rel.notas){
+      html+='<div style="margin-bottom:10px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Mano de obra</span>';
+      html+='<div style="background:var(--bg3);border-radius:6px;padding:8px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.notas)+'</div></div>';
+    }
+    html+=renderFotos(rel);
+    html+='</div>';
+  }
+  s('modal-cuerpo').innerHTML=html;
+  s('modal').classList.add('open');
+}
+
+// ─── BORRADOR ────────────────────────────────────────────────────────────────
+function guardarBorrador(){
+  if(!relId)return;
+  var bd={km:s('rel-km').value,danos:s('rel-danos').value,notas:s('rel-notas').value,
+    taller:s('rel-taller').value,telTaller:s('rel-tel').value,mailTaller:s('rel-mail').value,
+    cuit:s('rel-cuit').value,ts:Date.now()};
+  try{localStorage.setItem('bdr_'+relId,JSON.stringify(bd));}catch(e){}
+}
+['rel-km','rel-danos','rel-notas','rel-taller','rel-tel','rel-mail','rel-cuit'].forEach(function(id){
+  var el=s(id);if(el)el.addEventListener('input',guardarBorrador);
+});
+
+function abrirRel(id){
+  relId=id;notifVistas[id]=true;
+  var i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
+  s('rel-titulo').textContent='Relevamiento – '+i.Patente;
+  // Pre-cargar datos del relevamiento anterior si existen
+  var rel=i.Relevamiento;
+  if(rel&&rel.km){
+    s('rel-km').value=rel.km||'';
+    s('rel-danos').value=rel.danos||'';
+    s('rel-notas').value=rel.notas||'';
+    s('rel-taller').value=rel.taller||'';
+    s('rel-tel').value=rel.telTaller||'';
+    s('rel-mail').value=rel.mailTaller||'';
+    s('rel-cuit').value=rel.cuit||'';
+  } else {
+    ['rel-km','rel-danos','rel-notas','rel-taller','rel-tel','rel-mail','rel-cuit'].forEach(function(x){s(x).value='';});
+  }
+  // Verificar si hay un borrador guardado más reciente
+  try{
+    var bdrRaw=localStorage.getItem('bdr_'+id);
+    if(bdrRaw){
+      var bdr=JSON.parse(bdrRaw);
+      var hace=Math.round((Date.now()-bdr.ts)/60000);
+      if(confirm('💾 Hay un borrador guardado hace '+hace+' min.\n¿Restaurarlo?')){
+        if(bdr.km)s('rel-km').value=bdr.km;
+        if(bdr.danos)s('rel-danos').value=bdr.danos;
+        if(bdr.notas)s('rel-notas').value=bdr.notas;
+        if(bdr.taller)s('rel-taller').value=bdr.taller;
+        if(bdr.telTaller)s('rel-tel').value=bdr.telTaller;
+        if(bdr.mailTaller)s('rel-mail').value=bdr.mailTaller;
+        if(bdr.cuit)s('rel-cuit').value=bdr.cuit;
+      }
+    }
+  }catch(e){}
+  s('rel-fotos').value='';s('rel-preview').innerHTML='';s('rel-errores').textContent='';s('msg-rel').textContent='';
+  fotosPendientes=[];
+  // Mostrar devoluciones del admin si las hay
+  var devDiv=s('rel-devs');
+  if(devDiv){
+    if(i.Devoluciones&&i.Devoluciones.length){
+      devDiv.style.display='block';
+      devDiv.innerHTML='<div style="border-left:3px solid var(--orange);padding:10px 14px;background:rgba(240,124,46,.06);border-radius:0 8px 8px 0;margin-bottom:16px">'
+        +'<p style="font-size:11px;font-weight:600;color:var(--orange);margin-bottom:8px">🔔 Devoluciones del Admin</p>'
+        +i.Devoluciones.map(function(d){return'<div style="font-size:13px;color:var(--text);margin-bottom:6px">'+esc(d.texto)+'<span style="font-size:11px;color:var(--text3);margin-left:8px">'+d.fecha+'</span></div>';}).join('')
+        +'</div>';
+    } else {
+      devDiv.style.display='none';devDiv.innerHTML='';
+    }
+  }
+  ['isec-abiertas','isec-carga','isec-revision','isec-cerradas','isec-perfil','notif-bar'].forEach(function(x){hide(x);});
+  show('panel-rel');
+}
+
+function cerrarRel(){hide('panel-rel');inspTab('abiertas');actualizarBadgesInspector();}
+
+s('rel-fotos').addEventListener('change',async function(e){
+  var files=Array.from(e.target.files);fotosPendientes=[];
+  var prev=s('rel-preview'),errDiv=s('rel-errores');
+  prev.innerHTML='';errDiv.textContent='';
+  var errores=[];var MAX=4*1024*1024;
+  for(var fi=0;fi<files.length;fi++){
+    var file=files[fi];
+    var esJpg=file.type==='image/jpeg'||file.name.toLowerCase().endsWith('.jpg')||file.name.toLowerCase().endsWith('.jpeg');
+    if(!esJpg){errores.push('"'+file.name+'" no es JPG.');continue;}
+    if(file.size>MAX){errores.push('"'+file.name+'" supera 4 MB.');continue;}
+    var dataUrl=await new Promise(function(res){var r=new FileReader();r.onload=function(){res(r.result);};r.readAsDataURL(file);});
+    fotosPendientes.push(dataUrl);
+    var img=document.createElement('img');
+    img.src=dataUrl;img.style.cssText='width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer';
+    img.onclick=function(){window.open(this.src,'_blank');};
+    prev.appendChild(img);
+  }
+  if(errores.length)errDiv.textContent=errores.join(' · ');
+});
+
+async function enviarRel(){
+  var km=s('rel-km').value.trim(),danos=s('rel-danos').value.trim(),msg=s('msg-rel');
+  if(!km){msg.className='msg err';msg.textContent='Kilometraje obligatorio.';return;}
+  if(!danos){msg.className='msg err';msg.textContent='Daños obligatorio.';return;}
+  if(!fotosPendientes.length){msg.className='msg err';msg.textContent='Subí al menos una foto JPG.';return;}
+  msg.className='msg';msg.textContent='Enviando ('+fotosPendientes.length+' foto'+(fotosPendientes.length>1?'s':'')+')...';
+  var rel={km,danos,notas:s('rel-notas').value.trim(),taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),fotos:fotosPendientes,fechaEnvio:new Date().toISOString()};
+  try{
+    var i=inspecciones.find(function(x){return x.ID==relId;});
+    var res=await apiCall({action:'actualizar',id:relId,relevamiento:rel,estado:'Pendiente de verificar'});
+    // Si el GAS devolvió fotosLinks / cantFotos / carpetaUrl, incorporarlos al rel local
+    if(res&&res.relevamiento){
+      if(res.relevamiento.fotosLinks) rel.fotosLinks=res.relevamiento.fotosLinks;
+      if(res.relevamiento.cantFotos)  rel.cantFotos=res.relevamiento.cantFotos;
+      if(res.relevamiento.carpetaUrl) rel.carpetaUrl=res.relevamiento.carpetaUrl;
+    } else if(res&&res.fotosLinks){
+      rel.fotosLinks=res.fotosLinks;
+      if(res.cantFotos)  rel.cantFotos=res.cantFotos;
+      if(res.carpetaUrl) rel.carpetaUrl=res.carpetaUrl;
+    }
+    // Siempre guardar la cantidad aunque no lleguen links
+    if(!rel.cantFotos) rel.cantFotos=fotosPendientes.length;
+    if(i){i.Relevamiento=rel;i.Estado='Pendiente de verificar';}
+    try{localStorage.removeItem('bdr_'+relId);}catch(e){}
+    msg.className='msg ok';msg.textContent='✓ Relevamiento enviado. La inspección pasó a "Pendiente de verificar".';
+    toast('Relevamiento enviado correctamente.','ok');
+    setTimeout(function(){cerrarRel();},1500);
+  }catch(e){msg.className='msg err';msg.textContent='Error al enviar.';}
+}
+
+// ─── PDFs ─────────────────────────────────────────────────────────────────────
+function generarPDF(id){
+  var i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
+  var fecha=new Date().toLocaleDateString('es-AR');
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#111}.mb{display:flex;justify-content:space-between;border-bottom:2px solid #1a1a6e;padding-bottom:12px;margin-bottom:18px}h2{font-size:13px;background:#1a1a6e;color:#fff;padding:5px 10px;border-radius:4px;margin:14px 0 8px}.g{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px}.c{margin-bottom:4px}.c span{color:#555;font-size:11px}.c p{margin:0;font-weight:500}.full{grid-column:1/-1}footer{margin-top:30px;border-top:1px solid #ccc;padding-top:8px;font-size:10px;color:#888;text-align:center}</style></head><body>'
+    +'<div class="mb"><div><h1 style="font-size:18px;margin:0;color:#1a1a6e">Estudio Patitucci</h1><p style="font-size:11px;color:#555;margin:2px 0">Pericias - Danos Materiales - Homologacion CESVI</p></div><div style="text-align:right"><strong>INFORME DE INSPECCION</strong><br/>'+fecha+'</div></div>'
+    +'<h2>Siniestro</h2><div class="g"><div class="c"><span>N Siniestro</span><p>'+(i.Siniestro||'-')+'</p></div><div class="c"><span>Compania</span><p>'+(i.Compania||'-')+'</p></div><div class="c"><span>Tipo</span><p>'+(i.Tipo||'-')+'</p></div><div class="c"><span>Fecha inspeccion</span><p>'+formatFecha(i.FechaInsp)+'</p></div><div class="c"><span>Fecha siniestro</span><p>'+formatFecha(i.FechaSin)+'</p></div><div class="c"><span>Inspector</span><p>'+(i.Inspector||'-')+'</p></div></div>'
+    +'<h2>Vehiculo</h2><div class="g"><div class="c"><span>Patente</span><p>'+(i.Patente||'-')+'</p></div><div class="c"><span>Modelo</span><p>'+(i.Modelo||'-')+' '+(i.Anio?'('+i.Anio+')':"")+'</p></div><div class="c"><span>Chasis</span><p>'+(i.Chasis||'-')+'</p></div><div class="c"><span>Motor</span><p>'+(i.Motor||'-')+'</p></div><div class="c"><span>Km declarado</span><p>'+(i.Km||'-')+'</p></div></div>'
+    +'<h2>Asegurado</h2><div class="g"><div class="c"><span>Nombre</span><p>'+(i.Asegurado||'-')+'</p></div><div class="c"><span>Tel</span><p>'+(i.Tel||'-')+'</p></div><div class="c full"><span>Direccion</span><p>'+(i.Direccion||'-')+', '+(i.Localidad||'')+'</p></div><div class="c full"><span>Danos</span><p>'+(i.Danos||'-')+'</p></div></div>'
+    +(i.Relevamiento&&i.Relevamiento.km?'<h2>Relevamiento</h2><div class="g"><div class="c"><span>Km verificado</span><p>'+i.Relevamiento.km+'</p></div><div class="c full"><span>Danos verificados</span><p>'+(i.Relevamiento.danos||'-')+'</p></div>'+(i.Relevamiento.notas?'<div class="c full"><span>Mano de obra</span><p>'+i.Relevamiento.notas+'</p></div>':'')+'</div>':'<p style="color:#888;font-style:italic">Relevamiento pendiente.</p>')
+    +'<footer>Estudio Patitucci - '+fecha+'</footer></body></html>';
+  var win=window.open('','_blank');if(win){win.document.write(html);win.document.close();setTimeout(function(){win.print();},600);}
+}
+
+function generarPDFRel(id){
+  var i=inspecciones.find(function(x){return x.ID==id;});
+  if(!i){return;}
+  var rel=i.Relevamiento;if(typeof rel==='string'){try{rel=JSON.parse(rel);}catch(e){rel=null;}}
+  if(!rel||!rel.km){alert('No hay relevamiento.');return;}
+  var fecha=new Date().toLocaleDateString('es-AR');
+  var fechaRel=rel.fechaEnvio?new Date(rel.fechaEnvio).toLocaleDateString('es-AR'):'-';
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#111}.mb{display:flex;justify-content:space-between;border-bottom:2px solid #1a1a6e;padding-bottom:12px;margin-bottom:18px}h2{font-size:13px;background:#1a1a6e;color:#fff;padding:5px 10px;border-radius:4px;margin:14px 0 8px}.g{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px}.c{margin-bottom:6px}.c span{color:#555;font-size:11px;display:block}.c p{margin:0;font-weight:500}.full{grid-column:1/-1}.ref{background:#f5f5f5;border-left:3px solid #1a1a6e;padding:8px 12px;margin-bottom:10px}.firma{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:40px}.fl{border-top:1px solid #333;padding-top:6px;font-size:11px;color:#555;text-align:center}footer{margin-top:30px;border-top:1px solid #ccc;padding-top:8px;font-size:10px;color:#888;text-align:center}</style></head><body>'
+    +'<div class="mb"><div><h1 style="font-size:18px;margin:0;color:#1a1a6e">Estudio Patitucci</h1><p style="font-size:11px;color:#555;margin:2px 0">Pericias - Danos Materiales - Homologacion CESVI</p></div><div style="text-align:right"><strong>INFORME DE RELEVAMIENTO</strong><br/>'+fechaRel+'</div></div>'
+    +'<h2>Referencia</h2><div class="ref"><p><strong>Siniestro:</strong> '+(i.Siniestro||'-')+' - <strong>Compania:</strong> '+(i.Compania||'-')+'</p><p><strong>Patente:</strong> '+(i.Patente||'-')+' - <strong>Vehiculo:</strong> '+(i.Modelo||'-')+' '+(i.Anio?'('+i.Anio+')':"")+'</p><p><strong>Inspector:</strong> '+(i.Inspector||'-')+' - <strong>Lugar:</strong> '+(i.Direccion||'-')+', '+(i.Localidad||'')+'</p></div>'
+    +'<h2>Datos Verificados</h2><div class="g"><div class="c"><span>Km verificado</span><p>'+(rel.km||'-')+'</p></div><div class="c"><span>Chasis</span><p>'+(i.Chasis||'-')+'</p></div><div class="c"><span>Motor</span><p>'+(i.Motor||'-')+'</p></div></div>'
+    +'<h2>Taller</h2><div class="g"><div class="c"><span>Nombre</span><p>'+(rel.taller||'-')+'</p></div><div class="c"><span>Tel</span><p>'+(rel.telTaller||'-')+'</p></div><div class="c"><span>Mail</span><p>'+(rel.mailTaller||'-')+'</p></div><div class="c"><span>CUIT</span><p>'+(rel.cuit||'-')+'</p></div></div>'
+    +'<h2>Danos Verificados</h2><div style="background:#fff8f0;border:1px solid #fdd;border-radius:4px;padding:10px;min-height:50px"><p style="margin:0;line-height:1.6">'+(rel.danos||'-')+'</p></div>'
+    +(rel.notas?'<h2>Mano de Obra</h2><div style="background:#f8f8ff;border:1px solid #dde;border-radius:4px;padding:10px"><p style="margin:0;line-height:1.6">'+rel.notas+'</p></div>':'')
+    +'<div style="margin-top:16px;font-size:12px;color:#555">Fotos: '+(rel.cantFotos||0)+' - Archivadas en Google Drive.</div>'
+    +'<div class="firma"><div class="fl">Firma Inspector<br/><strong>'+(i.Inspector||'')+'</strong></div><div class="fl">Sello Estudio Patitucci</div></div>'
+    +'<footer>Estudio Patitucci - '+fecha+'</footer></body></html>';
+  var win=window.open('','_blank');if(win){win.document.write(html);win.document.close();setTimeout(function(){win.print();},600);}
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function toast(msg,tipo){
+  tipo=tipo||'ok';
+  var icons={ok:'✓',err:'✕',info:'ℹ'};
+  var container=s('toast-container');
+  var el=document.createElement('div');
+  el.className='toast '+tipo;
+  el.innerHTML='<span style="font-size:15px;flex-shrink:0">'+icons[tipo]+'</span><span>'+msg+'</span>';
+  container.appendChild(el);
+  setTimeout(function(){
+    el.style.animation='toastOut .3s ease forwards';
+    setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},300);
+  },3500);
+}
+
+// ─── EDITAR INSPECCIÓN ────────────────────────────────────────────────────────
+function abrirEditar(id){
+  editId=id;
+  var i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
+  s('e-sin').value=i.Siniestro||'';
+  var selCia=s('e-cia');
+  for(var k=0;k<selCia.options.length;k++){if(selCia.options[k].text===(i.Compania||'')){selCia.selectedIndex=k;break;}}
+  s('e-tipo').value=i.Tipo||'';
+  s('e-finsp').value=i.FechaInsp||'';
+  s('e-fsin').value=i.FechaSin||'';
+  s('e-pat').value=i.Patente||'';
+  s('e-mod').value=i.Modelo||'';
+  s('e-anio').value=i.Anio||'';
+  s('e-chasis').value=i.Chasis||'';
+  s('e-motor').value=i.Motor||'';
+  s('e-km').value=i.Km||'';
+  s('e-aseg').value=i.Asegurado||'';
+  s('e-tel').value=i.Tel||'';
+  s('e-dir').value=i.Direccion||'';
+  s('e-localidad').value=i.Localidad||'';
+  s('e-danos').value=i.Danos||'';
+  s('e-danos-den').value=i.DanosDen||'';
+  var me=s('msg-editar');if(me)me.textContent='';
+  cerrarModal();
+  s('modal-editar').classList.add('open');
+}
+
+function cerrarEditar(){s('modal-editar').classList.remove('open');}
+
+async function guardarEdicion(){
+  var me=s('msg-editar');
+  me.className='msg';me.textContent='Guardando...';
+  var datos={
+    action:'editar',id:editId,
+    sin:s('e-sin').value.trim(),
+    cia:s('e-cia').value,
+    tipo:s('e-tipo').value.trim(),
+    finsp:s('e-finsp').value,
+    fsin:s('e-fsin').value,
+    pat:s('e-pat').value.trim().toUpperCase(),
+    mod:s('e-mod').value.trim(),
+    anio:s('e-anio').value.trim(),
+    chasis:s('e-chasis').value.trim(),
+    motor:s('e-motor').value.trim(),
+    km:s('e-km').value.trim(),
+    aseg:s('e-aseg').value.trim(),
+    tel:s('e-tel').value.trim(),
+    dir:s('e-dir').value.trim(),
+    localidad:s('e-localidad').value.trim(),
+    danos:s('e-danos').value.trim(),
+    danosDen:s('e-danos-den').value.trim()
+  };
+  try{
+    var res=await apiCall(datos);
+    if(!res||res.ok!==false){
+      var i=inspecciones.find(function(x){return x.ID==editId;});
+      if(i){
+        i.Siniestro=datos.sin;i.Compania=datos.cia;i.Tipo=datos.tipo;
+        i.FechaInsp=datos.finsp;i.FechaSin=datos.fsin;
+        i.Patente=datos.pat;i.Modelo=datos.mod;i.Anio=datos.anio;
+        i.Chasis=datos.chasis;i.Motor=datos.motor;i.Km=datos.km;
+        i.Asegurado=datos.aseg;i.Tel=datos.tel;
+        i.Direccion=datos.dir;i.Localidad=datos.localidad;
+        i.Danos=datos.danos;i.DanosDen=datos.danosDen;
+      }
+      me.className='msg ok';me.textContent='✓ Guardado correctamente.';
+      actualizarBadgesAdmin();
+      renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+      var savedId=editId;
+      setTimeout(function(){cerrarEditar();if(savedId)abrirModal(savedId);},1200);
+    } else {
+      me.className='msg err';me.textContent='Error: '+(res.msg||'No se pudo guardar.');
+    }
+  }catch(e){me.className='msg err';me.textContent='Error de conexión.';}
+}
+
+// ─── URGENTE / PRIORIDAD ──────────────────────────────────────────────────────
+async function toggleUrgente(id){
+  var i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
+  i.Urgente=!i.Urgente;
+  try{
+    await apiCall({action:'actualizar',id:id,urgente:i.Urgente});
+    actualizarBadgesAdmin();
+    renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+    abrirModal(id);
+  }catch(e){i.Urgente=!i.Urgente;alert('Error al actualizar prioridad.');}
+}
+
+// ─── REASIGNAR INSPECTOR ──────────────────────────────────────────────────────
+async function confirmarReasignar(id){
+  var sel=s('reasig-sel-'+id);if(!sel)return;
+  var nuevoInsp=sel.value;if(!nuevoInsp){alert('Seleccioná un inspector.');return;}
+  var i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
+  if(nuevoInsp===i.Inspector){alert('Ya está asignado a '+nuevoInsp+'.');return;}
+  if(!confirm('¿Reasignar de '+i.Inspector+' a '+nuevoInsp+'?'))return;
+  var anterior=i.Inspector;
+  i.Inspector=nuevoInsp;
+  if(!i.Historial)i.Historial=[];
+  i.Historial.push({estado:'Reasignado → '+nuevoInsp+' (antes: '+anterior+')',fecha:new Date().toLocaleString('es-AR'),usuario:'Administrador'});
+  try{
+    await apiCall({action:'actualizar',id:id,inspector:nuevoInsp,mail:INSP_MAILS[nuevoInsp]||'',historial:i.Historial,notificar:true});
+    actualizarBadgesAdmin();
+    renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+    abrirModal(id);
+  }catch(e){i.Inspector=anterior;alert('Error al reasignar.');}
+}
+
+// ── Auto-login al recargar página ──────────────────────────────
+async function autoLogin(){
+  var nombre;
+  try{nombre=localStorage.getItem('ep_session');}catch(e){return;}
+  if(!nombre)return;
+  // Hay sesión guardada: mostrar loading y restaurar directamente
+  hide('screen-login');
+  var ls=s('screen-loading');ls.style.display='flex';
+  s('loading-msg').textContent='Restaurando sesión...';
+  try{
+    if(nombre==='Administrador'){
+      usuarioActual='Administrador';
+      var sa=s('screen-admin');sa.style.display='flex';sa.style.flexDirection='column';
+      s('admin-user-label').textContent='Administrador';
+      await cargarInspecciones();
+      ls.style.display='none';
+      adminTab('dashboard');
+      iniciarAutoRefresh();
+    } else {
+      usuarioActual=nombre;
+      var si=s('screen-inspector');si.style.display='flex';si.style.flexDirection='column';
+      s('insp-user-label').textContent=nombre;
+      s('perfil-nombre').textContent=nombre;
+      s('perfil-avatar').textContent=nombre[0].toUpperCase();
+      s('perfil-mail').textContent=INSP_MAILS[nombre]||'-';
+      await cargarInspector();
+      ls.style.display='none';
+    }
+  } catch(e){
+    // Si falla la carga, volver al login limpio
+    try{localStorage.removeItem('ep_session');}catch(ex){}
+    ls.style.display='none';
+    s('screen-login').style.display='flex';
+  }
+}
+document.addEventListener('DOMContentLoaded', autoLogin);
+
+// ── PWA: Service Worker + instalación ────────────────────────────────────────
+(function(){
+  // Generar íconos PNG con canvas (para iOS apple-touch-icon)
+  function generarIconoPNG(size){
+    try{
+      var c=document.createElement('canvas');c.width=size;c.height=size;
+      var ctx=c.getContext('2d');
+      // Fondo azul oscuro con bordes redondeados
+      ctx.fillStyle='#1a1a6e';
+      ctx.beginPath();ctx.roundRect(0,0,size,size,size*0.16);ctx.fill();
+      // Círculo interior
+      ctx.fillStyle='#2d2d9f';
+      ctx.beginPath();ctx.arc(size/2,size/2,size*0.38,0,Math.PI*2);ctx.fill();
+      // Texto EP
+      ctx.fillStyle='#ffffff';
+      ctx.font='bold '+(size*0.32)+'px Arial,sans-serif';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('EP',size/2,size/2+size*0.03);
+      return c.toDataURL('image/png');
+    }catch(e){return null;}
+  }
+
+  // Actualizar apple-touch-icon con PNG generado
+  var png=generarIconoPNG(180);
+  if(png){
+    var link=document.getElementById('apple-touch-icon');
+    if(link)link.href=png;
+  }
+
+  // Registrar Service Worker
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',function(){
+      navigator.serviceWorker.register('./sw.js').then(function(reg){
+        // Detectar actualización disponible
+        reg.addEventListener('updatefound',function(){
+          var newSW=reg.installing;
+          newSW.addEventListener('statechange',function(){
+            if(newSW.state==='installed'&&navigator.serviceWorker.controller){
+              toast('Nueva versión disponible. Recargá para actualizar.','info');
+            }
+          });
+        });
+      }).catch(function(){
+        // En file:// falla silenciosamente, es esperado
+      });
+    });
+  }
+
+  // Banner de instalación (Android/Chrome)
+  var installPrompt=null;
+  var banner=document.getElementById('pwa-banner');
+  var dismissed=false;
+  try{dismissed=!!localStorage.getItem('ep_pwa_dismissed');}catch(e){}
+
+  window.addEventListener('beforeinstallprompt',function(e){
+    e.preventDefault();
+    installPrompt=e;
+    if(!dismissed){
+      // Mostrar banner 3 segundos después de cargar
+      setTimeout(function(){
+        if(banner)banner.style.display='flex';
+      },3000);
+    }
+  });
+
+  document.getElementById('pwa-install-btn').addEventListener('click',function(){
+    if(!installPrompt)return;
+    installPrompt.prompt();
+    installPrompt.userChoice.then(function(r){
+      if(r.outcome==='accepted'){
+        toast('¡App instalada! Ya podés usarla desde tu pantalla de inicio.','ok');
+      }
+      if(banner)banner.style.display='none';
+      installPrompt=null;
+    });
+  });
+
+  document.getElementById('pwa-dismiss-btn').addEventListener('click',function(){
+    if(banner)banner.style.display='none';
+    try{localStorage.setItem('ep_pwa_dismissed','1');}catch(e){}
+  });
+
+  // iOS: mostrar instrucción manual si es Safari en iPhone
+  var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  var isStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  if(isIOS&&!isStandalone&&!dismissed){
+    setTimeout(function(){
+      toast('En iPhone: tocá Compartir → "Agregar a pantalla de inicio" para instalar la app.','info');
+      try{localStorage.setItem('ep_pwa_dismissed','1');}catch(e){}
+    },4000);
+  }
+})();
+</script>
+</body>
+</html>
