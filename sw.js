@@ -1,5 +1,5 @@
 // ── Service Worker — Estudio Patitucci ──────────────────────────────────────
-const CACHE_NAME = 'ep-v1';
+const CACHE_NAME = 'ep-v2';
 
 // Recursos a cachear para uso offline
 const STATIC_ASSETS = [
