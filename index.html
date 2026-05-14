@@ -118,9 +118,157 @@ tr:hover td{background:rgba(255,255,255,.02)}
 #pwa-banner .pwa-text span{font-size:11px;color:var(--text2)}
 #pwa-banner .pwa-btns{display:flex;flex-direction:column;gap:6px;flex-shrink:0}
 #pwa-banner .pwa-btns button{font-size:11px;padding:5px 10px;border-radius:6px}
+
+/* ── LANDING PAGE ── */
+#landing-page{display:flex;flex-direction:column;min-height:100vh;font-family:'Segoe UI',system-ui,sans-serif;background:#fff;position:fixed;inset:0;z-index:9999;overflow-y:auto}
+#landing-page.hidden{display:none}
+.lp-nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,22,40,.96);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.08);padding:0 1.5rem;height:64px;display:flex;align-items:center;justify-content:space-between}
+.lp-nav-brand{display:flex;align-items:center;gap:.75rem;text-decoration:none}
+.lp-nav-logo{width:36px;height:36px;background:#2563eb;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1rem;color:#fff}
+.lp-nav-name{color:#fff;font-size:1rem;font-weight:600}
+.lp-nav-name span{color:#94a3b8;font-weight:400;font-size:.8rem;display:block;line-height:1}
+.lp-btn-nav{background:#2563eb;color:#fff;border:none;padding:.5rem 1.25rem;border-radius:6px;font-size:.875rem;font-weight:600;cursor:pointer;transition:background .2s}
+.lp-btn-nav:hover{background:#1d4ed8}
+.lp-hero{margin-top:64px;background:linear-gradient(135deg,#0a1628 0%,#0f2044 40%,#1a3560 100%);min-height:calc(100vh - 64px);display:flex;align-items:center;position:relative;overflow:hidden;padding:4rem 1.5rem 3rem}
+.lp-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(37,99,235,.15) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(30,74,140,.2) 0%,transparent 50%)}
+.lp-hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:60px 60px}
+.lp-hero-content{position:relative;max-width:720px;margin:0 auto;text-align:center}
+.lp-hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(37,99,235,.2);border:1px solid rgba(37,99,235,.4);color:#93c5fd;padding:.35rem 1rem;border-radius:100px;font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:1.75rem}
+.lp-hero-badge::before{content:'';width:6px;height:6px;background:#60a5fa;border-radius:50%;animation:lp-pulse 2s infinite}
+@keyframes lp-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.lp-hero-title{color:#fff;font-size:clamp(1.75rem,5vw,3rem);font-weight:800;line-height:1.15;letter-spacing:-.02em;margin-bottom:.5rem}
+.lp-hero-title .lp-hl{color:#60a5fa;display:block}
+.lp-hero-sub{color:#94a3b8;font-size:clamp(.95rem,2vw,1.15rem);line-height:1.7;margin:1.25rem auto 2.5rem;max-width:560px}
+.lp-cta-group{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.lp-btn-primary{background:#2563eb;color:#fff;border:none;padding:.875rem 2rem;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:.5rem;box-shadow:0 4px 24px rgba(37,99,235,.4)}
+.lp-btn-primary:hover{background:#1d4ed8;transform:translateY(-1px)}
+.lp-btn-ghost{background:transparent;color:#94a3b8;border:1px solid rgba(255,255,255,.2);padding:.875rem 2rem;border-radius:8px;font-size:1rem;font-weight:600;cursor:pointer;transition:all .2s}
+.lp-btn-ghost:hover{border-color:rgba(255,255,255,.4);color:#fff}
+.lp-hero-stats{display:flex;justify-content:center;gap:2.5rem;margin-top:3.5rem;padding-top:2.5rem;border-top:1px solid rgba(255,255,255,.08);flex-wrap:wrap}
+.lp-stat-number{color:#fff;font-size:1.75rem;font-weight:800;line-height:1}
+.lp-stat-label{color:#94a3b8;font-size:.78rem;margin-top:.25rem;letter-spacing:.04em;text-transform:uppercase}
+.lp-services{background:#f8fafc;padding:5rem 1.5rem}
+.lp-section-header{text-align:center;max-width:600px;margin:0 auto 3rem}
+.lp-section-tag{color:#2563eb;font-size:.8rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.75rem}
+.lp-section-title{color:#0a1628;font-size:clamp(1.5rem,3vw,2.25rem);font-weight:800;line-height:1.2;letter-spacing:-.02em;margin-bottom:1rem}
+.lp-section-desc{color:#64748b;font-size:1rem;line-height:1.7}
+.lp-services-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;max-width:1000px;margin:0 auto}
+.lp-svc-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:2rem;transition:all .3s;position:relative;overflow:hidden}
+.lp-svc-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#2563eb,#1e4a8c);opacity:0;transition:opacity .3s}
+.lp-svc-card:hover{border-color:#2563eb;box-shadow:0 8px 40px rgba(37,99,235,.1);transform:translateY(-2px)}
+.lp-svc-card:hover::before{opacity:1}
+.lp-svc-icon{width:48px;height:48px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1.25rem}
+.lp-svc-title{color:#0a1628;font-size:1.05rem;font-weight:700;margin-bottom:.625rem}
+.lp-svc-desc{color:#64748b;font-size:.9rem;line-height:1.65}
+.lp-svc-badge{display:inline-block;background:#eff6ff;color:#2563eb;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:.2rem .6rem;border-radius:100px;margin-top:1rem}
+.lp-certifications{background:#fff;padding:4rem 1.5rem;border-top:1px solid #e2e8f0}
+.lp-cert-inner{max-width:900px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:center}
+.lp-cert-list{list-style:none;padding:0;margin:1.5rem 0 0;display:flex;flex-direction:column;gap:.75rem}
+.lp-cert-list li{display:flex;align-items:center;gap:.75rem;color:#0a1628;font-size:.9rem;font-weight:500}
+.lp-cert-list li::before{content:'✓';width:22px;height:22px;background:linear-gradient(135deg,#2563eb,#1e4a8c);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:800;flex-shrink:0}
+.lp-cert-cards{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.lp-cert-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:1.25rem;text-align:center}
+.lp-cert-card-icon{font-size:2rem;margin-bottom:.5rem}
+.lp-cert-card-title{color:#0a1628;font-size:.85rem;font-weight:700}
+.lp-cert-card-sub{color:#64748b;font-size:.75rem;margin-top:.25rem}
+.lp-access{background:linear-gradient(135deg,#0a1628,#1a3560);padding:5rem 1.5rem;text-align:center;position:relative;overflow:hidden}
+.lp-access::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(37,99,235,.2) 0%,transparent 70%)}
+.lp-access-content{position:relative;max-width:560px;margin:0 auto}
+.lp-access-icon{width:64px;height:64px;background:rgba(37,99,235,.2);border:1px solid rgba(37,99,235,.4);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.75rem;margin:0 auto 1.5rem}
+.lp-access-title{color:#fff;font-size:clamp(1.5rem,3vw,2rem);font-weight:800;margin-bottom:.75rem}
+.lp-access-desc{color:#94a3b8;font-size:1rem;line-height:1.6;margin-bottom:2rem}
+.lp-footer{background:#0a1628;border-top:1px solid rgba(255,255,255,.06);padding:2rem 1.5rem;text-align:center}
+.lp-footer-text{color:#64748b;font-size:.82rem}
+.lp-footer-text strong{color:#94a3b8}
+@media(max-width:640px){.lp-cert-inner{grid-template-columns:1fr}.lp-hero-stats{gap:1.5rem}}
 </style>
 </head>
 <body>
+
+<!-- LANDING PAGE -->
+<div id="landing-page">
+  <nav class="lp-nav">
+    <a class="lp-nav-brand" href="#">
+      <div class="lp-nav-logo">EP</div>
+      <div class="lp-nav-name">Estudio Patitucci<span>Consultoría Pericial</span></div>
+    </a>
+    <button class="lp-btn-nav" onclick="lpShowLogin()">Ingresar al sistema →</button>
+  </nav>
+  <section class="lp-hero">
+    <div class="lp-hero-grid"></div>
+    <div class="lp-hero-content">
+      <div class="lp-hero-badge">Peritos certificados CESVI</div>
+      <h1 class="lp-hero-title">Consultoría Técnica Pericial<span class="lp-hl">en Siniestros Automotores</span></h1>
+      <p class="lp-hero-sub">Nuestro equipo de peritos certificados brinda servicios de análisis, valoración y dictamen técnico de siniestros para las principales compañías aseguradoras del país.</p>
+      <div class="lp-cta-group">
+        <button class="lp-btn-primary" onclick="lpShowLogin()">🔐 Acceder al sistema</button>
+        <button class="lp-btn-ghost" onclick="document.querySelector('.lp-services').scrollIntoView({behavior:'smooth'})">Ver nuestros servicios ↓</button>
+      </div>
+      <div class="lp-hero-stats">
+        <div><div class="lp-stat-number">100%</div><div class="lp-stat-label">Peritos CESVI</div></div>
+        <div><div class="lp-stat-number">+2</div><div class="lp-stat-label">Aseguradoras</div></div>
+        <div><div class="lp-stat-number">24/48hs</div><div class="lp-stat-label">Respuesta máx.</div></div>
+      </div>
+    </div>
+  </section>
+  <section class="lp-services">
+    <div class="lp-section-header">
+      <div class="lp-section-tag">Lo que hacemos</div>
+      <h2 class="lp-section-title">Nuestros Servicios Periciales</h2>
+      <p class="lp-section-desc">Soluciones técnicas especializadas para la valoración y dictamen de siniestros automotores bajo estándares de calidad internacional.</p>
+    </div>
+    <div class="lp-services-grid">
+      <div class="lp-svc-card">
+        <div class="lp-svc-icon">📋</div>
+        <div class="lp-svc-title">Peritajes Técnicos CESVI</div>
+        <p class="lp-svc-desc">Valoración de daños materiales y dictámenes técnicos realizados exclusivamente por peritos certificados. Informes con respaldo técnico y validez ante grandes aseguradoras.</p>
+        <span class="lp-svc-badge">Certificación CESVI</span>
+      </div>
+      <div class="lp-svc-card">
+        <div class="lp-svc-icon">🔍</div>
+        <div class="lp-svc-title">Auditoría y Consultoría</div>
+        <p class="lp-svc-desc">Verificación física de unidades y detección de inconsistencias técnicas. Asesoramiento especializado para compañías aseguradoras líderes del mercado.</p>
+        <span class="lp-svc-badge">Prevención de fraude</span>
+      </div>
+      <div class="lp-svc-card">
+        <div class="lp-svc-icon">🛡️</div>
+        <div class="lp-svc-title">Inspecciones de Siniestros</div>
+        <p class="lp-svc-desc">Realizamos inspecciones remotas y presenciales, negociaciones y cierres, destrucciones totales, gestión de rezagos e investigación de posibles fraudes.</p>
+        <span class="lp-svc-badge">Div. Seguros</span>
+      </div>
+    </div>
+  </section>
+  <section class="lp-certifications">
+    <div class="lp-cert-inner">
+      <div>
+        <div class="lp-section-tag">Nuestra formación</div>
+        <h2 class="lp-section-title" style="font-size:1.75rem">Equipo certificado y con experiencia comprobada</h2>
+        <p class="lp-section-desc" style="text-align:left">Todos los integrantes del equipo son peritos formados y certificados por CESVI, con trayectoria en compañías aseguradoras líderes del mercado argentino.</p>
+        <ul class="lp-cert-list">
+          <li>Peritos certificados por CESVI Argentina</li>
+          <li>Experiencia con grandes aseguradoras líderes</li>
+          <li>Estándares de valoración internacionales</li>
+          <li>Identificación y verificación de unidades</li>
+        </ul>
+      </div>
+      <div class="lp-cert-cards">
+        <div class="lp-cert-card"><div class="lp-cert-card-icon">🏆</div><div class="lp-cert-card-title">CESVI</div><div class="lp-cert-card-sub">Certificación oficial</div></div>
+        <div class="lp-cert-card"><div class="lp-cert-card-icon">⚡</div><div class="lp-cert-card-title">24/48 hs</div><div class="lp-cert-card-sub">Respuesta máx.</div></div>
+      </div>
+    </div>
+  </section>
+  <section class="lp-access">
+    <div class="lp-access-content">
+      <div class="lp-access-icon">🔐</div>
+      <h2 class="lp-access-title">Acceso al Sistema Operativo</h2>
+      <p class="lp-access-desc">Ingresá con tus credenciales para acceder al sistema de gestión de inspecciones y siniestros del estudio.</p>
+      <button class="lp-btn-primary" onclick="lpShowLogin()" style="margin:0 auto">Iniciar sesión →</button>
+    </div>
+  </section>
+  <footer class="lp-footer">
+    <p class="lp-footer-text">© 2025 <strong>Estudio Patitucci</strong> — Consultoría Técnica Pericial en Siniestros Automotores</p>
+  </footer>
+</div>
 
 <!-- LOADING OVERLAY -->
 <div id="screen-loading">
@@ -716,8 +864,10 @@ function logout(){
   usuarioActual=null;inspActual=null;relId=null;fotosPendientes=[];
   if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
   ['screen-admin','screen-inspector'].forEach(x=>{s(x).style.display='none';});
-  s('screen-login').style.display='flex';
   s('login-nombre').value='';s('login-pass').value='';
+  // Volver a la landing pública
+  document.getElementById('landing-page').classList.remove('hidden');
+  window.scrollTo(0,0);
 }
 
 function cambiarPassAdmin(){
@@ -1871,7 +2021,8 @@ async function autoLogin(){
   var nombre;
   try{nombre=localStorage.getItem('ep_session');}catch(e){return;}
   if(!nombre)return;
-  // Hay sesión guardada: mostrar loading y restaurar directamente
+  // Hay sesión guardada: ocultar landing y restaurar directamente
+  document.getElementById('landing-page').classList.add('hidden');
   hide('screen-login');
   var ls=s('screen-loading');ls.style.display='flex';
   s('loading-msg').textContent='Restaurando sesión...';
@@ -1995,6 +2146,12 @@ document.addEventListener('DOMContentLoaded', autoLogin);
     },4000);
   }
 })();
+
+// ── Landing page ────────────────────────────────────────────────
+function lpShowLogin(){
+  document.getElementById('landing-page').classList.add('hidden');
+  s('screen-login').style.display='flex';
+}
 </script>
 </body>
 </html>
