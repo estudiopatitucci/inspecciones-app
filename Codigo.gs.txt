@@ -1,5 +1,6 @@
 const SHEET_ID = '1_socHaF14orZbtqiMxI5SKYMWEEGShw4gY_SEtMNN0w';
 const SHEET_NAME = 'Inspecciones';
+const ARCHIVO_NAME = 'Archivo';
 
 function doPost(e) {
   try {
@@ -9,6 +10,8 @@ function doPost(e) {
     if (action === 'actualizar') return actualizarInspeccion(data);
     if (action === 'eliminar') return eliminarInspeccion(data);
     if (action === 'listar') return listarInspecciones();
+    if (action === 'recordatorio') return enviarRecordatorio(data);
+    if (action === 'archivar') return archivarInspecciones();
     return resp({ok:false, msg:'Accion desconocida'});
   } catch(err) {
     return resp({ok:false, msg:err.toString()});
@@ -16,6 +19,8 @@ function doPost(e) {
 }
 
 function doGet(e) {
+  var action = e && e.parameter && e.parameter.action;
+  if (action === 'getArchivadas') return getArchivadas();
   return listarInspecciones();
 }
 
@@ -27,6 +32,39 @@ function getSheet() {
     sheet.appendRow(['ID','Siniestro','Compania','Tipo','FechaInsp','FechaSin','Patente','Modelo','Anio','Chasis','Motor','Km','Asegurado','Tel','Direccion','Localidad','Danos','Inspector','MailInspector','Estado','MailEnviado','Relevamiento','Devoluciones','CreadaEn']);
   }
   return sheet;
+}
+
+function getArchivoSheet() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(ARCHIVO_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(ARCHIVO_NAME);
+    sheet.appendRow(['ID','Siniestro','Compania','Tipo','FechaInsp','FechaSin','Patente','Modelo','Anio','Chasis','Motor','Km','Asegurado','Tel','Direccion','Localidad','Danos','Inspector','MailInspector','Estado','MailEnviado','Relevamiento','Devoluciones','CreadaEn','ArchivedAt']);
+  }
+  return sheet;
+}
+
+function leerInspecciones(sheet) {
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return [];
+  var headers = rows[0];
+  var result = [];
+  for (var i = 1; i < rows.length; i++) {
+    var obj = {};
+    for (var j = 0; j < headers.length; j++) {
+      obj[headers[j]] = rows[i][j];
+    }
+    if (obj.Relevamiento) {
+      try { obj.Relevamiento = JSON.parse(obj.Relevamiento); }
+      catch(e) { obj.Relevamiento = null; }
+    }
+    if (obj.Devoluciones) {
+      try { obj.Devoluciones = JSON.parse(obj.Devoluciones); }
+      catch(e) { obj.Devoluciones = []; }
+    }
+    result.push(obj);
+  }
+  return result;
 }
 
 function guardarInspeccion(data) {
@@ -55,6 +93,22 @@ function actualizarInspeccion(data) {
       if (data.relevamiento !== undefined) sheet.getRange(i+1, 22).setValue(JSON.stringify(data.relevamiento));
       if (data.devoluciones !== undefined) sheet.getRange(i+1, 23).setValue(JSON.stringify(data.devoluciones));
       if (data.mailEnviado !== undefined) sheet.getRange(i+1, 21).setValue(data.mailEnviado ? 'Si' : 'No');
+      if (data.inspector !== undefined) {
+        sheet.getRange(i+1, 18).setValue(data.inspector);
+        if (data.mail !== undefined) sheet.getRange(i+1, 19).setValue(data.mail);
+        if (data.notificar && data.mail) {
+          enviarMail({
+            inspector: data.inspector,
+            mail: data.mail,
+            sin: rows[i][1], cia: rows[i][2], tipo: rows[i][3],
+            finsp: rows[i][4], fsin: rows[i][5], pat: rows[i][6],
+            mod: rows[i][7], anio: rows[i][8], chasis: rows[i][9],
+            motor: rows[i][10], km: rows[i][11], aseg: rows[i][12],
+            tel: rows[i][13], dir: rows[i][14], localidad: rows[i][15],
+            danos: rows[i][16]
+          });
+        }
+      }
       return resp({ok:true});
     }
   }
@@ -74,27 +128,39 @@ function eliminarInspeccion(data) {
 }
 
 function listarInspecciones() {
+  return resp({ok:true, data: leerInspecciones(getSheet())});
+}
+
+function getArchivadas() {
+  return resp({ok:true, data: leerInspecciones(getArchivoSheet())});
+}
+
+function archivarInspecciones() {
   var sheet = getSheet();
+  var archivoSheet = getArchivoSheet();
   var rows = sheet.getDataRange().getValues();
-  if (rows.length <= 1) return resp({ok:true, data:[]});
   var headers = rows[0];
-  var result = [];
-  for (var i = 1; i < rows.length; i++) {
-    var obj = {};
-    for (var j = 0; j < headers.length; j++) {
-      obj[headers[j]] = rows[i][j];
-    }
-    if (obj.Relevamiento) {
-      try { obj.Relevamiento = JSON.parse(obj.Relevamiento); }
-      catch(e) { obj.Relevamiento = null; }
-    }
-    if (obj.Devoluciones) {
-      try { obj.Devoluciones = JSON.parse(obj.Devoluciones); }
-      catch(e) { obj.Devoluciones = []; }
-    }
-    result.push(obj);
+  var hoy = new Date();
+  var seisM = new Date(hoy);
+  seisM.setMonth(seisM.getMonth() - 6);
+
+  var archivadas = 0;
+  // Recorrer de abajo para arriba para no alterar índices al borrar
+  for (var i = rows.length - 1; i >= 1; i--) {
+    var estado = rows[i][19]; // columna Estado (índice 19)
+    var fechaInsp = rows[i][4]; // columna FechaInsp (índice 4)
+    if (estado !== 'Cerradas') continue;
+    var fecha = new Date(fechaInsp);
+    if (isNaN(fecha.getTime())) continue;
+    if (fecha > seisM) continue;
+    // Mover a Archivo
+    var fila = rows[i].slice();
+    fila.push(new Date().toISOString()); // ArchivedAt
+    archivoSheet.appendRow(fila);
+    sheet.deleteRow(i + 1);
+    archivadas++;
   }
-  return resp({ok:true, data:result});
+  return {ok: true, archivadas: archivadas};
 }
 
 function enviarMail(data) {
@@ -130,6 +196,33 @@ function enviarMail(data) {
     subject: asunto,
     body: cuerpo
   });
+}
+
+function enviarRecordatorio(data) {
+  try {
+    var asunto = 'Recordatorio: Inspeccion pendiente - Siniestro ' + data.siniestro;
+    var cuerpo = 'ESTUDIO PATITUCCI\n'
+      + 'Pericias - Danos Materiales - Homologacion CESVI\n\n'
+      + 'Hola ' + data.inspector + ',\n\n'
+      + 'Te recordamos que tenes una inspeccion pendiente de carga:\n\n'
+      + 'N Siniestro: ' + data.siniestro + '\n'
+      + 'Patente: ' + data.patente + '\n'
+      + 'Direccion: ' + data.direccion + '\n'
+      + 'Fecha de inspeccion: ' + data.finsp + '\n\n'
+      + 'Por favor, completa la carga del relevamiento a la brevedad.\n\n'
+      + 'Recorda que el plazo maximo para registrar el resultado es de 48 hs.\n\n'
+      + 'Saludos,\n'
+      + 'Estudio Patitucci';
+
+    MailApp.sendEmail({
+      to: data.mail,
+      subject: asunto,
+      body: cuerpo
+    });
+    return resp({ok: true});
+  } catch(err) {
+    return resp({ok: false, msg: err.toString()});
+  }
 }
 
 function resp(data) {
