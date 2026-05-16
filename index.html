@@ -2522,15 +2522,31 @@ function lpShowLogin(){
   document.getElementById('landing-page').classList.add('hidden');
   s('screen-login').style.display='flex';
 }
-function lpEnviarContacto(e){
+async function lpEnviarContacto(e){
   e.preventDefault();
   var nombre=document.getElementById('lp-nombre').value.trim();
   var email=document.getElementById('lp-email').value.trim();
   var mensaje=document.getElementById('lp-mensaje').value.trim();
-  var mailto='mailto:patitucciestudio@gmail.com'
-    +'?subject='+encodeURIComponent('Consulta de '+nombre)
-    +'&body='+encodeURIComponent('Nombre: '+nombre+'\nEmail: '+email+'\n\n'+mensaje);
-  window.location.href=mailto;
+  var btn=e.target.querySelector('button[type=submit]');
+  btn.disabled=true;btn.textContent='Enviando...';
+  try{
+    var res=await fetch(API,{method:'POST',body:JSON.stringify({action:'contacto',nombre,email,mensaje})});
+    var data=await res.json();
+    if(data.ok){
+      btn.textContent='✓ Mensaje enviado';
+      btn.style.background='#16a34a';
+      document.getElementById('lp-nombre').value='';
+      document.getElementById('lp-email').value='';
+      document.getElementById('lp-mensaje').value='';
+      setTimeout(()=>{btn.disabled=false;btn.textContent='Enviar mensaje →';btn.style.background='';},4000);
+    }else{
+      btn.disabled=false;btn.textContent='Enviar mensaje →';
+      alert('Error al enviar: '+(data.msg||'Intentá de nuevo.'));
+    }
+  }catch(err){
+    btn.disabled=false;btn.textContent='Enviar mensaje →';
+    alert('Error de conexión. Intentá de nuevo.');
+  }
 }
 </script>
 </body>
