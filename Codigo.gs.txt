@@ -12,6 +12,7 @@ function doPost(e) {
     if (action === 'listar') return listarInspecciones();
     if (action === 'recordatorio') return enviarRecordatorio(data);
     if (action === 'archivar') return archivarInspecciones();
+    if (action === 'contacto') return enviarContacto(data);
     return resp({ok:false, msg:'Accion desconocida'});
   } catch(err) {
     return resp({ok:false, msg:err.toString()});
@@ -216,6 +217,27 @@ function enviarRecordatorio(data) {
 
     MailApp.sendEmail({
       to: data.mail,
+      subject: asunto,
+      body: cuerpo
+    });
+    return resp({ok: true});
+  } catch(err) {
+    return resp({ok: false, msg: err.toString()});
+  }
+}
+
+function enviarContacto(data) {
+  try {
+    var asunto = 'Consulta desde estudiopatitucci.com.ar — ' + data.nombre;
+    var cuerpo = 'Nueva consulta desde el sitio web:\n\n'
+      + 'Nombre: ' + data.nombre + '\n'
+      + 'Email: ' + data.email + '\n'
+      + (data.empresa ? 'Empresa: ' + data.empresa + '\n' : '')
+      + (data.telefono ? 'Teléfono: ' + data.telefono + '\n' : '')
+      + '\nMensaje:\n' + data.mensaje;
+    MailApp.sendEmail({
+      to: 'patitucciestudio@gmail.com',
+      replyTo: data.email,
       subject: asunto,
       body: cuerpo
     });
