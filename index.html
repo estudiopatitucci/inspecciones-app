@@ -101,7 +101,18 @@ tr:hover td{background:rgba(255,255,255,.02)}
 @keyframes spin{to{transform:rotate(360deg)}}
 .msg{font-size:13px;min-height:18px;margin-top:10px}
 .msg.ok{color:var(--green)}.msg.err{color:var(--red)}
-@media(max-width:768px){.sidebar{display:none}.form-grid-2,.form-grid-3{grid-template-columns:1fr}.main-content{padding:16px}}
+/* ── Mobile sidebar drawer ── */
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200}
+.sidebar-backdrop.open{display:block}
+.hamburger{display:none;background:none;border:none;cursor:pointer;padding:6px;color:var(--text);flex-direction:column;gap:5px}
+.hamburger span{display:block;width:22px;height:2px;background:currentColor;border-radius:2px;transition:all .2s}
+@media(max-width:768px){
+  .hamburger{display:flex}
+  .sidebar{display:block;position:fixed;top:0;left:-240px;height:100vh;width:240px;z-index:201;transition:left .25s ease;padding-top:56px}
+  .sidebar.open{left:0}
+  .form-grid-2,.form-grid-3{grid-template-columns:1fr}
+  .main-content{padding:16px}
+}
 /* ── Toast ── */
 .toast{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 18px;font-size:13px;color:var(--text);min-width:220px;max-width:360px;box-shadow:0 6px 24px rgba(0,0,0,.5);animation:toastIn .22s ease;pointer-events:auto;display:flex;align-items:center;gap:10px}
 .toast.ok{border-left:3px solid var(--green)}.toast.err{border-left:3px solid var(--red)}.toast.info{border-left:3px solid var(--accent)}
@@ -482,7 +493,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <!-- ADMIN -->
 <div id="screen-admin" style="display:none;flex-direction:column;min-height:100vh">
+  <div class="sidebar-backdrop" id="admin-backdrop" onclick="closeMobileSidebar('admin')"></div>
   <div class="topbar">
+    <button class="hamburger" onclick="openMobileSidebar('admin')" aria-label="Menú">
+      <span></span><span></span><span></span>
+    </button>
     <div class="topbar-logo">Estudio <span>Patitucci</span></div>
     <div style="flex:1"></div>
     <span style="font-size:11px;color:var(--text3)" id="last-update"></span>
@@ -491,7 +506,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <button class="btn-secondary btn-sm" style="margin-left:12px" onclick="logout()">Salir</button>
   </div>
   <div style="display:flex;flex:1">
-    <div class="sidebar">
+    <div class="sidebar" id="admin-sidebar">
       <div class="sidebar-logo">Panel <span>Admin</span></div>
       <div class="sidebar-section">Principal</div>
       <button class="sidebar-item active" id="amenu-dashboard" onclick="adminTab('dashboard')">📊 Dashboard</button>
@@ -783,14 +798,18 @@ tr:hover td{background:rgba(255,255,255,.02)}
 
 <!-- INSPECTOR -->
 <div id="screen-inspector" style="display:none;flex-direction:column;min-height:100vh">
+  <div class="sidebar-backdrop" id="insp-backdrop" onclick="closeMobileSidebar('insp')"></div>
   <div class="topbar">
+    <button class="hamburger" onclick="openMobileSidebar('insp')" aria-label="Menú">
+      <span></span><span></span><span></span>
+    </button>
     <div class="topbar-logo">Estudio <span>Patitucci</span></div>
     <div style="flex:1"></div>
     <span style="font-size:12px;color:var(--text2)" id="insp-user-label"></span>
     <button class="btn-secondary btn-sm" style="margin-left:12px" onclick="logout()">Salir</button>
   </div>
   <div style="display:flex;flex:1">
-    <div class="sidebar">
+    <div class="sidebar" id="insp-sidebar">
       <div class="sidebar-logo">Inspector</div>
       <div class="sidebar-section">Mis inspecciones</div>
       <button class="sidebar-item active" id="smenu-abiertas" onclick="inspTab('abiertas')">
@@ -2540,6 +2559,24 @@ document.addEventListener('DOMContentLoaded', function() {
     },4000);
   }
 })();
+
+// ── Mobile sidebar ───────────────────────────────────────────────
+function openMobileSidebar(panel){
+  document.getElementById(panel+'-sidebar').classList.add('open');
+  document.getElementById(panel+'-backdrop').classList.add('open');
+}
+function closeMobileSidebar(panel){
+  document.getElementById(panel+'-sidebar').classList.remove('open');
+  document.getElementById(panel+'-backdrop').classList.remove('open');
+}
+// Cerrar sidebar al tocar un item del menú en mobile
+document.addEventListener('click',function(e){
+  var item=e.target.closest('.sidebar-item');
+  if(item){
+    var panel=item.closest('#admin-sidebar')?'admin':item.closest('#insp-sidebar')?'insp':null;
+    if(panel&&window.innerWidth<=768)closeMobileSidebar(panel);
+  }
+});
 
 // ── Landing page ────────────────────────────────────────────────
 function lpShowLogin(){
