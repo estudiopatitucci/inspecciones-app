@@ -2504,13 +2504,19 @@ document.addEventListener('DOMContentLoaded', function() {
         reg.addEventListener('updatefound',function(){
           var newSW=reg.installing;
           newSW.addEventListener('statechange',function(){
-            if(newSW.state==='installed'&&navigator.serviceWorker.controller){
-              toast('Nueva versión disponible. Recargá para actualizar.','info');
+            if(newSW.state==='activated'){
+              window.location.reload();
             }
           });
         });
-      }).catch(function(){
-        // En file:// falla silenciosamente, es esperado
+        // Verificar actualizaciones cada vez que el usuario vuelve a la pestaña
+        document.addEventListener('visibilitychange',function(){
+          if(document.visibilityState==='visible') reg.update();
+        });
+      }).catch(function(){});
+      // Recargar cuando el SW avisa que se actualizó
+      navigator.serviceWorker.addEventListener('message',function(e){
+        if(e.data&&e.data.type==='SW_UPDATED') window.location.reload();
       });
     });
   }

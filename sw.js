@@ -1,7 +1,6 @@
 // ── Service Worker — Estudio Patitucci ──────────────────────────────────────
-const CACHE_NAME = 'ep-v3';
+const CACHE_NAME = 'ep-v4';
 
-// Recursos a cachear para uso offline
 const STATIC_ASSETS = [
   './index.html',
   './manifest.json',
@@ -12,7 +11,7 @@ const STATIC_ASSETS = [
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
 ];
 
-// ── Instalación: cachea todos los recursos estáticos ────────────────────────
+// ── Instalación ──────────────────────────────────────────────────────────────
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
@@ -26,16 +25,22 @@ self.addEventListener('install', event => {
   );
 });
 
-// ── Activación: limpia caches viejas ────────────────────────────────────────
+// ── Activación: limpia caches viejas y toma control inmediato ────────────────
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
     ).then(() => self.clients.claim())
+      .then(() => {
+        // Avisar a todas las pestañas que recarguen
+        self.clients.matchAll({ type: 'window' }).then(clients => {
+          clients.forEach(client => client.postMessage({ type: 'SW_UPDATED' }));
+        });
+      })
   );
 });
 
-// ── Fetch: Network First para API, Cache First para estáticos ───────────────
+// ── Fetch: Network First para navegación, Cache First para estáticos ─────────
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
@@ -49,6 +54,18 @@ self.addEventListener('fetch', event => {
     return;
   }
 
+  // Network first para el HTML principal (siempre fresco)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).then(response => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        return response;
+      }).catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
@@ -58,11 +75,7 @@ self.addEventListener('fetch', event => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => {
-        if (event.request.mode === 'navigate') {
-          return caches.match('./index.html');
-        }
-      });
+      }).catch(() => null);
     })
   );
 });
