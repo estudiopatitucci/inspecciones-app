@@ -1299,7 +1299,7 @@ function abrirModal(id){
   html+='<div style="grid-column:1/-1"><span style="font-size:11px;color:var(--text2);display:block">Daños declarados</span>'+esc(i.Danos||'-')+'</div>';
   if(i.DanosDen)html+='<div style="grid-column:1/-1;background:rgba(79,124,255,.06);border:1px solid rgba(79,124,255,.2);border-radius:8px;padding:10px;margin-top:4px"><span style="font-size:10px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:4px">Daños denunciados (ocurrencia del siniestro)</span><span style="font-size:13px;line-height:1.5">'+esc(i.DanosDen)+'</span></div>';
   html+='</div>';
-  if(rel&&rel.km){
+  if(rel&&(rel.km||rel.danos||rel.taller||rel.fechaEnvio||rel.fotosLinks)){
     html+='<div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.2);border-radius:10px;padding:14px;margin-bottom:16px">';
     html+='<p style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:12px">✓ Relevamiento recibido</p>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin-bottom:12px">';

@@ -85,13 +85,46 @@ function guardarInspeccion(data) {
   return resp({ok:true, id:id});
 }
 
+function getOrCreateFolder(name) {
+  var folders = DriveApp.getFoldersByName(name);
+  if (folders.hasNext()) return folders.next();
+  return DriveApp.createFolder(name);
+}
+
 function actualizarInspeccion(data) {
   var sheet = getSheet();
   var rows = sheet.getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
     if (rows[i][0] == data.id) {
       if (data.estado !== undefined) sheet.getRange(i+1, 20).setValue(data.estado);
-      if (data.relevamiento !== undefined) sheet.getRange(i+1, 22).setValue(JSON.stringify(data.relevamiento));
+      if (data.relevamiento !== undefined) {
+        var rel = data.relevamiento;
+        // Si hay fotos en base64, subirlas a Drive
+        if (rel.fotos && rel.fotos.length > 0) {
+          try {
+            var folder = getOrCreateFolder('Inspeccion_' + data.id);
+            var links = [];
+            rel.fotos.forEach(function(base64, idx) {
+              try {
+                var b64 = base64.replace(/^data:image\/\w+;base64,/, '');
+                var blob = Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', 'foto_' + (idx+1) + '.jpg');
+                var file = folder.createFile(blob);
+                file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+                links.push({viewUrl: file.getUrl(), id: file.getId()});
+              } catch(e) {}
+            });
+            rel.fotosLinks = links;
+            rel.cantFotos = links.length;
+            rel.carpetaUrl = folder.getUrl();
+          } catch(e) {}
+          delete rel.fotos; // Eliminar base64 antes de guardar en Sheets
+        }
+        sheet.getRange(i+1, 22).setValue(JSON.stringify(rel));
+        // Devolver links al frontend
+        if (rel.fotosLinks) {
+          return resp({ok: true, relevamiento: {fotosLinks: rel.fotosLinks, cantFotos: rel.cantFotos, carpetaUrl: rel.carpetaUrl}});
+        }
+      }
       if (data.devoluciones !== undefined) sheet.getRange(i+1, 23).setValue(JSON.stringify(data.devoluciones));
       if (data.mailEnviado !== undefined) sheet.getRange(i+1, 21).setValue(data.mailEnviado ? 'Si' : 'No');
       if (data.inspector !== undefined) {
