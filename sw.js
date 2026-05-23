@@ -1,5 +1,5 @@
 // ── Service Worker — Estudio Patitucci ──────────────────────────────────────
-const CACHE_NAME = 'ep-v4';
+const CACHE_NAME = 'ep-v7';
 
 const STATIC_ASSETS = [
   './index.html',

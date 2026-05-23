@@ -2,9 +2,34 @@ const SHEET_ID = '1_socHaF14orZbtqiMxI5SKYMWEEGShw4gY_SEtMNN0w';
 const SHEET_NAME = 'Inspecciones';
 const ARCHIVO_NAME = 'Archivo';
 
+// Token compartido con el frontend — debe coincidir exactamente con el de index.html
+// Cambiarlo acá y en index.html al mismo tiempo si necesitás rotarlo.
+const SECRET_TOKEN = 'ep_9k2mX7vQn4pRjL8wZdA3sYtB6uCfHg0E';
+
+// Únicos usuarios autorizados a ver fotos y carpetas de inspecciones en Drive
+const DRIVE_VIEWERS = [
+  'bruno@estudiopatitucci.com',
+  'valentinopatitucci5@gmail.com',
+  'patitucci.mp@gmail.com',
+  'estudiopatitucci@gmail.com',
+  'sanchezmajo2022@gmail.com'
+];
+
+function compartirConAutorizados(item) {
+  // Quitar acceso público y agregar solo a los usuarios autorizados
+  item.setSharing(DriveApp.Access.NONE, DriveApp.Permission.NONE);
+  DRIVE_VIEWERS.forEach(function(email) {
+    try { item.addViewer(email); } catch(e) {}
+  });
+}
+
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
+    // El formulario de contacto público no requiere token
+    if (data.action !== 'contacto' && data.token !== SECRET_TOKEN) {
+      return resp({ok: false, msg: 'No autorizado'});
+    }
     var action = data.action;
     if (action === 'guardar') return guardarInspeccion(data);
     if (action === 'actualizar') return actualizarInspeccion(data);
@@ -20,7 +45,9 @@ function doPost(e) {
 }
 
 function doGet(e) {
-  var action = e && e.parameter && e.parameter.action;
+  var token = e && e.parameter && e.parameter.token;
+  if (token !== SECRET_TOKEN) return resp({ok: false, msg: 'No autorizado'});
+  var action = e.parameter.action;
   if (action === 'getArchivadas') return getArchivadas();
   return listarInspecciones();
 }
@@ -85,10 +112,33 @@ function guardarInspeccion(data) {
   return resp({ok:true, id:id});
 }
 
-function getOrCreateFolder(name) {
-  var folders = DriveApp.getFoldersByName(name);
+// Nombre de la carpeta madre donde se guardan todas las inspecciones
+const CARPETA_MADRE = 'Inspecciones Patitucci - Fotos';
+
+function getCarpetaMadre() {
+  var folders = DriveApp.getFoldersByName(CARPETA_MADRE);
   if (folders.hasNext()) return folders.next();
-  return DriveApp.createFolder(name);
+  // Si no existe, la crea y comparte con los viewers autorizados
+  var nueva = DriveApp.createFolder(CARPETA_MADRE);
+  try { compartirConAutorizados(nueva); } catch(e) {}
+  return nueva;
+}
+
+function getOrCreateFolder(name) {
+  var madre = getCarpetaMadre();
+  // Buscar la subcarpeta dentro de la carpeta madre
+  var subs = madre.getFoldersByName(name);
+  if (subs.hasNext()) return subs.next();
+  // Si no existe dentro de la madre, buscar en el raíz (carpetas viejas sueltas) y moverlas
+  var suelta = DriveApp.getFoldersByName(name);
+  if (suelta.hasNext()) {
+    var carpetaSuelta = suelta.next();
+    madre.addFolder(carpetaSuelta);
+    DriveApp.getRootFolder().removeFolder(carpetaSuelta);
+    return carpetaSuelta;
+  }
+  // Crear dentro de la carpeta madre
+  return madre.createFolder(name);
 }
 
 function actualizarInspeccion(data) {
@@ -103,14 +153,26 @@ function actualizarInspeccion(data) {
         if (rel.fotos && rel.fotos.length > 0) {
           try {
             var folder = getOrCreateFolder('Inspeccion_' + data.id);
+            // Intentar restringir la carpeta — fallo no debe bloquear la subida
+            try { compartirConAutorizados(folder); } catch(eFolder) {}
             var links = [];
             rel.fotos.forEach(function(base64, idx) {
               try {
                 var b64 = base64.replace(/^data:image\/\w+;base64,/, '');
                 var blob = Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', 'foto_' + (idx+1) + '.jpg');
                 var file = folder.createFile(blob);
-                file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-                links.push({viewUrl: file.getUrl(), id: file.getId()});
+                // Hacer cada foto accesible con el link directo (no indexable, no buscable)
+                // Esto permite que el panel admin muestre miniaturas sin depender de la cuenta Google del navegador
+                try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(eShare) {}
+                // También agregar como viewer a los usuarios autorizados
+                try { compartirConAutorizados(file); } catch(eFile) {}
+                // Guardar link y thumbUrl listo para usar en el frontend
+                var fileId = file.getId();
+                links.push({
+                  viewUrl: file.getUrl(),
+                  id: fileId,
+                  thumbUrl: 'https://lh3.googleusercontent.com/d/' + fileId + '=w400'
+                });
               } catch(e) {}
             });
             rel.fotosLinks = links;
@@ -283,4 +345,91 @@ function enviarContacto(data) {
 function resp(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+// ════════════════════════════════════════════════════════
+//  FUNCIÓN DE MIGRACIÓN — correr UNA SOLA VEZ
+//  Aplica permiso "anyone with link" a todas las fotos ya subidas
+//  Pasos: 1) Pegá esto en el editor de GAS
+//         2) Seleccioná la función "migrarPermisosExistentes"
+//         3) Presioná "Ejecutar"
+//         4) Revisá los logs (Ver > Registros)
+//         5) Cuando diga "Migración completada", borrá la función
+// ════════════════════════════════════════════════════════
+function migrarPermisosExistentes() {
+  var resultados = { ok: 0, err: 0, carpetas: 0 };
+  
+  // Buscar todas las carpetas que empiecen con "Inspeccion_"
+  var carpetasIter = DriveApp.getFoldersByName('');
+  
+  // Buscar en el Drive del usuario
+  var query = DriveApp.searchFolders('title contains "Inspeccion_"');
+  
+  while (query.hasNext()) {
+    var carpeta = query.next();
+    resultados.carpetas++;
+    Logger.log('Procesando carpeta: ' + carpeta.getName());
+    
+    var archivos = carpeta.getFiles();
+    while (archivos.hasNext()) {
+      var archivo = archivos.next();
+      try {
+        archivo.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        resultados.ok++;
+        Logger.log('  ✓ ' + archivo.getName() + ' — permiso aplicado');
+      } catch(e) {
+        resultados.err++;
+        Logger.log('  ✗ ' + archivo.getName() + ' — ERROR: ' + e.toString());
+      }
+    }
+  }
+  
+  Logger.log('');
+  Logger.log('════ Migración completada ════');
+  Logger.log('Carpetas procesadas: ' + resultados.carpetas);
+  Logger.log('Archivos OK: ' + resultados.ok);
+  Logger.log('Errores: ' + resultados.err);
+}
+
+// ════════════════════════════════════════════════════════
+//  MIGRACIÓN — mover carpetas sueltas a la carpeta madre
+//  Correr UNA SOLA VEZ después de hacer deploy
+//  Pasos: seleccionar "migrarCarpetasAMadre" → Ejecutar → Ver Registros
+// ════════════════════════════════════════════════════════
+function migrarCarpetasAMadre() {
+  var madre = getCarpetaMadre();
+  var resultados = { movidas: 0, yaAdentro: 0, err: 0 };
+  
+  var query = DriveApp.searchFolders('title contains "Inspeccion_"');
+  while (query.hasNext()) {
+    var carpeta = query.next();
+    var nombre = carpeta.getName();
+    try {
+      // Verificar si ya está dentro de la madre
+      var padres = carpeta.getParents();
+      var yaEstaAdentro = false;
+      while (padres.hasNext()) {
+        if (padres.next().getId() === madre.getId()) { yaEstaAdentro = true; break; }
+      }
+      if (yaEstaAdentro) {
+        resultados.yaAdentro++;
+        Logger.log('Ya está adentro: ' + nombre);
+      } else {
+        madre.addFolder(carpeta);
+        try { DriveApp.getRootFolder().removeFolder(carpeta); } catch(e) {}
+        resultados.movidas++;
+        Logger.log('✓ Movida: ' + nombre);
+      }
+    } catch(e) {
+      resultados.err++;
+      Logger.log('✗ Error con ' + nombre + ': ' + e.toString());
+    }
+  }
+  
+  Logger.log('');
+  Logger.log('════ Migración completada ════');
+  Logger.log('Carpetas movidas: ' + resultados.movidas);
+  Logger.log('Ya estaban adentro: ' + resultados.yaAdentro);
+  Logger.log('Errores: ' + resultados.err);
 }
