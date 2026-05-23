@@ -43,6 +43,7 @@ button{font-family:'DM Sans',sans-serif;cursor:pointer;border:none;border-radius
 .pill-red{background:rgba(229,83,83,.15);color:#e55353}
 .pill-orange{background:rgba(240,124,46,.15);color:#f07c2e}
 .pill-gray{background:rgba(139,146,168,.1);color:var(--text2)}
+.pill-amber{background:rgba(245,158,11,.15);color:#f59e0b}
 #screen-login{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:var(--bg);z-index:200}
 .login-box{width:100%;max-width:380px}
 .login-logo{margin-bottom:28px}
@@ -310,6 +311,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .g-btn-add-otra:hover{background:rgba(79,124,255,.15)}
 @media(max-width:768px){.sel-hs{width:74px}.sel-panos{width:68px}.task-exp-row{gap:4px}}
 </style>
+<script>
+(function(){
+  if(location.search.indexOf("taller=")!==-1){
+    var st=document.createElement("style");
+    st.textContent="#landing-page,#screen-login{display:none!important}";
+    document.head.appendChild(st);
+  }
+})();
+</script>
 </head>
 <body>
 
@@ -576,6 +586,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="sidebar-item" id="amenu-pendientes" onclick="adminTab('pendientes')">
         📋 Pend. de carga <span class="badge" id="badge-pend" style="display:none">0</span>
       </button>
+      <button class="sidebar-item" id="amenu-taller" onclick="adminTab('taller')">
+        🔧 Pend. fotos taller <span class="badge" id="badge-taller" style="display:none;background:#f59e0b;color:#111">0</span>
+      </button>
       <button class="sidebar-item" id="amenu-revision" onclick="adminTab('revision')">
         🔍 Pend. de verificar <span class="badge yellow" id="badge-rev" style="display:none">0</span>
       </button>
@@ -696,6 +709,14 @@ tr:hover td{background:rgba(255,255,255,.02)}
               <button class="insp-btn" onclick="selInsp('Sebastián')">Sebastián</button>
               <button class="insp-btn" onclick="selInsp('Mariano')">Mariano</button>
               <button class="insp-btn" onclick="selInsp('Bruno')">Bruno</button>
+              <button class="insp-btn" id="btn-sel-taller" onclick="selTaller()" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)">🔧 Taller</button>
+            </div>
+            <div id="bloque-taller" style="display:none;margin-top:12px">
+              <p style="font-size:13px;color:var(--text2);margin-bottom:12px">La IP queda en estado <strong style="color:#f59e0b">Esperando taller</strong>. Luego podrás generar el link desde el detalle.</p>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn-primary" style="background:#f59e0b;color:#111" onclick="guardarTaller()">🔧 Guardar para taller</button>
+                <button class="btn-secondary" onclick="deselTaller()">Cancelar</button>
+              </div>
             </div>
             <div id="bloque-mail" style="display:none">
               <div class="form-grid-2" style="margin-bottom:12px">
@@ -734,6 +755,13 @@ tr:hover td{background:rgba(255,255,255,.02)}
           </div>
         </div>
         <div id="tabla-pend"></div>
+      </div>
+
+      <!-- TALLER -->
+      <div id="asec-taller" style="display:none">
+        <h2 style="font-size:20px;font-weight:600;margin-bottom:6px">🔧 Pendientes por fotos de taller</h2>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Inspecciónes guardadas para que el taller cargue el relevamiento. Generá y enviá el link desde acá.</p>
+        <div id="tabla-taller"></div>
       </div>
 
       <!-- PENDIENTE DE VERIFICAR -->
@@ -1111,7 +1139,17 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <span id="fotos-contador" style="font-size:12px;font-weight:600;color:var(--text3)">0/30</span>
           </div>
           <p style="font-size:12px;color:var(--text2);margin-bottom:10px">JPG o PNG · Se comprimen automáticamente · Máx 30 fotos</p>
-          <input type="file" id="rel-fotos" accept="image/jpeg,image/png,.jpg,.jpeg,.png" multiple style="font-size:13px;color:var(--text2)"/>
+          <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+            <label for="rel-fotos-camara" style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;background:rgba(79,124,255,.12);border:1px solid rgba(79,124,255,.3);color:var(--accent);padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;user-select:none">
+              📷 Sacar foto
+            </label>
+            <label for="rel-fotos-galeria" style="display:inline-flex;align-items:center;gap:7px;cursor:pointer;background:rgba(79,124,255,.06);border:1px solid rgba(79,124,255,.18);color:var(--text2);padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;user-select:none">
+              🖼 Desde galería
+            </label>
+          </div>
+          <input type="file" id="rel-fotos-camara" accept="image/jpeg,image/png,.jpg,.jpeg,.png" capture="environment" multiple style="display:none"/>
+          <input type="file" id="rel-fotos-galeria" accept="image/jpeg,image/png,.jpg,.jpeg,.png" multiple style="display:none"/>
+          <input type="file" id="rel-fotos" accept="image/jpeg,image/png,.jpg,.jpeg,.png" multiple style="display:none"/>
           <div id="rel-errores" style="font-size:12px;margin-top:8px;min-height:16px"></div>
           <div id="rel-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
         </div>
@@ -1182,6 +1220,17 @@ tr:hover td{background:rgba(255,255,255,.02)}
   </div>
 </div>
 
+<div id="screen-taller" style="display:none;flex-direction:column;min-height:100vh">
+  <div class="topbar">
+    <div class="topbar-logo">Estudio <span>Patitucci</span></div>
+    <div style="flex:1"></div>
+    <span style="font-size:12px;color:#f59e0b;font-weight:500">&#x1F527; Portal del Taller</span>
+  </div>
+  <div style="flex:1;padding:20px;max-width:680px;margin:0 auto;width:100%">
+    <div id="taller-content"></div>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
@@ -1247,7 +1296,7 @@ const show=id=>{const e=s(id);if(e)e.style.display='block';};
 const hide=id=>{const e=s(id);if(e)e.style.display='none';};
 const g=id=>s(id)?.value?.trim()||'';
 const esc=v=>{if(!v)return'';return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));};
-const estadoPill=e=>{const m={'Pendientes de carga':'blue','Pendiente de verificar':'yellow','Pendientes de resolver':'orange',Cerradas:'green'};return '<span class="pill pill-'+(m[e]||'gray')+'">'+esc(e)+'</span>';};
+const estadoPill=e=>{const m={'Pendientes de carga':'blue','Pendiente de verificar':'yellow','Pendientes de resolver':'orange','Esperando taller':'amber',Cerradas:'green'};return '<span class="pill pill-'+(m[e]||'gray')+'">'+esc(e)+'</span>';};
 const formatFecha=f=>{if(!f)return'-';try{const d=new Date(f);if(!isNaN(d.getTime()))return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});}catch(e){}return String(f).split('T')[0];};
 async function apiCall(data){const r=await fetch(API,{method:'POST',body:JSON.stringify(Object.assign({token:SECRET_TOKEN},data))});return r.json();}
 async function apiGet(){const r=await fetch(API+'?token='+SECRET_TOKEN);return r.json();}
@@ -1323,12 +1372,13 @@ function cambiarPass(){
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
 function adminTab(t){
-  ['dashboard','nueva','pendientes','revision','resolver','cerradas','stats','archivo','perfil'].forEach(x=>{
+  ['dashboard','nueva','pendientes','taller','revision','resolver','cerradas','stats','archivo','perfil'].forEach(x=>{
     const btn=s('amenu-'+x);if(btn)btn.className='sidebar-item'+(t===x?' active':'');
     const sec=s('asec-'+x);if(sec)sec.style.display=t===x?'block':'none';
   });
   if(t==='dashboard')renderDashboard();
   if(t==='pendientes')renderTablaAdmin('pendientes');
+  if(t==='taller')renderTalleres();
   if(t==='revision')renderTablaAdmin('revision');
   if(t==='resolver')renderTablaAdmin('resolver');
   if(t==='cerradas')renderTablaAdmin('cerradas');
@@ -1342,6 +1392,7 @@ async function cargarInspecciones(){
     if(res.ok){
       inspecciones=res.data||[];
       actualizarBadgesAdmin();
+      if(s('asec-taller')&&s('asec-taller').style.display!=='none')renderTalleres();
       var lu=s('last-update');
       if(lu)lu.textContent='Act. '+new Date().toLocaleTimeString('es-AR',{hour:'2-digit',minute:'2-digit'});
     }
@@ -1359,6 +1410,34 @@ function actualizarBadgesAdmin(){
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
+// ─── SECCIÓN TALLER ────────────────────────────────────────────────────────
+function renderTalleres(){
+  var lista=inspecciones.filter(function(i){return i.Estado==='Esperando taller';});
+  var cont=s('tabla-taller');
+  if(!lista.length){
+    cont.innerHTML='<div style="text-align:center;padding:40px;color:var(--text2)">No hay inspecciones esperando al taller.</div>';
+    return;
+  }
+  var html='<div style="overflow-x:auto"><table class="tabla"><thead><tr>'
+    +'<th>Fecha</th><th>Siniestro</th><th>Patente</th><th>Dirección</th><th>Localidad</th><th>Compañía</th><th>Acciones</th></tr></thead><tbody>';
+  lista.forEach(function(i){
+    html+='<tr>'
+      +'<td><strong>'+formatFecha(i.FechaInsp)+'</strong></td>'
+      +'<td class="mono">'+esc(i.Siniestro||'-')+'</td>'
+      +'<td><strong>'+esc(i.Patente||'-')+'</strong>'+(i.Urgente?' <span style="color:var(--red);font-size:12px;font-weight:700">🔴</span>':'')+'</td>'
+      +'<td>'+esc(i.Direccion||'-')+'</td>'
+      +'<td>'+esc(i.Localidad||'-')+'</td>'
+      +'<td style="font-size:12px">'+esc(i.Compania||'-')+'</td>'
+      +'<td style="display:flex;gap:6px;flex-wrap:wrap">'
+      +'<button class="btn-secondary btn-sm" onclick="abrirModal(\''+esc(i.ID)+'\')">🔍 Ver detalle</button>'
+      +'<button class="btn-sm" style="background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.35);font-weight:600" onclick="enviarATaller(\''+esc(i.ID)+'\')">'
+      +'🔗 Generar y enviar link</button>'
+      +'</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  cont.innerHTML=html;
+}
+
 function renderDashboard(){
   const total=inspecciones.length;
   const asig=inspecciones.filter(i=>i.Estado==='Pendientes de carga').length;
@@ -1482,6 +1561,7 @@ function renderTablaAdmin(tipo){
         +'<td style="display:flex;gap:6px;flex-wrap:wrap">'
         +'<button class="btn-secondary btn-sm" onclick="abrirModal(\''+esc(i.ID)+'\')">Ver detalle</button>'
         +(venc?'<button class="btn-sm" style="background:rgba(229,83,83,.12);color:var(--red);border:1px solid rgba(229,83,83,.3)" onclick="enviarRecordatorio(\''+esc(i.ID)+'\')">✉ Recordatorio</button>':'')
+        
         +'</td></tr>';
     }).join('')+'</tbody></table></div>';
 }
@@ -1638,6 +1718,7 @@ function abrirModal(id){
   var urgStyle=i.Urgente?'background:rgba(229,83,83,.15);color:var(--red);border:1px solid rgba(229,83,83,.3)':'background:var(--bg3);color:var(--text2);border:1px solid var(--border)';
   html+='<button class="btn-sm" style="'+urgStyle+'" onclick="toggleUrgente(\''+esc(i.ID)+'\')">'+(i.Urgente?'🔴 Quitar urgencia':'⚪ Marcar urgente')+'</button>';
   html+='<button class="btn-secondary btn-sm" onclick="generarPDF(\''+esc(i.ID)+'\')">📄 PDF Inspección</button>';
+  if(i.Estado==='Pendientes de carga'||i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)" onclick="enviarATaller(\''+esc(i.ID)+'\')">&#x1F517; Enviar a taller</button>';
   html+='<button class="btn-secondary btn-sm" onclick="generarPDFRel(\''+esc(i.ID)+'\')">📋 PDF Relevamiento</button>';
   html+='<button class="btn-danger btn-sm" onclick="eliminarInsp(\''+esc(i.ID)+'\')">Eliminar</button>';
   html+='<button class="btn-secondary btn-sm" onclick="cerrarModal()" style="margin-left:auto">✕ Cerrar</button>';
@@ -2201,13 +2282,134 @@ function limpiarForm(){
 
 function volverPDF(){hide('paso-form');show('paso-pdf');s('pdf-input').value='';s('pdf-error').textContent='';limpiarForm();}
 
+var asignarTallerMode=false;
 function selInsp(nombre){
+  asignarTallerMode=false;
   inspActual=nombre;
-  document.querySelectorAll('#insp-btns .insp-btn').forEach(function(b){b.className='insp-btn'+(b.textContent===nombre?' sel':'');});
+  document.querySelectorAll('#insp-btns .insp-btn').forEach(function(b){b.className='insp-btn'+(b.textContent.trim()===nombre?' sel':'');});
+  hide('bloque-taller');
   show('bloque-mail');
   s('f-insp-nombre').value=nombre;
   s('f-mail').value=INSP_MAILS[nombre]||'';
   actualizarPreview();
+}
+function selTaller(){
+  asignarTallerMode=true;
+  inspActual=null;
+  document.querySelectorAll('#insp-btns .insp-btn').forEach(function(b){b.className='insp-btn'+(b.id==='btn-sel-taller'?' sel':'');});
+  hide('bloque-mail');
+  show('bloque-taller');
+}
+function deselTaller(){
+  asignarTallerMode=false;
+  inspActual=null;
+  document.querySelectorAll('#insp-btns .insp-btn').forEach(function(b){b.className='insp-btn';});
+  hide('bloque-taller');
+}
+
+async function guardarTaller(){
+  var sin=g('f-sin'),pat=g('f-pat'),msg=s('msg-guard');
+  if(!sin){msg.className='msg err';msg.textContent='Nº siniestro obligatorio.';return;}
+  if(!pat){msg.className='msg err';msg.textContent='Patente obligatoria.';return;}
+  if(inspecciones.some(function(i){return String(i.Siniestro).trim()===String(sin).trim();})){
+    if(!confirm('⚠ Ya existe una inspección con el siniestro "'+sin+'".\n¿Querés guardar de todas formas?'))return;
+  }
+  msg.className='msg';msg.textContent='Guardando...';
+  try{
+    var res=await apiCall({action:'guardar',sin,cia:g('f-cia'),tipo:g('f-tipo'),finsp:g('f-finsp'),fsin:g('f-fsin'),pat:pat.toUpperCase(),mod:g('f-mod'),anio:g('f-anio'),chasis:g('f-chasis'),motor:g('f-motor'),km:g('f-km'),aseg:g('f-aseg'),tel:g('f-tel'),dir:g('f-dir'),localidad:g('f-localidad'),danos:g('f-danos'),danosDen:g('f-danos-den'),inspector:'Taller',estado:'Esperando taller',asignarTaller:true,mailEnviado:false,enviarMail:false,historial:[{estado:'Esperando taller',fecha:new Date().toLocaleString('es-AR'),usuario:'Administrador'}]});
+    if(res.ok){
+      msg.className='msg ok';msg.textContent='✓ Guardada.';
+      await cargarInspecciones();
+      // Forzar estado correcto independientemente de la versión del GAS
+      // Buscar por ID primero (GAS nuevo), luego por siniestro (GAS viejo)
+      var nueva = res.id
+        ? inspecciones.find(function(x){return String(x.ID)===String(res.id);})
+        : inspecciones.find(function(x){return String(x.Siniestro).trim()===String(sin).trim();});
+      if(!nueva){
+        // Si no se encontró, agregar directamente al array local
+        nueva={ID:res.id||String(Date.now()),Siniestro:sin,Patente:pat.toUpperCase(),
+          Estado:'Esperando taller',Inspector:'Taller',
+          FechaInsp:g('f-finsp')||'',Compania:g('f-cia')||'',
+          Direccion:g('f-dir')||'',Localidad:g('f-localidad')||'',
+          Urgente:false,Relevamiento:null};
+        inspecciones.push(nueva);
+      } else {
+        nueva.Estado='Esperando taller';
+        nueva.Inspector='Taller';
+      }
+      actualizarBadgesAdmin();
+      toast('Inspección guardada. Aparece en "Pend. fotos taller".','ok');
+      limpiarForm();volverPDF();deselTaller();
+      adminTab('taller');
+    }else{msg.className='msg err';msg.textContent='Error: '+res.msg;}
+  }catch(e){msg.className='msg err';msg.textContent='Error de conexión.';}
+}
+
+async function enviarATaller(id){
+  var btn=event&&(event.currentTarget||event.target);
+  if(btn){btn.disabled=true;btn.textContent='Generando...';}
+  try{
+    var res=await apiCall({action:'generarTokenTaller',id:id});
+    if(res.ok){
+      mostrarLinkTaller(res.link,res.exp);
+      var insp=inspecciones.find(function(x){return x.ID==id;});
+      if(insp)insp.Estado='Esperando taller';
+      actualizarBadgesAdmin();
+      renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+    }else{alert('Error: '+(res.msg||'No se pudo generar el link.'));}
+  }catch(e){alert('Error de conexión.');}
+  if(btn){btn.disabled=false;btn.textContent='🔗 Enviar a taller';}
+}
+
+function mostrarLinkTaller(link,exp){
+  var expStr='-';
+  if(exp){try{expStr=new Date(exp).toLocaleString('es-AR');}catch(e){}}
+  var waMsg=encodeURIComponent('🔧 Hola! Te enviamos el link para cargar la inspección en el Estudio Patitucci.\n\nAccedé acá (válido 48 hs):\n'+link);
+  var cont=s('modal-body')||document.body;
+  var div=document.createElement('div');
+  div.style.cssText='background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:16px;margin-bottom:14px';
+  div.innerHTML='<p style="font-weight:600;color:#f59e0b;margin-bottom:8px">🔗 Link generado para el taller</p>'
+    +'<p style="font-size:12px;color:var(--text2);margin-bottom:10px">Vence: <strong style="color:var(--text)">'+esc(expStr)+'</strong> &nbsp;&bull;&nbsp; Uso único</p>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
+    +'<input type="text" id="taller-link-input" value="'+esc(link)+'" readonly style="flex:1;font-size:12px;background:var(--bg3);min-width:0"/>'
+    +'<button class="btn-primary btn-sm" onclick="copiarLinkTaller()">Copiar</button>'
+    +'</div>'
+    +'<span id="taller-copy-msg" style="font-size:12px;color:var(--green);display:none;margin-bottom:8px">✓ Copiado al portapapeles</span>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px">'
+    +'<input type="tel" id="taller-wa-tel" placeholder="WhatsApp del taller (ej: 11 2345 6789)" oninput="actualizarWaLink()" '
+    +'style="flex:1;font-size:12px;min-width:0"/>'
+    +'<a id="taller-wa-btn" href="https://wa.me/?text='+waMsg+'" target="_blank" rel="noopener" '
+    +'style="display:inline-flex;align-items:center;gap:6px;background:#25d366;color:#fff;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap">'
+    +'📲 Enviar por WhatsApp</a>'
+    +'</div>'
+    +'<p style="font-size:11px;color:var(--text3);margin-top:5px">Sin número: abre WhatsApp y elegís el contacto. Con número: abre la conversación directamente.</p>';
+  cont.insertBefore(div,cont.firstChild);
+  // Guardar waMsg para actualizarWaLink
+  window._tallerWaMsg=waMsg;
+}
+
+function actualizarWaLink(){
+  var inp=s('taller-wa-tel'),btn=document.getElementById('taller-wa-btn');
+  if(!inp||!btn)return;
+  var tel=inp.value.replace(/\D/g,'');
+  if(tel.length>=8){
+    // Argentina: agregar 549 si no empieza con código de país
+    if(!tel.startsWith('549')&&!tel.startsWith('54'))tel='549'+tel;
+    else if(tel.startsWith('54')&&!tel.startsWith('549'))tel='549'+tel.slice(2);
+    btn.href='https://wa.me/'+tel+'?text='+(window._tallerWaMsg||'');
+  }else{
+    btn.href='https://wa.me/?text='+(window._tallerWaMsg||'');
+  }
+}
+
+function copiarLinkTaller(){
+  var inp=s('taller-link-input');if(!inp)return;
+  inp.select();inp.setSelectionRange(0,9999);
+  try{
+    navigator.clipboard.writeText(inp.value).then(function(){
+      var m=s('taller-copy-msg');if(m){m.style.display='block';setTimeout(function(){m.style.display='none';},2500);}
+    }).catch(function(){document.execCommand('copy');});
+  }catch(e){document.execCommand('copy');}
 }
 
 function actualizarPreview(){
@@ -2225,7 +2427,7 @@ async function guardar(enviarMail){
   const sin=g('f-sin'),pat=g('f-pat'),msg=s('msg-guard');
   if(!sin){msg.className='msg err';msg.textContent='Nº siniestro obligatorio.';return;}
   if(!pat){msg.className='msg err';msg.textContent='Patente obligatoria.';return;}
-  if(!inspActual){msg.className='msg err';msg.textContent='Seleccioná un inspector.';return;}
+  if(!inspActual&&!asignarTallerMode){msg.className='msg err';msg.textContent='Seleccioná un inspector o el botón Taller.';return;}
   // Validación de duplicados
   if(inspecciones.some(function(i){return String(i.Siniestro).trim()===String(sin).trim();})){
     if(!confirm('⚠ Ya existe una inspección con el siniestro "'+sin+'".\n¿Querés guardar de todas formas?'))return;
@@ -2514,7 +2716,7 @@ function actualizarContadorFotos(){
   contador.style.color=fotosPendientes.length>=30?'var(--red)':fotosPendientes.length>0?'var(--green)':'var(--text3)';
 }
 
-s('rel-fotos').addEventListener('change',async function(e){
+async function procesarFotosInput(e){
   var files=Array.from(e.target.files);
   fotosPendientes=[];
   var prev=s('rel-preview'),errDiv=s('rel-errores');
@@ -2581,7 +2783,10 @@ s('rel-fotos').addEventListener('change',async function(e){
     errDiv.style.color='var(--green)';
     errDiv.textContent=fotosPendientes.length>0?'✓ '+fotosPendientes.length+' foto'+(fotosPendientes.length>1?'s':'')+' listas para enviar.':'';
   }
-});
+  e.target.value='';
+}
+s('rel-fotos-camara').addEventListener('change', procesarFotosInput);
+s('rel-fotos-galeria').addEventListener('change', procesarFotosInput);
 
 async function enviarRel(){
   var km=s('rel-km').value.trim(),danos=s('rel-danos').value.trim(),msg=s('msg-rel');
@@ -2833,9 +3038,152 @@ async function confirmarReasignar(id){
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Comprobar si es un link de taller
+  var tallerParam=(new URLSearchParams(window.location.search)).get('taller');
+  if(tallerParam){iniciarVistaTaller(tallerParam);return;}
   // Siempre mostrar pantalla de login al abrir la página
   try { localStorage.removeItem('ep_session'); } catch(e) {}
 });
+
+// ─── VISTA TALLER ──────────────────────────────────────────────────────────
+var tallerTokenActual=null;
+var tallerFotos=[];
+
+async function iniciarVistaTaller(token){
+  tallerTokenActual=token;
+  var lp=document.getElementById('landing-page');
+  if(lp)lp.style.display='none';
+  hide('screen-login');
+  var ls=s('screen-loading');ls.style.display='flex';
+  var lmsg=document.getElementById('loading-msg');if(lmsg)lmsg.textContent='Cargando inspección...';
+  try{
+    var res=await fetch(API+'?tallerToken='+encodeURIComponent(token));
+    var data=await res.json();
+    ls.style.display='none';
+    if(!data.ok){mostrarErrorTaller(data.msg||'Link inválido o expirado.');return;}
+    mostrarPantallaTaller(data.inspeccion);
+  }catch(e){
+    ls.style.display='none';
+    mostrarErrorTaller('Error de conexión. Verificá tu internet e intentá de nuevo.');
+  }
+}
+
+function mostrarErrorTaller(msg){
+  var sc=s('screen-taller');sc.style.display='flex';
+  s('taller-content').innerHTML='<div style="text-align:center;padding:40px 20px">'
+    +'<div style="font-size:48px;margin-bottom:16px">⚠️</div>'
+    +'<h2 style="font-size:20px;font-weight:600;margin-bottom:10px;color:var(--red)">No se puede acceder</h2>'
+    +'<p style="font-size:14px;color:var(--text2);max-width:340px;margin:0 auto">'+esc(msg)+'</p>'
+    +'</div>';
+}
+
+function mostrarPantallaTaller(insp){
+  var sc=s('screen-taller');sc.style.display='flex';
+  var html='<div class="card" style="margin-bottom:16px">';
+  html+='<p style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;font-weight:600;margin-bottom:8px">🔗 Inspección asignada al taller</p>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:13px">';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Siniestro</span><strong>'+esc(insp.siniestro||'-')+'</strong></div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Patente</span><strong>'+esc(insp.patente||'-')+'</strong></div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Modelo</span>'+esc((insp.modelo||'-')+' ('+(insp.anio||'-')+')')+'</div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Compañía</span>'+esc(insp.compania||'-')+'</div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Asegurado</span>'+esc(insp.asegurado||'-')+'</div>';
+  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Fecha insp.</span>'+esc(insp.fechaInsp||'-')+'</div>';
+  if(insp.danos)html+='<div style="grid-column:1/-1"><span style="font-size:11px;color:var(--text2);display:block">Daños declarados</span>'+esc(insp.danos)+'</div>';
+  html+='</div></div>';
+  html+='<div class="card" style="margin-bottom:16px">';
+  html+='<p class="section-title">Datos del taller</p>';
+  html+='<div class="form-grid-2" style="margin-bottom:12px">';
+  html+='<div class="field"><label>Nombre del taller</label><input type="text" id="t-nombre" placeholder="Nombre..."/></div>';
+  html+='<div class="field"><label>Teléfono</label><input type="tel" id="t-tel" placeholder="Teléfono..."/></div>';
+  html+='</div>';
+  html+='<div class="form-grid-2" style="margin-bottom:12px">';
+  html+='<div class="field"><label>Mail</label><input type="email" id="t-mail" placeholder="mail@taller.com"/></div>';
+  html+='<div class="field"><label>CUIT</label><input type="text" id="t-cuit" placeholder="20-..."/></div>';
+  html+='</div>';
+  html+='<div class="field"><label>Km del vehículo</label><input type="text" id="t-km" placeholder="Km actuales"/></div>';
+  html+='</div>';
+  html+='<div class="card" style="margin-bottom:16px">';
+  html+='<p class="section-title">Daños verificados</p>';
+  html+='<textarea id="t-danos" rows="4" style="width:100%;resize:vertical" placeholder="Descripí los daños que verificás en el vehículo..."></textarea>';
+  html+='</div>';
+  html+='<div class="card" style="margin-bottom:16px">';
+  html+='<p class="section-title">Fotos</p>';
+  html+='<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">';
+  html+='<label for="t-fotos-camara" style="display:inline-flex;align-items:center;gap:6px;background:rgba(79,124,255,.12);color:var(--accent);border:1px solid rgba(79,124,255,.3);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:500">📷 Sacar foto</label>';
+  html+='<label for="t-fotos-galeria" style="display:inline-flex;align-items:center;gap:6px;background:rgba(139,146,168,.08);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px">🖼 Desde galería</label>';
+  html+='</div>';
+  html+='<input type="file" id="t-fotos-camara" accept="image/jpeg,image/png" capture="environment" multiple style="display:none"/>';
+  html+='<input type="file" id="t-fotos-galeria" accept="image/jpeg,image/png" multiple style="display:none"/>';
+  html+='<div id="t-fotos-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>';
+  html+='</div>';
+  html+='<div class="card">';
+  html+='<p class="section-title">Enviar relevamiento</p>';
+  html+='<p style="font-size:13px;color:var(--text2);margin-bottom:12px">Una vez enviado, el link ya no podrá usarse nuevamente.</p>';
+  html+='<button class="btn-primary" id="t-btn-enviar" style="background:#f59e0b;color:#111;font-weight:600" onclick="enviarRelTaller()">🚀 Enviar al Estudio Patitucci</button>';
+  html+='<div id="t-msg" class="msg" style="margin-top:12px;display:block"></div>';
+  html+='</div>';
+  s('taller-content').innerHTML=html;
+  setTimeout(function(){
+    var cam=s('t-fotos-camara'),gal=s('t-fotos-galeria');
+    if(cam)cam.addEventListener('change',agregarFotosTaller);
+    if(gal)gal.addEventListener('change',agregarFotosTaller);
+  },100);
+}
+
+function agregarFotosTaller(e){
+  Array.from(e.target.files).forEach(function(file){
+    var reader=new FileReader();
+    reader.onload=function(ev){tallerFotos.push({id:'f'+Date.now()+Math.random(),dataUrl:ev.target.result,name:file.name});renderFotosTaller();};
+    reader.readAsDataURL(file);
+  });
+  e.target.value='';
+}
+
+function renderFotosTaller(){
+  var prev=s('t-fotos-preview');if(!prev)return;
+  prev.innerHTML=tallerFotos.map(function(f,i){
+    return '<div style="position:relative;width:80px;height:80px">'
+      +'<img src="'+f.dataUrl+'" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border)"/>'
+      +'<button onclick="quitarFotoTaller('+i+')" style="position:absolute;top:-6px;right:-6px;background:#e55353;color:#fff;border-radius:50%;width:20px;height:20px;font-size:12px;display:flex;align-items:center;justify-content:center;padding:0">×</button>'
+      +'</div>';
+  }).join('');
+}
+
+function quitarFotoTaller(idx){tallerFotos.splice(idx,1);renderFotosTaller();}
+
+async function enviarRelTaller(){
+  var msg=s('t-msg'),btn=s('t-btn-enviar');
+  if(!tallerTokenActual){if(msg){msg.className='msg err';msg.textContent='Error: token no disponible.';}return;}
+  if(msg)msg.className='msg';if(msg)msg.textContent='Enviando...';
+  if(btn)btn.disabled=true;
+  try{
+    var rel={
+      taller:(s('t-nombre')&&s('t-nombre').value.trim())||'',
+      telTaller:(s('t-tel')&&s('t-tel').value.trim())||'',
+      mailTaller:(s('t-mail')&&s('t-mail').value.trim())||'',
+      cuit:(s('t-cuit')&&s('t-cuit').value.trim())||'',
+      km:(s('t-km')&&s('t-km').value.trim())||'',
+      danos:(s('t-danos')&&s('t-danos').value.trim())||'',
+      fotos:tallerFotos.map(function(f){return f.dataUrl;}),
+      fechaEnvio:new Date().toISOString()
+    };
+    var res=await fetch(API,{method:'POST',body:JSON.stringify({action:'relevamientoTaller',tallerToken:tallerTokenActual,relevamiento:rel})});
+    var data=await res.json();
+    if(data.ok){
+      if(msg){msg.className='msg ok';msg.textContent='✓ ¡Relevamiento enviado correctamente!';}
+      var sc=s('taller-content');
+      sc.insertAdjacentHTML('beforebegin','<div style="background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:12px;padding:24px;text-align:center;margin-bottom:16px"><div style="font-size:44px;margin-bottom:10px">✅</div><p style="font-weight:600;color:var(--green);font-size:16px">Relevamiento enviado con éxito</p><p style="font-size:13px;color:var(--text2);margin-top:6px">El Estudio Patitucci ya puede revisar el relevamiento. Gracias.</p></div>');
+      sc.style.display='none';
+    }else{
+      if(msg){msg.className='msg err';msg.textContent='Error: '+(data.msg||'No se pudo enviar.');}
+      if(btn)btn.disabled=false;
+    }
+  }catch(e){
+    if(msg){msg.className='msg err';msg.textContent='Error de conexión. Intentá de nuevo.';}
+    if(btn)btn.disabled=false;
+  }
+}
+
 
 // ── PWA: Service Worker + instalación ────────────────────────────────────────
 (function(){
