@@ -3078,56 +3078,63 @@ function mostrarErrorTaller(msg){
 }
 
 function mostrarPantallaTaller(insp){
-  var sc=s('screen-taller');sc.style.display='flex';
-  var html='<div class="card" style="margin-bottom:16px">';
-  html+='<p style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#f59e0b;font-weight:600;margin-bottom:8px">🔗 Inspección asignada al taller</p>';
-  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:13px">';
-  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Siniestro</span><strong>'+esc(insp.siniestro||'-')+'</strong></div>';
-  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Patente</span><strong>'+esc(insp.patente||'-')+'</strong></div>';
-  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Modelo</span>'+esc((insp.modelo||'-')+' ('+(insp.anio||'-')+')')+'</div>';
-  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Compañía</span>'+esc(insp.compania||'-')+'</div>';
-  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Asegurado</span>'+esc(insp.asegurado||'-')+'</div>';
-  html+='<div><span style="font-size:11px;color:var(--text2);display:block">Fecha insp.</span>'+esc(insp.fechaInsp||'-')+'</div>';
-  if(insp.danos)html+='<div style="grid-column:1/-1"><span style="font-size:11px;color:var(--text2);display:block">Daños declarados</span>'+esc(insp.danos)+'</div>';
-  html+='</div></div>';
-  html+='<div class="card" style="margin-bottom:16px">';
-  html+='<p class="section-title">Datos del taller</p>';
-  html+='<div class="form-grid-2" style="margin-bottom:12px">';
-  html+='<div class="field"><label>Nombre del taller</label><input type="text" id="t-nombre" placeholder="Nombre..."/></div>';
-  html+='<div class="field"><label>Teléfono</label><input type="tel" id="t-tel" placeholder="Teléfono..."/></div>';
-  html+='</div>';
-  html+='<div class="form-grid-2" style="margin-bottom:12px">';
-  html+='<div class="field"><label>Mail</label><input type="email" id="t-mail" placeholder="mail@taller.com"/></div>';
-  html+='<div class="field"><label>CUIT</label><input type="text" id="t-cuit" placeholder="20-..."/></div>';
-  html+='</div>';
-  html+='<div class="field"><label>Km del vehículo</label><input type="text" id="t-km" placeholder="Km actuales"/></div>';
-  html+='</div>';
-  html+='<div class="card" style="margin-bottom:16px">';
-  html+='<p class="section-title">Daños verificados</p>';
-  html+='<textarea id="t-danos" rows="4" style="width:100%;resize:vertical" placeholder="Descripí los daños que verificás en el vehículo..."></textarea>';
-  html+='</div>';
-  html+='<div class="card" style="margin-bottom:16px">';
-  html+='<p class="section-title">Fotos</p>';
-  html+='<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">';
-  html+='<label for="t-fotos-camara" style="display:inline-flex;align-items:center;gap:6px;background:rgba(79,124,255,.12);color:var(--accent);border:1px solid rgba(79,124,255,.3);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px;font-weight:500">📷 Sacar foto</label>';
-  html+='<label for="t-fotos-galeria" style="display:inline-flex;align-items:center;gap:6px;background:rgba(139,146,168,.08);color:var(--text2);border:1px solid var(--border);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:13px">🖼 Desde galería</label>';
-  html+='</div>';
-  html+='<input type="file" id="t-fotos-camara" accept="image/jpeg,image/png" capture="environment" multiple style="display:none"/>';
-  html+='<input type="file" id="t-fotos-galeria" accept="image/jpeg,image/png" multiple style="display:none"/>';
-  html+='<div id="t-fotos-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>';
-  html+='</div>';
-  html+='<div class="card">';
-  html+='<p class="section-title">Enviar relevamiento</p>';
-  html+='<p style="font-size:13px;color:var(--text2);margin-bottom:12px">Una vez enviado, el link ya no podrá usarse nuevamente.</p>';
-  html+='<button class="btn-primary" id="t-btn-enviar" style="background:#f59e0b;color:#111;font-weight:600" onclick="enviarRelTaller()">🚀 Enviar al Estudio Patitucci</button>';
-  html+='<div id="t-msg" class="msg" style="margin-top:12px;display:block"></div>';
-  html+='</div>';
-  s('taller-content').innerHTML=html;
+  // Cargar la inspeccion del taller en el array local para que abrirRel() la encuentre
+  var fakeInsp={
+    ID:insp.id, Siniestro:insp.siniestro, Patente:insp.patente,
+    Modelo:insp.modelo, Anio:insp.anio, Compania:insp.compania,
+    Asegurado:insp.asegurado, Tel:insp.tel, Direccion:insp.direccion,
+    Localidad:insp.localidad, Danos:insp.danos, Inspector:'Taller',
+    Estado:'Esperando taller', Relevamiento:null, Devoluciones:[]
+  };
+  inspecciones=[fakeInsp];
+  usuarioActual='Taller';
+
+  // Mostrar pantalla inspector en modo taller
+  var si=s('screen-inspector');
+  si.style.display='flex';si.style.flexDirection='column';
+
+  // Ocultar sidebar y boton salir
+  var sb=document.getElementById('insp-sidebar');
+  if(sb)sb.style.display='none';
+  si.querySelectorAll('.btn-secondary').forEach(function(b){
+    if(b.getAttribute('onclick')==='logout()')b.style.display='none';
+  });
+
+  // Cambiar topbar
+  var logo=si.querySelector('.topbar-logo');
+  if(logo)logo.innerHTML='Estudio <span>Patitucci</span>';
+  var lbl=s('insp-user-label');
+  if(lbl)lbl.innerHTML='<span style="color:#f59e0b;font-weight:600">🔧 Portal del Taller</span>';
+
+  // Abrir relevamiento con el calculador completo
+  abrirRel(insp.id);
+
+  // Adaptar el formulario para modo taller
   setTimeout(function(){
-    var cam=s('t-fotos-camara'),gal=s('t-fotos-galeria');
-    if(cam)cam.addEventListener('change',agregarFotosTaller);
-    if(gal)gal.addEventListener('change',agregarFotosTaller);
-  },100);
+    // Cambiar titulo
+    var tit=s('rel-titulo');
+    if(tit)tit.innerHTML='<span style="color:#f59e0b;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">🔗 Inspección asignada al taller</span>'
+      +esc(insp.siniestro||'-')+' Â· '+esc(insp.patente||'-')+' Â· '+esc(insp.compania||'-');
+
+    // Ocultar boton Volver (taller no puede navegar para atras)
+    var volver=document.querySelector('#panel-rel button[onclick="cerrarRel()"]');
+    if(volver)volver.style.display='none';
+
+    // Reemplazar boton Enviar para que use el endpoint del taller
+    var btnEnv=document.querySelector('#panel-rel button[onclick="enviarRel()"]');
+    if(btnEnv){
+      btnEnv.setAttribute('onclick','enviarRelTallerDesdeForm()');
+      btnEnv.textContent='🚀 Enviar al Estudio Patitucci';
+      btnEnv.style.background='#f59e0b';
+      btnEnv.style.color='#111';
+    }
+
+    // Mostrar daños declarados como referencia
+    if(insp.danos&&s('rel-danos')&&!s('rel-danos').value){
+      // Pre-cargar danos declarados como punto de partida
+      s('rel-danos').placeholder='Danos declarados: '+insp.danos;
+    }
+  },150);
 }
 
 function agregarFotosTaller(e){
@@ -3150,6 +3157,68 @@ function renderFotosTaller(){
 }
 
 function quitarFotoTaller(idx){tallerFotos.splice(idx,1);renderFotosTaller();}
+
+async function enviarRelTallerDesdeForm(){
+  // Usa el formulario completo del inspector (con calculador) para enviar al taller
+  var km=s('rel-km').value.trim();
+  var msg=s('msg-rel');
+  if(!km){msg.className='msg err';msg.textContent='Kilometraje obligatorio.';return;}
+  msg.className='msg';msg.textContent='Enviando...';
+  var btnEnv=document.querySelector('#panel-rel button[onclick="enviarRelTallerDesdeForm()"]');
+  if(btnEnv)btnEnv.disabled=true;
+  // Construir calculador igual que enviarRel()
+  var calcTotalHs=relCalcState.piezas.reduce(function(acc,p){return acc+(p.hsTrabajo||0);},0);
+  var calcTotalOpHs=relOpState.reduce(function(acc,o){
+    if(o.operacion==='Banco de estiraje') return acc+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
+    if(o.operacion==='Desmontaje y montaje de accesorios') return acc+(o.horas||0);
+    return acc;
+  },0);
+  var calcTotalPanos=relCalcState.piezas.reduce(function(acc,p){if(p.tarea==='Pintar')return acc+(p.panos||0);if(p.tarea==='Difuminar')return acc+0.5;return acc;},0);
+  var calcData={
+    tipo:relCalcState.tipo,
+    piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),
+    operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};}),
+    total:calcTotalHs+calcTotalOpHs,
+    totalPanos:calcTotalPanos
+  };
+  var rel={
+    km:km,
+    danos:s('rel-danos').value.trim(),
+    calculador:calcData,
+    taller:s('rel-taller').value.trim(),
+    telTaller:s('rel-tel').value.trim(),
+    mailTaller:s('rel-mail').value.trim(),
+    cuit:s('rel-cuit').value.trim(),
+    fotos:fotosPendientes,
+    fechaEnvio:new Date().toISOString(),
+    origenTaller:true
+  };
+  try{
+    var res=await fetch(API,{method:'POST',body:JSON.stringify({action:'relevamientoTaller',tallerToken:tallerTokenActual,relevamiento:rel})});
+    var data=await res.json();
+    if(data.ok){
+      msg.className='msg ok';msg.textContent='✓ ¡Relevamiento enviado correctamente!';
+      // Mostrar pantalla de exito
+      var panel=s('panel-rel');
+      if(panel){
+        panel.insertAdjacentHTML('beforebegin',
+          '<div style="background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:12px;padding:28px;text-align:center;max-width:500px;margin:40px auto">'
+          +'<div style="font-size:48px;margin-bottom:12px">✅</div>'
+          +'<p style="font-weight:600;color:var(--green);font-size:18px;margin-bottom:6px">Relevamiento enviado con éxito</p>'
+          +'<p style="font-size:13px;color:var(--text2)">El Estudio Patitucci ya puede revisar el relevamiento. Gracias.</p>'
+          +'</div>'
+        );
+        panel.style.display='none';
+      }
+    }else{
+      msg.className='msg err';msg.textContent='Error: '+(data.msg||'No se pudo enviar.');
+      if(btnEnv)btnEnv.disabled=false;
+    }
+  }catch(e){
+    msg.className='msg err';msg.textContent='Error de conexiÃ³n. IntentÃ¡ de nuevo.';
+    if(btnEnv)btnEnv.disabled=false;
+  }
+}
 
 async function enviarRelTaller(){
   var msg=s('t-msg'),btn=s('t-btn-enviar');
