@@ -187,9 +187,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .lp-cert-card-icon{font-size:2rem;margin-bottom:.5rem}
 .lp-cert-card-title{color:#0a1628;font-size:.85rem;font-weight:700}
 .lp-cert-card-sub{color:#64748b;font-size:.75rem;margin-top:.25rem}
-.lp-access{background:linear-gradient(135deg,#0a1628,#1a3560);padding:5rem 1.5rem;text-align:center;position:relative;overflow:hidden}
-.lp-access::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(37,99,235,.2) 0%,transparent 70%)}
-.lp-access-content{position:relative;max-width:560px;margin:0 auto}
+.lp-access{background:linear-gradient(135deg,#0a1628,#1a3560);padding:5rem 1.5rem 4rem;text-align:center;position:relative;overflow:hidden}
+.lp-access::before{content:'';position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse at center,rgba(37,99,235,.2) 0%,transparent 70%)}
+.lp-access-content{position:relative;z-index:1;max-width:560px;margin:0 auto}
 .lp-access-icon{width:64px;height:64px;background:rgba(37,99,235,.2);border:1px solid rgba(37,99,235,.4);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.75rem;margin:0 auto 1.5rem}
 .lp-access-title{color:#fff;font-size:clamp(1.5rem,3vw,2rem);font-weight:800;margin-bottom:.75rem}
 .lp-access-desc{color:#94a3b8;font-size:1rem;line-height:1.6;margin-bottom:2rem}
@@ -501,7 +501,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="lp-access-content">
       <h2 class="lp-access-title">Acceso al Sistema Operativo</h2>
       <p class="lp-access-desc">Ingresá con tus credenciales para acceder al sistema de gestión de inspecciones y siniestros del estudio.</p>
-      <button class="lp-btn-primary" onclick="lpShowLogin()" style="margin:0 auto">Iniciar sesión →</button>
+      <button class="lp-btn-primary" onclick="lpShowLogin()" style="display:inline-flex;margin:0 auto">Iniciar sesión →</button>
     </div>
   </section>
   <footer class="lp-footer">
@@ -1153,8 +1153,21 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <div id="rel-errores" style="font-size:12px;margin-top:8px;min-height:16px"></div>
           <div id="rel-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
         </div>
-        <button class="btn-primary" onclick="enviarRel()" style="padding:10px 24px;font-size:14px">Enviar relevamiento</button>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:4px">
+          <button class="btn-primary" onclick="enviarRel()" style="padding:10px 24px;font-size:14px">Enviar relevamiento</button>
+          <button class="btn-secondary" onclick="guardarBorradorCompleto()" style="padding:10px 18px;font-size:14px">💾 Guardar sin enviar</button>
+        </div>
         <div id="msg-rel" class="msg"></div>
+        <div id="upload-progress-wrap" style="display:none;margin-top:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <span id="upload-progress-label" style="font-size:12px;color:var(--text2);font-weight:500">Subiendo fotos...</span>
+            <span id="upload-progress-pct" style="font-size:12px;font-weight:700;color:var(--accent)">0%</span>
+          </div>
+          <div style="background:var(--bg2,#e5e7eb);border-radius:6px;height:8px;overflow:hidden">
+            <div id="upload-progress-bar" style="height:100%;width:0%;background:var(--accent,#4f7cff);border-radius:6px;transition:width .25s ease"></div>
+          </div>
+          <div id="upload-progress-sub" style="font-size:11px;color:var(--text3);margin-top:4px;text-align:right"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -1299,6 +1312,10 @@ const esc=v=>{if(!v)return'';return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;
 const estadoPill=e=>{const m={'Pendientes de carga':'blue','Pendiente de verificar':'yellow','Pendientes de resolver':'orange','Esperando taller':'amber',Cerradas:'green'};return '<span class="pill pill-'+(m[e]||'gray')+'">'+esc(e)+'</span>';};
 const formatFecha=f=>{if(!f)return'-';try{const d=new Date(f);if(!isNaN(d.getTime()))return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});}catch(e){}return String(f).split('T')[0];};
 async function apiCall(data){const r=await fetch(API,{method:'POST',body:JSON.stringify(Object.assign({token:SECRET_TOKEN},data))});return r.json();}
+function apiCallXHR(data,onProgress){return new Promise(function(resolve,reject){var xhr=new XMLHttpRequest();xhr.open('POST',API);xhr.responseType='json';if(onProgress&&xhr.upload){xhr.upload.onprogress=function(e){if(e.lengthComputable)onProgress(e.loaded,e.total);};}xhr.onload=function(){if(xhr.status>=200&&xhr.status<300){resolve(xhr.response);}else{reject(new Error('HTTP '+xhr.status));}};xhr.onerror=function(){reject(new Error('red'));};xhr.send(JSON.stringify(Object.assign({token:SECRET_TOKEN},data)));});}
+function mostrarProgresoSubida(loaded,total,nFotos){var wrap=s('upload-progress-wrap');var bar=s('upload-progress-bar');var pct=s('upload-progress-pct');var lbl=s('upload-progress-label');var sub=s('upload-progress-sub');if(!wrap)return;var pctVal=total>0?Math.min(99,Math.round(loaded/total*100)):0;if(bar)bar.style.width=pctVal+'%';if(pct)pct.textContent=pctVal+'%';if(lbl)lbl.textContent='Subiendo '+(nFotos||'')+(nFotos===1?' foto...':(nFotos>1?' fotos...':'...'));if(sub){var mb=(loaded/1048576).toFixed(1)+' / '+(total/1048576).toFixed(1)+' MB';sub.textContent=mb;}}
+function ocultarProgresoSubida(){var wrap=s('upload-progress-wrap');if(wrap)wrap.style.display='none';var bar=s('upload-progress-bar');if(bar)bar.style.width='0%';}
+function iniciarProgresoSubida(nFotos){var wrap=s('upload-progress-wrap');if(wrap)wrap.style.display='block';var bar=s('upload-progress-bar');if(bar)bar.style.width='0%';var pct=s('upload-progress-pct');if(pct)pct.textContent='0%';var lbl=s('upload-progress-label');if(lbl)lbl.textContent='Subiendo '+(nFotos||'')+(nFotos===1?' foto...':(nFotos>1?' fotos...':'...'));var sub=s('upload-progress-sub');if(sub)sub.textContent='';}
 async function apiGet(){const r=await fetch(API+'?token='+SECRET_TOKEN);return r.json();}
 
 async function doLogin(){
@@ -1403,10 +1420,12 @@ function actualizarBadgesAdmin(){
   const pend=inspecciones.filter(i=>i.Estado==='Pendientes de carga').length;
   const rev=inspecciones.filter(i=>i.Estado==='Pendiente de verificar').length;
   const resol=inspecciones.filter(i=>i.Estado==='Pendientes de resolver').length;
-  const bp=s('badge-pend'),br=s('badge-rev'),bres=s('badge-resolver');
+  const tall=inspecciones.filter(i=>i.Estado==='Esperando taller').length;
+  const bp=s('badge-pend'),br=s('badge-rev'),bres=s('badge-resolver'),bt=s('badge-taller');
   if(pend>0){bp.style.display='inline';bp.textContent=pend;}else bp.style.display='none';
   if(rev>0){br.style.display='inline';br.textContent=rev;}else br.style.display='none';
   if(resol>0){bres.style.display='inline';bres.textContent=resol;}else bres.style.display='none';
+  if(bt){if(tall>0){bt.style.display='inline';bt.textContent=tall;}else bt.style.display='none';}
 }
 
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
@@ -2589,6 +2608,108 @@ function verDetalleInsp(id){
 }
 
 // ─── BORRADOR ────────────────────────────────────────────────────────────────
+// ─── INDEXEDDB — BORRADORES CON FOTOS ────────────────────────────────────────
+var _epDB=null;
+function epDbOpen(){
+  return new Promise(function(resolve,reject){
+    if(_epDB){resolve(_epDB);return;}
+    var req=indexedDB.open('ep_borradores',1);
+    req.onupgradeneeded=function(e){e.target.result.createObjectStore('drafts',{keyPath:'id'});};
+    req.onsuccess=function(e){_epDB=e.target.result;resolve(_epDB);};
+    req.onerror=function(){reject(req.error);};
+  });
+}
+function epDbSave(draft){
+  return epDbOpen().then(function(db){
+    return new Promise(function(resolve,reject){
+      var tx=db.transaction('drafts','readwrite');
+      tx.objectStore('drafts').put(draft);
+      tx.oncomplete=resolve;
+      tx.onerror=function(){reject(tx.error);};
+    });
+  });
+}
+function epDbLoad(id){
+  return epDbOpen().then(function(db){
+    return new Promise(function(resolve,reject){
+      var req=db.transaction('drafts','readonly').objectStore('drafts').get(String(id));
+      req.onsuccess=function(){resolve(req.result||null);};
+      req.onerror=function(){reject(req.error);};
+    });
+  });
+}
+function epDbDelete(id){
+  return epDbOpen().then(function(db){
+    return new Promise(function(resolve){
+      var tx=db.transaction('drafts','readwrite');
+      tx.objectStore('drafts').delete(String(id));
+      tx.oncomplete=resolve;tx.onerror=resolve;
+    });
+  });
+}
+
+function renderFotosGuardadas(fotosArr){
+  var prev=s('rel-preview');if(!prev)return;
+  prev.innerHTML='';
+  fotosArr.forEach(function(f,idx){
+    var wrapper=document.createElement('div');
+    wrapper.style.cssText='position:relative;display:inline-block';
+    var img=document.createElement('img');
+    img.src=f.dataUrl||f;
+    img.style.cssText='width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer;display:block';
+    img.onclick=function(){window.open(this.src,'_blank');};
+    var del=document.createElement('button');
+    del.textContent='×';
+    del.style.cssText='position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;font-weight:700';
+    del.onclick=(function(wr,fu){
+      return function(ev){
+        ev.stopPropagation();
+        fotosPendientes=fotosPendientes.filter(function(x){return (x.dataUrl||x)!==(fu.dataUrl||fu);});
+        wr.remove();
+        actualizarContadorFotos();
+      };
+    })(wrapper,f);
+    wrapper.appendChild(img);wrapper.appendChild(del);
+    prev.appendChild(wrapper);
+  });
+  actualizarContadorFotos();
+  var errDiv=s('rel-errores');
+  if(errDiv){errDiv.style.color='var(--green)';errDiv.textContent='✓ '+fotosArr.length+' foto'+(fotosArr.length>1?'s':'')+' restauradas del borrador.';}
+}
+
+async function guardarBorradorCompleto(){
+  var key=tallerTokenActual||relId;
+  if(!key){toast('No hay inspección activa.','err');return;}
+  var msg=s('msg-rel');
+  var calcTotal=relCalcState.piezas.reduce(function(acc,p){return acc+(p.hsTrabajo||0);},0);
+  var draft={
+    id:String(key),ts:Date.now(),
+    km:s('rel-km')?s('rel-km').value:'',
+    danos:s('rel-danos')?s('rel-danos').value:'',
+    taller:s('rel-taller')?s('rel-taller').value:'',
+    telTaller:s('rel-tel')?s('rel-tel').value:'',
+    mailTaller:s('rel-mail')?s('rel-mail').value:'',
+    cuit:s('rel-cuit')?s('rel-cuit').value:'',
+    costoDiaChapa:relCostoDiaChapa,costoPanoPintura:relCostoPanoPintura,
+    calculador:{tipo:relCalcState.tipo,
+      piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),
+      total:calcTotal,
+      operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};})},
+    fotos:fotosPendientes.map(function(f){return{dataUrl:f.dataUrl||f,name:f.name||'foto.jpg'};})
+  };
+  try{
+    await epDbSave(draft);
+    var nf=draft.fotos.length;
+    var txt='✓ Borrador guardado'+(nf?' con '+nf+' foto'+(nf>1?'s':'')+'.':'.');
+    if(msg){msg.className='msg ok';msg.textContent=txt;}
+    toast(txt,'ok');
+  }catch(e){
+    var errTxt='No se pudo guardar el borrador. Verificá el espacio disponible.';
+    if(msg){msg.className='msg err';msg.textContent=errTxt;}
+    toast(errTxt,'err');
+  }
+}
+
 function guardarBorrador(){
   if(!relId)return;
   var calcTotal=relCalcState.piezas.reduce(function(acc,p){return acc+(p.hsTrabajo||0);},0);
@@ -2639,35 +2760,7 @@ function abrirRel(id){
   } else {
     ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit'].forEach(function(x){s(x).value='';});
   }
-  // Verificar si hay un borrador guardado más reciente
-  try{
-    var bdrRaw=localStorage.getItem('bdr_'+id);
-    if(bdrRaw){
-      var bdr=JSON.parse(bdrRaw);
-      var hace=Math.round((Date.now()-bdr.ts)/60000);
-      if(confirm('💾 Hay un borrador guardado hace '+hace+' min.\n¿Restaurarlo?')){
-        if(bdr.km)s('rel-km').value=bdr.km;
-        if(bdr.danos)s('rel-danos').value=bdr.danos;
-        if(bdr.taller)s('rel-taller').value=bdr.taller;
-        if(bdr.telTaller)s('rel-tel').value=bdr.telTaller;
-        if(bdr.mailTaller)s('rel-mail').value=bdr.mailTaller;
-        if(bdr.cuit)s('rel-cuit').value=bdr.cuit;
-        if(bdr.calculador){
-          relCalcState={tipo:bdr.calculador.tipo||'',piezas:(bdr.calculador.piezas||[]).map(function(p,i){return Object.assign({},p,{_id:i});})};
-          relCalcIdx=relCalcState.piezas.length;
-          if(bdr.calculador.operaciones&&bdr.calculador.operaciones.length){
-            relOpState=bdr.calculador.operaciones.map(function(o,i){return Object.assign({},o,{_id:i});});
-            relOpIdx=relOpState.length;
-          }
-          if(s('rel-calc-tipo'))s('rel-calc-tipo').value=relCalcState.tipo||'';
-          if(bdr.costoDiaChapa){relCostoDiaChapa=bdr.costoDiaChapa;if(s('rel-costo-chapa'))s('rel-costo-chapa').value=bdr.costoDiaChapa;}
-          if(bdr.costoPanoPintura){relCostoPanoPintura=bdr.costoPanoPintura;if(s('rel-costo-pano'))s('rel-costo-pano').value=bdr.costoPanoPintura;}
-          relOpRender();
-          relCalcRender();
-        }
-      }
-    }
-  }catch(e){}
+  // Verificar borrador — se hace async después de mostrar el form
   s('rel-fotos').value='';s('rel-preview').innerHTML='';s('rel-errores').textContent='';s('msg-rel').textContent='';
   fotosPendientes=[];
   // Mostrar devoluciones del admin si las hay
@@ -2685,6 +2778,36 @@ function abrirRel(id){
   }
   ['isec-abiertas','isec-carga','isec-revision','isec-cerradas','isec-perfil','notif-bar'].forEach(function(x){hide(x);});
   show('panel-rel');
+  // Verificar borrador completo en IndexedDB (con fotos)
+  epDbLoad(id).then(function(bdr){
+    if(!bdr)return;
+    var hace=Math.round((Date.now()-bdr.ts)/60000);
+    var nf=(bdr.fotos||[]).length;
+    var txt='💾 Hay un borrador guardado hace '+hace+' min'+(nf?' con '+nf+' foto'+(nf>1?'s':''):'')+'.\n¿Restaurarlo?';
+    if(!confirm(txt))return;
+    if(bdr.km)s('rel-km').value=bdr.km;
+    if(bdr.danos)s('rel-danos').value=bdr.danos;
+    if(bdr.taller)s('rel-taller').value=bdr.taller;
+    if(bdr.telTaller)s('rel-tel').value=bdr.telTaller;
+    if(bdr.mailTaller)s('rel-mail').value=bdr.mailTaller;
+    if(bdr.cuit)s('rel-cuit').value=bdr.cuit;
+    if(bdr.costoDiaChapa){relCostoDiaChapa=bdr.costoDiaChapa;if(s('rel-costo-chapa'))s('rel-costo-chapa').value=bdr.costoDiaChapa;}
+    if(bdr.costoPanoPintura){relCostoPanoPintura=bdr.costoPanoPintura;if(s('rel-costo-pano'))s('rel-costo-pano').value=bdr.costoPanoPintura;}
+    if(bdr.calculador){
+      relCalcState={tipo:bdr.calculador.tipo||'',piezas:(bdr.calculador.piezas||[]).map(function(p,i){return Object.assign({},p,{_id:i});})};
+      relCalcIdx=relCalcState.piezas.length;
+      if(bdr.calculador.operaciones&&bdr.calculador.operaciones.length){
+        relOpState=bdr.calculador.operaciones.map(function(o,i){return Object.assign({},o,{_id:i});});
+        relOpIdx=relOpState.length;
+      }
+      if(s('rel-calc-tipo'))s('rel-calc-tipo').value=relCalcState.tipo||'';
+      relOpRender();relCalcRender();
+    }
+    if(bdr.fotos&&bdr.fotos.length){
+      fotosPendientes=bdr.fotos.slice();
+      renderFotosGuardadas(bdr.fotos);
+    }
+  }).catch(function(){});
 }
 
 function cerrarRel(){hide('panel-rel');inspTab('abiertas');actualizarBadgesInspector();}
@@ -2813,7 +2936,7 @@ async function enviarRel(){
   var errCampos=validarCamposRel();
   if(errCampos){msg.className='msg err';msg.textContent=errCampos;return;}
   if(!fotosPendientes.length){msg.className='msg err';msg.textContent='Subí al menos una foto JPG.';return;}
-  msg.className='msg';msg.textContent='Enviando ('+fotosPendientes.length+' foto'+(fotosPendientes.length>1?'s':'')+')...';
+  msg.className='msg';msg.textContent='Preparando envío...';
   var calcTotalHs=relCalcState.piezas.reduce(function(acc,p){return acc+(p.hsTrabajo||0);},0);
   var calcTotalOpHs=relOpState.reduce(function(acc,o){
     if(o.operacion==='Banco de estiraje') return acc+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
@@ -2830,7 +2953,10 @@ async function enviarRel(){
   var rel={km,danos,calculador:calcData,taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),fotos:fotosPendientes,fechaEnvio:new Date().toISOString()};
   try{
     var i=inspecciones.find(function(x){return x.ID==relId;});
-    var res=await apiCall({action:'actualizar',id:relId,relevamiento:rel,estado:'Pendiente de verificar'});
+    iniciarProgresoSubida(fotosPendientes.length);
+    var res=await apiCallXHR({action:'actualizar',id:relId,relevamiento:rel,estado:'Pendiente de verificar'},function(loaded,total){mostrarProgresoSubida(loaded,total,fotosPendientes.length);});
+    // Barra al 100% + estado procesando
+    (function(){var bar=s('upload-progress-bar');if(bar)bar.style.width='100%';var pct=s('upload-progress-pct');if(pct)pct.textContent='100%';var lbl=s('upload-progress-label');if(lbl)lbl.textContent='Procesando en servidor...';var sub=s('upload-progress-sub');if(sub)sub.textContent='';})();
     // Si el GAS devolvió fotosLinks / cantFotos / carpetaUrl, incorporarlos al rel local
     if(res&&res.relevamiento){
       if(res.relevamiento.fotosLinks) rel.fotosLinks=res.relevamiento.fotosLinks;
@@ -2845,10 +2971,11 @@ async function enviarRel(){
     if(!rel.cantFotos) rel.cantFotos=fotosPendientes.length;
     if(i){i.Relevamiento=rel;i.Estado='Pendiente de verificar';}
     try{localStorage.removeItem('bdr_'+relId);}catch(e){}
-    msg.className='msg ok';msg.textContent='✓ Relevamiento enviado. La inspección pasó a "Pendiente de verificar".';
+    epDbDelete(relId).catch(function(){});
+    ocultarProgresoSubida();msg.className='msg ok';msg.textContent='✓ Relevamiento enviado. La inspección pasó a "Pendiente de verificar".';
     toast('Relevamiento enviado correctamente.','ok');
     setTimeout(function(){cerrarRel();},1500);
-  }catch(e){msg.className='msg err';msg.textContent='Error al enviar.';}
+  }catch(e){ocultarProgresoSubida();msg.className='msg err';msg.textContent='Error al enviar. Intentá de nuevo.';}
 }
 
 // ─── PDFs ─────────────────────────────────────────────────────────────────────
@@ -3148,6 +3275,16 @@ function mostrarPantallaTaller(insp){
       btnEnv.textContent='🚀 Enviar al Estudio Patitucci';
       btnEnv.style.background='#f59e0b';
       btnEnv.style.color='#111';
+      // Agregar botón "Guardar sin enviar" al lado
+      if(!document.getElementById('btn-guardar-taller')){
+        var btnGuardar=document.createElement('button');
+        btnGuardar.id='btn-guardar-taller';
+        btnGuardar.className='btn-secondary';
+        btnGuardar.textContent='💾 Guardar sin enviar';
+        btnGuardar.style.cssText='padding:10px 18px;font-size:14px;margin-left:10px';
+        btnGuardar.onclick=guardarBorradorCompleto;
+        btnEnv.parentNode.insertBefore(btnGuardar,btnEnv.nextSibling);
+      }
     }
 
     // Mostrar daños declarados como referencia
@@ -3186,7 +3323,7 @@ async function enviarRelTallerDesdeForm(){
   if(!km){msg.className='msg err';msg.textContent='Kilometraje obligatorio.';return;}
   var errCampos=validarCamposRel();
   if(errCampos){msg.className='msg err';msg.textContent=errCampos;return;}
-  msg.className='msg';msg.textContent='Enviando...';
+  msg.className='msg';msg.textContent='Preparando envío...';
   var btnEnv=document.querySelector('#panel-rel button[onclick="enviarRelTallerDesdeForm()"]');
   if(btnEnv)btnEnv.disabled=true;
   // Construir calculador igual que enviarRel()
@@ -3217,10 +3354,12 @@ async function enviarRelTallerDesdeForm(){
     origenTaller:true
   };
   try{
-    var res=await fetch(API,{method:'POST',body:JSON.stringify({action:'relevamientoTaller',tallerToken:tallerTokenActual,relevamiento:rel})});
-    var data=await res.json();
+    iniciarProgresoSubida(fotosPendientes.length);
+    var data=await apiCallXHR({action:'relevamientoTaller',tallerToken:tallerTokenActual,relevamiento:rel},function(loaded,total){mostrarProgresoSubida(loaded,total,fotosPendientes.length);});
+    (function(){var bar=s('upload-progress-bar');if(bar)bar.style.width='100%';var pct=s('upload-progress-pct');if(pct)pct.textContent='100%';var lbl=s('upload-progress-label');if(lbl)lbl.textContent='Procesando en servidor...';var sub=s('upload-progress-sub');if(sub)sub.textContent='';})();
     if(data.ok){
-      msg.className='msg ok';msg.textContent='✓ ¡Relevamiento enviado correctamente!';
+      epDbDelete(tallerTokenActual).catch(function(){});
+      ocultarProgresoSubida();msg.className='msg ok';msg.textContent='✓ ¡Relevamiento enviado correctamente!';
       // Mostrar pantalla de exito
       var panel=s('panel-rel');
       if(panel){
@@ -3234,11 +3373,11 @@ async function enviarRelTallerDesdeForm(){
         panel.style.display='none';
       }
     }else{
-      msg.className='msg err';msg.textContent='Error: '+(data.msg||'No se pudo enviar.');
+      ocultarProgresoSubida();msg.className='msg err';msg.textContent='Error: '+(data.msg||'No se pudo enviar.');
       if(btnEnv)btnEnv.disabled=false;
     }
   }catch(e){
-    msg.className='msg err';msg.textContent='Error de conexiÃ³n. IntentÃ¡ de nuevo.';
+    ocultarProgresoSubida();msg.className='msg err';msg.textContent='Error de conexión. Intentá de nuevo.';
     if(btnEnv)btnEnv.disabled=false;
   }
 }
