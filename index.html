@@ -3,7 +3,68 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Estudio Patitucci</title>
+
+<!-- ═══ SEO PRIMARIO ════════════════════════════════════════════════════════ -->
+<title>Estudio Patitucci | Peritajes y Consultoría en Siniestros Automotores – Argentina</title>
+<meta name="description" content="Estudio Patitucci: peritajes técnicos CESVI, inspecciones de siniestros automotores, auditoría de daños y consultoría pericial para aseguradoras en Argentina. Respuesta en 24/48 hs."/>
+<meta name="keywords" content="peritaje automotor, perito siniestros, inspección de siniestros, CESVI Argentina, consultoría pericial, daños materiales, homologación CESVI, estudio patitucci, peritaje de autos, liquidador de siniestros"/>
+<meta name="author" content="Estudio Patitucci"/>
+<meta name="robots" content="index, follow"/>
+<link rel="canonical" href="https://estudiopatitucci.com.ar/"/>
+
+<!-- ═══ GEO / IDIOMA ════════════════════════════════════════════════════════ -->
+<meta name="geo.region" content="AR"/>
+<meta name="geo.placename" content="Argentina"/>
+<meta http-equiv="content-language" content="es-AR"/>
+
+<!-- ═══ OPEN GRAPH (Facebook, WhatsApp, LinkedIn, IA crawlers) ═════════════ -->
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://estudiopatitucci.com.ar/"/>
+<meta property="og:title" content="Estudio Patitucci | Peritajes en Siniestros Automotores"/>
+<meta property="og:description" content="Consultoría técnica pericial en siniestros automotores. Peritajes CESVI, inspecciones y auditoría de daños para aseguradoras. Argentina, 24/48 hs."/>
+<meta property="og:image" content="https://estudiopatitucci.com.ar/og-image.jpg"/>
+<meta property="og:locale" content="es_AR"/>
+<meta property="og:site_name" content="Estudio Patitucci"/>
+
+<!-- ═══ TWITTER / X CARD ════════════════════════════════════════════════════ -->
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="Estudio Patitucci | Peritajes en Siniestros Automotores"/>
+<meta name="twitter:description" content="Consultoría técnica pericial en siniestros automotores. Peritajes CESVI, inspecciones y auditoría de daños. Argentina."/>
+<meta name="twitter:image" content="https://estudiopatitucci.com.ar/og-image.jpg"/>
+
+<!-- ═══ SCHEMA.ORG — DATOS ESTRUCTURADOS (Google + IA) ════════════════════ -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "ProfessionalService",
+  "name": "Estudio Patitucci",
+  "description": "Consultoría técnica pericial en siniestros automotores. Peritajes CESVI, inspecciones de daños y auditoría para aseguradoras en Argentina.",
+  "url": "https://estudiopatitucci.com.ar/",
+  "logo": "https://estudiopatitucci.com.ar/og-image.jpg",
+  "image": "https://estudiopatitucci.com.ar/og-image.jpg",
+  "telephone": "+54",
+  "email": "mariano.patitucci35@gmail.com",
+  "address": {
+    "@type": "PostalAddress",
+    "addressCountry": "AR"
+  },
+  "areaServed": {
+    "@type": "Country",
+    "name": "Argentina"
+  },
+  "serviceType": [
+    "Peritaje automotor",
+    "Inspección de siniestros",
+    "Consultoría pericial CESVI",
+    "Auditoría de daños materiales",
+    "Homologación CESVI"
+  ],
+  "sameAs": [
+    "https://www.linkedin.com/company/estudio-patitucci",
+    "https://www.instagram.com/estudiopatitucci"
+  ]
+}
+</script>
 <!-- PWA -->
 <link rel="manifest" href="./manifest.json"/>
 <meta name="theme-color" content="#1a1a6e"/>
@@ -495,13 +556,6 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div class="lp-cert-card"><div class="lp-cert-card-icon">🏆</div><div class="lp-cert-card-title">CESVI</div><div class="lp-cert-card-sub">Certificación oficial</div></div>
         <div class="lp-cert-card"><div class="lp-cert-card-icon">⚡</div><div class="lp-cert-card-title">24/48 hs</div><div class="lp-cert-card-sub">Respuesta máx.</div></div>
       </div>
-    </div>
-  </section>
-  <section class="lp-access">
-    <div class="lp-access-content">
-      <h2 class="lp-access-title">Acceso al Sistema Operativo</h2>
-      <p class="lp-access-desc">Ingresá con tus credenciales para acceder al sistema de gestión de inspecciones y siniestros del estudio.</p>
-      <button class="lp-btn-primary" onclick="lpShowLogin()" style="display:inline-flex;margin:0 auto">Iniciar sesión →</button>
     </div>
   </section>
   <footer class="lp-footer">
@@ -1024,12 +1078,27 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <h3 style="font-size:15px;font-weight:600" id="rel-titulo">Relevamiento</h3>
         </div>
         <div id="rel-devs" style="display:none"></div>
-        <div class="card">
-          <p class="section-title">Vehículo verificado</p>
-          <div style="margin-bottom:12px"><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Kilometraje real *</label><input type="number" id="rel-km" style="width:200px"/></div>
-          <div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Observaciones del siniestro</label><textarea id="rel-danos" rows="3" style="resize:vertical"></textarea></div>
+
+        <!-- ── 1. Datos del auto y la denuncia (solo lectura) ── -->
+        <div id="rel-info-auto" class="card" style="background:var(--bg2);border:1px solid var(--border)">
+          <p class="section-title" style="margin-bottom:12px">📋 Datos del siniestro</p>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px" id="rel-info-grid"></div>
         </div>
-        <!-- ── Calculador inline ── -->
+
+        <!-- ── 2. Datos del taller / asegurado ── -->
+        <div class="card">
+          <p class="section-title">Taller / asegurado</p>
+          <div class="form-grid-2" style="margin-bottom:12px">
+            <div class="field"><label>Nombre *</label><input type="text" id="rel-taller"/></div>
+            <div class="field"><label>Teléfono *</label><input type="text" id="rel-tel" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/></div>
+          </div>
+          <div class="form-grid-2">
+            <div class="field"><label>Mail *</label><input type="email" id="rel-mail" inputmode="email"/></div>
+            <div class="field"><label>CUIT * <span style="font-size:10px;color:var(--text3);font-weight:400">(11 dígitos)</span></label><input type="text" id="rel-cuit" inputmode="numeric" placeholder="20123456789" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)"/></div>
+          </div>
+        </div>
+
+        <!-- ── 3. Calculador inline ── -->
         <div class="card">
           <p class="section-title" style="margin-bottom:14px">🧮 Mano de obra</p>
           <div style="max-width:290px;margin-bottom:16px">
@@ -1122,17 +1191,14 @@ tr:hover td{background:rgba(255,255,255,.02)}
             </div>
           </div>
         </div>
+        <!-- ── 4. Kilometraje + Observaciones ── -->
         <div class="card">
-          <p class="section-title">Taller / asegurado</p>
-          <div class="form-grid-2" style="margin-bottom:12px">
-            <div class="field"><label>Nombre *</label><input type="text" id="rel-taller"/></div>
-            <div class="field"><label>Teléfono *</label><input type="text" id="rel-tel" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/></div>
-          </div>
-          <div class="form-grid-2">
-            <div class="field"><label>Mail *</label><input type="email" id="rel-mail" inputmode="email"/></div>
-            <div class="field"><label>CUIT * <span style="font-size:10px;color:var(--text3);font-weight:400">(11 dígitos)</span></label><input type="text" id="rel-cuit" inputmode="numeric" placeholder="20123456789" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)"/></div>
-          </div>
+          <p class="section-title">Vehículo verificado</p>
+          <div style="margin-bottom:12px"><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Kilometraje real *</label><input type="number" id="rel-km" style="width:200px"/></div>
+          <div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Observaciones del siniestro</label><textarea id="rel-danos" rows="3" style="resize:vertical"></textarea></div>
         </div>
+
+        <!-- ── 5. Fotos ── -->
         <div class="card">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
             <p class="section-title" style="margin-bottom:0">Fotos *</p>
@@ -1258,7 +1324,7 @@ var passwords=(function(){
   try{var s=localStorage.getItem('ep_pw');if(s){var p=JSON.parse(s);Object.keys(p).forEach(function(k){obj[k]=p[k];});}}catch(e){}
   return obj;
 })();
-let usuarioActual=null,inspActual=null,inspecciones=[],relId=null,editId=null,fotosPendientes=[],notifVistas={},ciaActual='rivadavia';
+let usuarioActual=null,inspActual=null,inspecciones=[],relId=null,editId=null,fotosPendientes=[],notifVistas={},ciaActual='rivadavia',fotosSubiendo=0;
 let autoRefreshTimer=null;
 const PLAZO_HRS=48;
 
@@ -1356,7 +1422,7 @@ async function doLogin(){
 
 function logout(){
   try{localStorage.removeItem('ep_session');}catch(e){}
-  usuarioActual=null;inspActual=null;relId=null;fotosPendientes=[];
+  usuarioActual=null;inspActual=null;relId=null;fotosPendientes=[];fotosSubiendo=0;
   if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
   ['screen-admin','screen-inspector'].forEach(x=>{s(x).style.display='none';});
   s('login-nombre').value='';s('login-pass').value='';
@@ -2109,22 +2175,39 @@ function extraerRivadavia(txt){
   // Localidad: texto antes de 'Buenos Aires'
   var localidad=find([/([A-Z][A-Z\s]{2,20}?)\s+Buenos\s+Aires/i]);
 
-  // Daños: texto tras la segunda repetición de la narrativa ('DEL LUGAR.')
-  var danos=find([
-    /DEL\s+LUGAR\.[\s\S]{0,300}?DEL\s+LUGAR\.?\s+((?:PUERTA|PARAGOLPE|CAPOT|GUARDABARROS)[^]+?(?:VERIFICAR\.?|VERIFICAR\s))/i,
-    /((?:PUERTA|PARAGOLPE|CAPOT|GUARDABARROS)[^.]+\.(?:[^.]+\.)?)/i
-  ]);
-
-  // Daños denunciados: narrativa de ocurrencia del siniestro (antes del primer 'DEL LUGAR.')
+  // ── Daños denunciados: sección "OCURRENCIA DEL SINIESTRO" ─────────────────
   var danosDen='';
-  var mOcurr=txt.match(/\b(VENIA|VENÍ|CIRCULABA|CONDUCÍA|CONDUCIENDO|TRANSITABA|ESTABA|ESTACIONADO|CIRCULANDO|MANEJABA|MANEJANDO|IBAN|IBA)\b/i);
-  if(mOcurr){
-    var posIni=txt.indexOf(mOcurr[0]);
-    var posFin=txt.indexOf('DEL LUGAR.');
-    if(posFin>posIni) danosDen=txt.substring(posIni,posFin+10).trim();
-    else danosDen=txt.substring(posIni,posIni+600).trim();
-    // Limpiar espacios dobles y saltos innecesarios
-    danosDen=danosDen.replace(/\s{2,}/g,' ');
+  var _mOcSec=txt.match(/OCURRENCIA\s+DEL\s+SINIESTRO\s+([\s\S]+?)(?=DETALLE\s+DE\s+DA|\n\n|$)/i);
+  if(_mOcSec&&_mOcSec[1].trim().length>5){
+    danosDen=_mOcSec[1].replace(/\s{2,}/g,' ').trim();
+  } else {
+    // Fallback: buscar por verbo de inicio de narrativa
+    var mOcurr=txt.match(/\b(VENIA|VENÍA|VENÍ|CIRCULABA|CONDUCÍA|CONDUCIENDO|TRANSITABA|ESTABA|ESTACIONADO|CIRCULANDO|MANEJABA|MANEJANDO|IBAN|IBA|ENCONTRABA|LLEGABA|VIAJABA|MARCHABA|TRANSITANDO|DETUVE|DETENIDO)\b/i);
+    if(mOcurr){
+      var posIni=txt.indexOf(mOcurr[0]);
+      var _lb=txt.substring(Math.max(0,posIni-8),posIni);
+      var _mLb=_lb.match(/\b([A-ZÀ-ÿ]{1,5})\s+$/i);
+      if(_mLb) posIni-=_mLb[0].length;
+      var _endMarkers=['DEL LUGAR.','SIN PODER MOVERSE.','MOVERSE.','VERIFICAR.'];
+      var posFin=-1;
+      for(var _mi=0;_mi<_endMarkers.length;_mi++){var _p=txt.indexOf(_endMarkers[_mi],posIni);if(_p>posIni){posFin=_p+_endMarkers[_mi].length;break;}}
+      danosDen=(posFin>posIni?txt.substring(posIni,posFin):txt.substring(posIni,posIni+800)).trim();
+      danosDen=danosDen.replace(/\s{2,}/g,' ');
+    }
+  }
+
+  // ── Daños declarados: sección "DETALLE DE DAÑOS DECLARADOS…" ──────────────
+  var danos='';
+  var _mDanSec=txt.match(/DETALLE\s+DE\s+DA[N\xd1]OS\s+DECLARADOS\s*(?:POR\s+EL\s+SOCIO|DEL\s+ASEGURADO|DEL\s+TERCERO|DEL\s+VEH[I\xcd]CULO|POR\s+EL\s+TERCERO)?\s*([\s\S]+?)(?:\s*\n|\d{2}\/\d{2}\/\d{4}|$)/i);
+  if(_mDanSec&&_mDanSec[1].trim().length>2){
+    danos=_mDanSec[1].replace(/\s{2,}/g,' ').trim();
+  } else {
+    // Fallback: buscar tras fin de narrativa o por palabras de daño
+    var _dp=[
+      /(?:MOVERSE\.|DEL\s+LUGAR\.)\s*([^\n]{10,300})/i,
+      /((?:PUERTA|PARAGOLPE|CAPOT|GUARDABARROS|RUEDA|EXTREMO|DEFENSA|FARO|ESPEJO|MECANICO|FRENO)[^.]+\.(?:[^.]+\.)?)/i
+    ];
+    for(var _di=0;_di<_dp.length;_di++){var _dm=txt.match(_dp[_di]);if(_dm&&_dm[1]&&_dm[1].trim().length>3){danos=_dm[1].replace(/\s{2,}/g,' ').trim();break;}}
   }
 
   return{sin,cia:'Seguros Rivadavia',tipo,finsp,fsin,pat:pat?pat.toUpperCase():'',mod,anio,chasis,motor,km:'',aseg,tel,dir,localidad,danos,danosDen};
@@ -2651,30 +2734,25 @@ function epDbDelete(id){
 function renderFotosGuardadas(fotosArr){
   var prev=s('rel-preview');if(!prev)return;
   prev.innerHTML='';
-  fotosArr.forEach(function(f,idx){
+  fotosPendientes=fotosArr.map(function(f,idx){
+    return{_uid:'bdr_'+idx,dataUrl:f.dataUrl||null,driveLink:f.driveLink||null,name:f.name||'foto.jpg',status:f.status||'subida'};
+  });
+  fotosPendientes.forEach(function(entry){
     var wrapper=document.createElement('div');
+    wrapper.setAttribute('data-uid',entry._uid);
     wrapper.style.cssText='position:relative;display:inline-block';
     var img=document.createElement('img');
-    img.src=f.dataUrl||f;
+    img.src=(entry.driveLink&&entry.driveLink.thumbUrl)||entry.dataUrl||'';
     img.style.cssText='width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer;display:block';
-    img.onclick=function(){window.open(this.src,'_blank');};
-    var del=document.createElement('button');
-    del.textContent='×';
-    del.style.cssText='position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;font-weight:700';
-    del.onclick=(function(wr,fu){
-      return function(ev){
-        ev.stopPropagation();
-        fotosPendientes=fotosPendientes.filter(function(x){return (x.dataUrl||x)!==(fu.dataUrl||fu);});
-        wr.remove();
-        actualizarContadorFotos();
-      };
-    })(wrapper,f);
-    wrapper.appendChild(img);wrapper.appendChild(del);
+    img.onclick=(function(en){return function(){window.open((en.driveLink&&en.driveLink.viewUrl)||en.dataUrl||'#','_blank');};})(entry);
+    wrapper.appendChild(img);
+    wrapper.appendChild(crearBotonEliminar(wrapper,entry));
     prev.appendChild(wrapper);
   });
   actualizarContadorFotos();
   var errDiv=s('rel-errores');
-  if(errDiv){errDiv.style.color='var(--green)';errDiv.textContent='✓ '+fotosArr.length+' foto'+(fotosArr.length>1?'s':'')+' restauradas del borrador.';}
+  var sub=fotosPendientes.filter(function(f){return f.status==='subida';}).length;
+  if(errDiv){errDiv.style.color='var(--green)';errDiv.textContent='✓ '+sub+' foto'+(sub>1?'s':'')+' restauradas del borrador.';}
 }
 
 async function guardarBorradorCompleto(){
@@ -2695,7 +2773,10 @@ async function guardarBorradorCompleto(){
       piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),
       total:calcTotal,
       operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};})},
-    fotos:fotosPendientes.map(function(f){return{dataUrl:f.dataUrl||f,name:f.name||'foto.jpg'};})
+    fotos:fotosPendientes.map(function(f){
+      if(f.driveLink)return{driveLink:f.driveLink,name:f.name||'foto.jpg',status:'subida'};
+      return{dataUrl:f.dataUrl||f,name:f.name||'foto.jpg',status:f.status||'error'};
+    })
   };
   try{
     await epDbSave(draft);
@@ -2762,7 +2843,7 @@ function abrirRel(id){
   }
   // Verificar borrador — se hace async después de mostrar el form
   s('rel-fotos').value='';s('rel-preview').innerHTML='';s('rel-errores').textContent='';s('msg-rel').textContent='';
-  fotosPendientes=[];
+  fotosPendientes=[];fotosSubiendo=0;ocultarProgresoSubida();
   // Mostrar devoluciones del admin si las hay
   var devDiv=s('rel-devs');
   if(devDiv){
@@ -2778,6 +2859,9 @@ function abrirRel(id){
   }
   ['isec-abiertas','isec-carga','isec-revision','isec-cerradas','isec-perfil','notif-bar'].forEach(function(x){hide(x);});
   show('panel-rel');
+  // Llenar card de info auto y auto-asignar tipo de vehículo
+  relLlenarInfoAuto(i);
+  if(!relCalcState.tipo) autoAsignarTipoVehiculo(i.Modelo||'');
   // Verificar borrador completo en IndexedDB (con fotos)
   epDbLoad(id).then(function(bdr){
     if(!bdr)return;
@@ -2804,13 +2888,76 @@ function abrirRel(id){
       relOpRender();relCalcRender();
     }
     if(bdr.fotos&&bdr.fotos.length){
-      fotosPendientes=bdr.fotos.slice();
-      renderFotosGuardadas(bdr.fotos);
+      renderFotosGuardadas(bdr.fotos||[]);
     }
   }).catch(function(){});
 }
 
 function cerrarRel(){hide('panel-rel');inspTab('abiertas');actualizarBadgesInspector();}
+
+// ─── INFO AUTO (card de solo lectura en panel-rel) ────────────────────────────
+function relLlenarInfoAuto(insp){
+  var grid=s('rel-info-grid');if(!grid)return;
+  var campos=[
+    {label:'N° Siniestro',val:insp.Siniestro,mono:true},
+    {label:'Compañía',val:insp.Compania},
+    {label:'Patente',val:insp.Patente,mono:true},
+    {label:'Modelo / Año',val:(insp.Modelo||'-')+(insp.Anio?' ('+insp.Anio+')':'')},
+    {label:'N° Chasis',val:insp.Chasis,mono:true},
+    {label:'Asegurado',val:insp.Asegurado}
+  ];
+  var html=campos.map(function(c){
+    return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px">'
+      +'<span style="display:block;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">'+c.label+'</span>'
+      +'<span style="font-size:13px;color:var(--text);font-weight:500'+(c.mono?';font-family:monospace;letter-spacing:.04em':'')+'">'+esc(c.val||'-')+'</span>'
+      +'</div>';
+  }).join('');
+  if(insp.DanosDen){
+    html+='<div style="grid-column:1/-1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px">'
+      +'<span style="display:block;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Ocurrencia del siniestro</span>'
+      +'<span style="font-size:13px;color:var(--text);font-weight:400;line-height:1.5">'+esc(insp.DanosDen)+'</span>'
+      +'</div>';
+  }
+  grid.innerHTML=html;
+}
+
+// ─── AUTO-ASIGNACIÓN DE TIPO DE VEHÍCULO ─────────────────────────────────────
+function autoAsignarTipoVehiculo(modelo){
+  var sel=s('rel-calc-tipo');if(!sel||!modelo)return;
+  var m=modelo.toLowerCase();
+  var tipo='';
+
+  // ── Pickups (primero para que no caigan en sedan) ──────────────────────────
+  var esPickupA=/hilux|ranger|s10|amarok|l200|triton|frontier d|colorado|ram 1500|f-?150|navara|np300/.test(m);
+  var esPickupB=/\btoro\b|oroch|strada|saveiro|montana|mini.?pickup/.test(m);
+  var esDoble=/doble|d\.?c\.?|\b4p\b|\b4 p\b|cabina doble|crew/.test(m);
+  if(esPickupA&&esDoble)      tipo='Pickup A Cabina Doble';
+  else if(esPickupA)          tipo='Pickup A Cabina Simple';
+  else if(esPickupB&&esDoble) tipo='Pickup B Cabina Doble';
+  else if(esPickupB)          tipo='Pickup B Cabina Simple';
+
+  // ── Utilitario / Furgón ────────────────────────────────────────────────────
+  else if(/\bmaster\b|trafic|kangoo|partner|expert|boxer|berlingo|jumpy|jumper|caddy|transporter|crafter|fiorino|ducato|doblo|\bvito\b|sprinter|viano|transit|tourneo|iveco daily|\bvan\b|furgon|furg[oó]n/.test(m))
+    tipo='Utilitario / Furgón';
+
+  // ── SUV / Weekend ──────────────────────────────────────────────────────────
+  else if(/sw4|rav4|fortuner|4runner|tiguan|touareg|t-?cross|taos|teramont|tracker|equinox|trailblazer|captiva|ecosport|eco sport|\bkuga\b|territory|explorer|escape|\bpuma\b ford|duster|captur|koleos|kadjar|\b2008\b|\b3008\b|\b5008\b|c3 aircross|c4 cactus|c5 aircross|c-crosser|\bkicks\b|murano|pathfinder|x-?trail|qashqai|hr-?v|cr-?v|\bpilot\b|tucson|santa fe|creta|venue|sportage|sorento|seltos|\bsoul\b|renegade|compass|cherokee|wrangler|gladiator|\bx1\b|\bx3\b|\bx5\b|\bgla\b|\bglc\b|\bgle\b|\bq3\b|\bq5\b|\bq7\b|\basx\b|eclipse cross|outlander|pajero|forester|outback|\bxv\b impreza|vitara|500x|cx-?3|cx-?5|cx-?9|jimny/.test(m))
+    tipo='SUV / Weekend';
+
+  // ── Sedán / Hatchback 3 Puertas ───────────────────────────────────────────
+  else if(/3 puertas|3p\b|3\.?p\b/.test(m))
+    tipo='Sedán / Hatchback (3 Puertas)';
+
+  // ── Sedán / Hatchback 4-5 Puertas (por defecto autos comunes) ─────────────
+  else if(/etios|corolla|yaris|civic|focus|\bgol\b|\bpolo\b|\bvento\b|virtus|suran|\bup\b|onix|cruze|prisma|cobalt|\bsail\b|agile|aveo|celta|classic|palio|punto|bravo|linea|\buno\b|grand siena|cronos|\bargo\b|\bmobi\b|logan|sandero|fluence|\bclio\b|megane|latitude|\b206\b|\b207\b|\b208\b|\b307\b|\b308\b|\b408\b|\b508\b|\bc3\b|\bc4\b|\bc5\b|versa|tiida|march|sentra|almera|\bfit\b|\bjazz\b|\bcity\b|\bi30\b|elantra|hb20|accent|cerato|\brio\b|picanto|fiesta|mondeo|\bka\b|\bgolf\b|jetta|\ba1\b|\ba3\b|\ba4\b|\ba6\b|serie 1|serie 3|serie 5|clase a|clase c|clase e|meriva|zafira|cobalt|granta|vesta|fiat 500|abarth|tipo|bravo|\b147\b|\b156\b|\b166\b/.test(m))
+    tipo='Sedán / Hatchback (4-5 Puertas)';
+
+  if(tipo){
+    sel.value=tipo;
+    relCalcState.tipo=tipo;
+    relCalcSetTipo();
+  }
+}
 
 // ─── COMPRESIÓN DE FOTOS ──────────────────────────────────────────────────────
 async function comprimirFoto(dataUrl,maxPx,quality){
@@ -2835,77 +2982,155 @@ async function comprimirFoto(dataUrl,maxPx,quality){
 function actualizarContadorFotos(){
   var contador=s('fotos-contador');
   if(!contador)return;
-  contador.textContent=fotosPendientes.length+'/30';
-  contador.style.color=fotosPendientes.length>=30?'var(--red)':fotosPendientes.length>0?'var(--green)':'var(--text3)';
+  var MAX_F=30;
+  contador.textContent=fotosPendientes.length+'/'+MAX_F;
+  contador.style.color=fotosPendientes.length>=MAX_F?'var(--red)':fotosPendientes.length>0?'var(--green)':'var(--text3)';
+  var btnEnv=document.querySelector('#panel-rel button[onclick="enviarRel()"],#panel-rel button[onclick="enviarRelTallerDesdeForm()"]');
+  if(btnEnv){
+    var hayError=fotosPendientes.some(function(f){return f.status==='error';});
+    if(fotosSubiendo>0){btnEnv.disabled=true;btnEnv.style.opacity='0.55';btnEnv.title='Esperá que terminen de subir las fotos ('+fotosSubiendo+' pendiente'+(fotosSubiendo>1?'s':'')+')';}
+    else if(hayError){btnEnv.disabled=true;btnEnv.style.opacity='0.55';btnEnv.title='Hay fotos con error. Usá ↺ para reintentar.';}
+    else{btnEnv.disabled=false;btnEnv.style.opacity='';btnEnv.title='';}
+  }
 }
 
+// ── Helpers de upload progresivo ─────────────────────────────────────────
+function crearBotonEliminar(wrapper,entry){
+  var del=document.createElement('button');
+  del.textContent='×';
+  del.style.cssText='position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;font-weight:700';
+  del.onclick=function(ev){
+    ev.stopPropagation();
+    fotosPendientes=fotosPendientes.filter(function(x){return x._uid!==entry._uid;});
+    wrapper.remove();
+    actualizarContadorFotos();
+  };
+  return del;
+}
+async function subirFotoADrive(fotoEntry,idx){
+  var res;
+  if(tallerTokenActual){
+    var r=await fetch(API,{method:'POST',body:JSON.stringify({action:'uploadFotoTaller',tallerToken:tallerTokenActual,foto:fotoEntry.dataUrl,idx:idx})});
+    res=await r.json();
+  } else {
+    res=await apiCall({action:'uploadFoto',id:relId,foto:fotoEntry.dataUrl,idx:idx});
+  }
+  if(res&&res.ok&&res.link)return res.link;
+  throw new Error(res&&res.msg||'Error al subir');
+}
+function _actualizarMsgFotos(){
+  var errDiv=s('rel-errores');if(!errDiv)return;
+  var subidas=fotosPendientes.filter(function(f){return f.status==='subida';}).length;
+  var errores=fotosPendientes.filter(function(f){return f.status==='error';}).length;
+  if(fotosSubiendo>0){errDiv.style.color='var(--text2)';errDiv.textContent='Subiendo fotos a Drive... ('+subidas+' de '+fotosPendientes.length+' listas)';}
+  else if(errores>0){errDiv.style.color='var(--red)';errDiv.textContent='⚠ '+errores+' foto'+(errores>1?'s':'')+' fallaron. Usá ↺ para reintentar antes de enviar.';}
+  else{errDiv.style.color='var(--green)';errDiv.textContent='✓ '+subidas+' foto'+(subidas>1?'s':'')+' guardadas en Drive. Podés enviar.';ocultarProgresoSubida();}
+}
+function _overlaySpinner(){
+  var o=document.createElement('div');
+  o.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:8px;background:rgba(0,0,0,.38);pointer-events:none';
+  var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('width','22');svg.setAttribute('height','22');svg.setAttribute('viewBox','0 0 24 24');
+  svg.setAttribute('fill','none');svg.setAttribute('stroke','#fff');svg.setAttribute('stroke-width','2.5');svg.setAttribute('stroke-linecap','round');
+  var path=document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d','M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83');
+  svg.appendChild(path);svg.style.animation='spin .8s linear infinite';
+  o.appendChild(svg);return o;
+}
+function _overlayOk(ovrl,wrap,entry){
+  ovrl.style.background='rgba(22,163,74,.38)';
+  ovrl.innerHTML='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  setTimeout(function(){ovrl.style.display='none';wrap.appendChild(crearBotonEliminar(wrap,entry));},900);
+}
+function _overlayError(ovrl,wrap,entry,idx){
+  ovrl.style.background='rgba(220,38,38,.45)';
+  ovrl.innerHTML='<span style="color:#fff;font-size:19px;font-weight:700">!</span>';
+  var rb=document.createElement('button');
+  rb.textContent='↺';rb.setAttribute('data-retry','1');
+  rb.style.cssText='position:absolute;bottom:-7px;right:-7px;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:14px;line-height:1;padding:0;font-weight:700';
+  rb.title='Reintentar';
+  rb.onclick=(function(en,wr,ov,li){return function(ev){ev.stopPropagation();_reintentarFoto(en,wr,ov,li);};})(entry,wrap,ovrl,idx);
+  wrap.appendChild(rb);
+}
+async function _reintentarFoto(entry,wrap,ovrl,idx){
+  entry.status='subiendo';fotosSubiendo++;
+  ovrl.style.display='';
+  var rb=wrap.querySelector('[data-retry]');if(rb)rb.remove();
+  var spinner=_overlaySpinner();ovrl.parentNode.replaceChild(spinner,ovrl);ovrl=spinner;
+  var imgEl=wrap.querySelector('img');if(imgEl)imgEl.style.opacity='0.55';
+  actualizarContadorFotos();
+  try{
+    var link=await subirFotoADrive(entry,idx);
+    if(!fotosPendientes.find(function(x){return x._uid===entry._uid;}))return;
+    entry.driveLink=link;entry.status='subida';
+    if(imgEl)imgEl.style.opacity='1';
+    _overlayOk(ovrl,wrap,entry);
+    fotosSubiendo=Math.max(0,fotosSubiendo-1);
+    actualizarContadorFotos();_actualizarMsgFotos();
+  }catch(er){
+    entry.status='error';
+    _overlayError(ovrl,wrap,entry,idx);
+    fotosSubiendo=Math.max(0,fotosSubiendo-1);
+    actualizarContadorFotos();_actualizarMsgFotos();
+  }
+}
 async function procesarFotosInput(e){
   var files=Array.from(e.target.files);
-  fotosPendientes=[];
+  fotosPendientes=[];fotosSubiendo=0;
   var prev=s('rel-preview'),errDiv=s('rel-errores');
   prev.innerHTML='';
   errDiv.textContent='';errDiv.style.color='var(--text2)';
   var errores=[];
-  var MAX_FOTOS=30;
-  var MAX_SIZE=20*1024*1024; // 20 MB antes de comprimir
-
+  var MAX_FOTOS=30;var MAX_SIZE=20*1024*1024;
   if(files.length>MAX_FOTOS){
     errores.push('Máximo '+MAX_FOTOS+' fotos. Seleccionaste '+files.length+', se tomarán las primeras '+MAX_FOTOS+'.');
     files=files.slice(0,MAX_FOTOS);
   }
-
-  errDiv.textContent='Comprimiendo fotos...';
-
+  var validCount=0;
   for(var fi=0;fi<files.length;fi++){
     var file=files[fi];
-    var esImg=file.type.startsWith('image/')||
-              /\.(jpg|jpeg|png)$/i.test(file.name);
+    var esImg=file.type.startsWith('image/')||/\.(jpg|jpeg|png)$/i.test(file.name);
     if(!esImg){errores.push('"'+file.name+'" no es una imagen válida.');continue;}
     if(file.size>MAX_SIZE){errores.push('"'+file.name+'" supera 20 MB.');continue;}
-
     errDiv.textContent='Comprimiendo '+(fi+1)+' de '+files.length+'...';
-
-    var dataUrl=await new Promise(function(res){
-      var r=new FileReader();
-      r.onload=function(){res(r.result);};
-      r.readAsDataURL(file);
-    });
-
+    var dataUrl=await new Promise(function(res){var r=new FileReader();r.onload=function(){res(r.result);};r.readAsDataURL(file);});
     var compressed=await comprimirFoto(dataUrl,1200,0.82);
-    fotosPendientes.push(compressed);
-
-    // Preview con botón eliminar
+    var uid='f_'+Date.now()+'_'+fi;
+    var fotoEntry={_uid:uid,dataUrl:compressed,name:file.name,driveLink:null,status:'subiendo'};
+    fotosPendientes.push(fotoEntry);
+    fotosSubiendo++;validCount++;
     var wrapper=document.createElement('div');
+    wrapper.setAttribute('data-uid',uid);
     wrapper.style.cssText='position:relative;display:inline-block';
     var img=document.createElement('img');
     img.src=compressed;
-    img.style.cssText='width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer;display:block';
+    img.style.cssText='width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer;display:block;opacity:0.55';
     img.onclick=function(){window.open(this.src,'_blank');};
-    var del=document.createElement('button');
-    del.textContent='×';
-    del.style.cssText='position:absolute;top:-5px;right:-5px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;border:none;cursor:pointer;font-size:13px;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;font-weight:700';
-    del.onclick=(function(wr,comp){
-      return function(ev){
-        ev.stopPropagation();
-        fotosPendientes=fotosPendientes.filter(function(f){return f!==comp;});
-        wr.remove();
-        actualizarContadorFotos();
-      };
-    })(wrapper,compressed);
-    wrapper.appendChild(img);
-    wrapper.appendChild(del);
+    var overlay=_overlaySpinner();
+    wrapper.appendChild(img);wrapper.appendChild(overlay);
     prev.appendChild(wrapper);
+    actualizarContadorFotos();
+    // Upload en paralelo — no await
+    (function(entry,wrap,ovrl,imgEl,localIdx){
+      subirFotoADrive(entry,localIdx).then(function(link){
+        if(!fotosPendientes.find(function(x){return x._uid===entry._uid;}))return;
+        entry.driveLink=link;entry.status='subida';
+        imgEl.style.opacity='1';
+        _overlayOk(ovrl,wrap,entry);
+        fotosSubiendo=Math.max(0,fotosSubiendo-1);
+        actualizarContadorFotos();_actualizarMsgFotos();
+      }).catch(function(){
+        if(!fotosPendientes.find(function(x){return x._uid===entry._uid;}))return;
+        entry.status='error';
+        _overlayError(ovrl,wrap,entry,localIdx);
+        fotosSubiendo=Math.max(0,fotosSubiendo-1);
+        actualizarContadorFotos();_actualizarMsgFotos();
+      });
+    })(fotoEntry,wrapper,overlay,img,validCount-1);
   }
-
   actualizarContadorFotos();
-
-  if(errores.length){
-    errDiv.style.color='var(--red)';
-    errDiv.textContent=errores.join(' · ');
-  } else {
-    errDiv.style.color='var(--green)';
-    errDiv.textContent=fotosPendientes.length>0?'✓ '+fotosPendientes.length+' foto'+(fotosPendientes.length>1?'s':'')+' listas para enviar.':'';
-  }
+  if(errores.length){errDiv.style.color='var(--red)';errDiv.textContent=errores.join(' · ');}
+  else if(validCount>0){iniciarProgresoSubida(validCount);errDiv.style.color='var(--text2)';errDiv.textContent='Subiendo fotos a Drive...';}
   e.target.value='';
 }
 s('rel-fotos-camara').addEventListener('change', procesarFotosInput);
@@ -2936,7 +3161,9 @@ async function enviarRel(){
   var errCampos=validarCamposRel();
   if(errCampos){msg.className='msg err';msg.textContent=errCampos;return;}
   if(!fotosPendientes.length){msg.className='msg err';msg.textContent='Subí al menos una foto JPG.';return;}
-  msg.className='msg';msg.textContent='Preparando envío...';
+  if(fotosSubiendo>0){msg.className='msg err';msg.textContent='Esperá que terminen de subir las fotos.';return;}
+  if(fotosPendientes.some(function(f){return f.status==='error';})){msg.className='msg err';msg.textContent='Hay fotos con error. Reintentá antes de enviar.';return;}
+  msg.className='msg';msg.textContent='Enviando...';
   var calcTotalHs=relCalcState.piezas.reduce(function(acc,p){return acc+(p.hsTrabajo||0);},0);
   var calcTotalOpHs=relOpState.reduce(function(acc,o){
     if(o.operacion==='Banco de estiraje') return acc+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
@@ -2950,13 +3177,11 @@ async function enviarRel(){
   var _costoPintura=calcTotalPanos*relCostoPanoPintura;
   var _costoTotal=_costoChapa+_costoPintura+_totalOpCosto;
   var calcData={tipo:relCalcState.tipo,piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};}),total:calcTotalHs+calcTotalOpHs,totalPanos:calcTotalPanos,costoDiaChapa:relCostoDiaChapa,costoPanoPintura:relCostoPanoPintura,costoTotal:_costoTotal};
-  var rel={km,danos,calculador:calcData,taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),fotos:fotosPendientes,fechaEnvio:new Date().toISOString()};
+  var _fl=fotosPendientes.filter(function(f){return f.driveLink;}).map(function(f){return f.driveLink;});
+  var rel={km,danos,calculador:calcData,taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),fotosLinks:_fl,cantFotos:_fl.length,fechaEnvio:new Date().toISOString()};
   try{
     var i=inspecciones.find(function(x){return x.ID==relId;});
-    iniciarProgresoSubida(fotosPendientes.length);
-    var res=await apiCallXHR({action:'actualizar',id:relId,relevamiento:rel,estado:'Pendiente de verificar'},function(loaded,total){mostrarProgresoSubida(loaded,total,fotosPendientes.length);});
-    // Barra al 100% + estado procesando
-    (function(){var bar=s('upload-progress-bar');if(bar)bar.style.width='100%';var pct=s('upload-progress-pct');if(pct)pct.textContent='100%';var lbl=s('upload-progress-label');if(lbl)lbl.textContent='Procesando en servidor...';var sub=s('upload-progress-sub');if(sub)sub.textContent='';})();
+    var res=await apiCall({action:'actualizar',id:relId,relevamiento:rel,estado:'Pendiente de verificar'});
     // Si el GAS devolvió fotosLinks / cantFotos / carpetaUrl, incorporarlos al rel local
     if(res&&res.relevamiento){
       if(res.relevamiento.fotosLinks) rel.fotosLinks=res.relevamiento.fotosLinks;
@@ -3349,14 +3574,14 @@ async function enviarRelTallerDesdeForm(){
     telTaller:s('rel-tel').value.trim(),
     mailTaller:s('rel-mail').value.trim(),
     cuit:s('rel-cuit').value.trim(),
-    fotos:fotosPendientes,
+    fotosLinks:fotosPendientes.filter(function(f){return f.driveLink;}).map(function(f){return f.driveLink;}),
+    cantFotos:fotosPendientes.filter(function(f){return f.driveLink;}).length,
     fechaEnvio:new Date().toISOString(),
     origenTaller:true
   };
   try{
-    iniciarProgresoSubida(fotosPendientes.length);
-    var data=await apiCallXHR({action:'relevamientoTaller',tallerToken:tallerTokenActual,relevamiento:rel},function(loaded,total){mostrarProgresoSubida(loaded,total,fotosPendientes.length);});
-    (function(){var bar=s('upload-progress-bar');if(bar)bar.style.width='100%';var pct=s('upload-progress-pct');if(pct)pct.textContent='100%';var lbl=s('upload-progress-label');if(lbl)lbl.textContent='Procesando en servidor...';var sub=s('upload-progress-sub');if(sub)sub.textContent='';})();
+    var r2=await fetch(API,{method:'POST',body:JSON.stringify({action:'relevamientoTaller',tallerToken:tallerTokenActual,relevamiento:rel})});
+    var data=await r2.json();
     if(data.ok){
       epDbDelete(tallerTokenActual).catch(function(){});
       ocultarProgresoSubida();msg.className='msg ok';msg.textContent='✓ ¡Relevamiento enviado correctamente!';
@@ -3809,6 +4034,17 @@ function relCalcRender(){
 function p(nombre,req){ return {nombre:nombre,requierePintura:!!req}; }
 var S=true,N=false;
 
+// ── Zonas donde solo se permite Sustituir (sin Reparar) ──
+var ZONAS_SOLO_SUST=[
+  'Seguridad',
+  'Cristales',
+  'Mecánica / Vano Motor',
+  'Mecánica',
+  'Tren Delantero y Tracción',
+  'Tren Delantero y Tracción 4x4',
+  'Tren Delantero y Suspensión'
+];
+
 // ── helpers ──
 function gFind(zona,pieza,tarea){ return relCalcState.piezas.find(function(x){return x.zona===zona&&x.pieza===pieza&&x.tarea===tarea;}); }
 function gCount(zona){ return relCalcState.piezas.filter(function(x){return x.zona===zona;}).length; }
@@ -3929,11 +4165,12 @@ function renderAcordeon(zona,piezasList){
 }
 function renderPiezaRow(zona,pieza,mostrarZona){
   var rid=_gRid++; _gMap[rid]={zona:zona,pieza:pieza};
+  var esSoloSust=ZONAS_SOLO_SUST.indexOf(zona)!==-1;
   var hasR=!!gFind(zona,pieza.nombre,'Reparar'),hasS=!!gFind(zona,pieza.nombre,'Sustituir');
   var hasP=!!gFind(zona,pieza.nombre,'Pintar'),hasD=!!gFind(zona,pieza.nombre,'Difuminar');
   var blq={Reparar:hasS||hasD,Sustituir:hasR||hasD,Pintar:hasD,Difuminar:hasR||hasS||hasP};
-  var tareas=['Reparar','Sustituir'];
-  if(pieza.requierePintura){ tareas.push('Pintar','Difuminar'); }
+  var tareas=esSoloSust?['Sustituir']:['Reparar','Sustituir'];
+  if(!esSoloSust&&pieza.requierePintura){ tareas.push('Pintar','Difuminar'); }
   var labels={Reparar:'R',Sustituir:'S',Pintar:'P',Difuminar:'D'};
   var taskBtns=tareas.map(function(t){
     var e=gFind(zona,pieza.nombre,t),lbl=labels[t],isBlq=!!blq[t];
