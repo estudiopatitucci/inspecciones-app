@@ -26,18 +26,24 @@ function compartirConAutorizados(item) {
 function doPost(e) {
   try {
     var data = JSON.parse(e.postData.contents);
+    var action = data.action;
+    // relevamientoTaller usa tallerToken propio, no SECRET_TOKEN
+    if (action === 'relevamientoTaller') return recibirRelTaller(data);
+    if (action === 'uploadFotoTaller') return uploadFotoTaller(data);
     // El formulario de contacto público no requiere token
-    if (data.action !== 'contacto' && data.token !== SECRET_TOKEN) {
+    if (action !== 'contacto' && data.token !== SECRET_TOKEN) {
       return resp({ok: false, msg: 'No autorizado'});
     }
-    var action = data.action;
     if (action === 'guardar') return guardarInspeccion(data);
     if (action === 'actualizar') return actualizarInspeccion(data);
+    if (action === 'editar') return actualizarInspeccion(data);
     if (action === 'eliminar') return eliminarInspeccion(data);
     if (action === 'listar') return listarInspecciones();
     if (action === 'recordatorio') return enviarRecordatorio(data);
     if (action === 'archivar') return archivarInspecciones();
     if (action === 'contacto') return enviarContacto(data);
+    if (action === 'generarTokenTaller') return generarTokenTaller(data);
+    if (action === 'uploadFoto') return uploadFotoSingle(data);
     return resp({ok:false, msg:'Accion desconocida'});
   } catch(err) {
     return resp({ok:false, msg:err.toString()});
@@ -45,6 +51,10 @@ function doPost(e) {
 }
 
 function doGet(e) {
+  // Endpoint público para que el taller cargue su inspección con token
+  var tallerToken = e && e.parameter && e.parameter.tallerToken;
+  if (tallerToken) return getTallerInspeccion(tallerToken);
+
   var token = e && e.parameter && e.parameter.token;
   if (token !== SECRET_TOKEN) return resp({ok: false, msg: 'No autorizado'});
   var action = e.parameter.action;
@@ -57,7 +67,7 @@ function getSheet() {
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
-    sheet.appendRow(['ID','Siniestro','Compania','Tipo','FechaInsp','FechaSin','Patente','Modelo','Anio','Chasis','Motor','Km','Asegurado','Tel','Direccion','Localidad','Danos','Inspector','MailInspector','Estado','MailEnviado','Relevamiento','Devoluciones','CreadaEn']);
+    sheet.appendRow(['ID','Siniestro','Compania','Tipo','FechaInsp','FechaSin','Patente','Modelo','Anio','Chasis','Motor','Km','Asegurado','Tel','Direccion','Localidad','Danos','Inspector','MailInspector','Estado','MailEnviado','Relevamiento','Devoluciones','CreadaEn','TallerToken','TallerTokenExp']);
   }
   return sheet;
 }
@@ -70,6 +80,17 @@ function getArchivoSheet() {
     sheet.appendRow(['ID','Siniestro','Compania','Tipo','FechaInsp','FechaSin','Patente','Modelo','Anio','Chasis','Motor','Km','Asegurado','Tel','Direccion','Localidad','Danos','Inspector','MailInspector','Estado','MailEnviado','Relevamiento','Devoluciones','CreadaEn','ArchivedAt']);
   }
   return sheet;
+}
+
+// Devuelve el número de columna (1-based) de DanosDen, creándola si no existe.
+function getDanosDenCol(sheet) {
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var idx = headers.indexOf('DanosDen');
+  if (idx !== -1) return idx + 1;
+  // No existe → agregar al final
+  var col = sheet.getLastColumn() + 1;
+  sheet.getRange(1, col).setValue('DanosDen');
+  return col;
 }
 
 function leerInspecciones(sheet) {
@@ -106,8 +127,25 @@ function guardarInspeccion(data) {
     data.mailEnviado ? 'Si' : 'No',
     '', '', new Date().toISOString()
   ]);
+  // Guardar DanosDen (columna auto-detectada / creada)
+  if (data.danosDen) {
+    var lastRow = sheet.getLastRow();
+    var ddCol = getDanosDenCol(sheet);
+    sheet.getRange(lastRow, ddCol).setValue(data.danosDen);
+  }
   if (data.enviarMail && data.mail) {
     enviarMail(data);
+  }
+  // Si se asigna directo al taller, generar token inmediatamente
+  if (data.asignarTaller) {
+    var token = generarToken32();
+    var exp = new Date();
+    exp.setHours(exp.getHours() + 48);
+    var lastRow = sheet.getLastRow();
+    sheet.getRange(lastRow, 25).setValue(token);
+    sheet.getRange(lastRow, 26).setValue(exp.toISOString());
+    var appUrl = 'https://estudiopatitucci.github.io/inspecciones-app/?taller=' + token;
+    return resp({ok:true, id:id, link:appUrl, exp:exp.toISOString()});
   }
   return resp({ok:true, id:id});
 }
@@ -150,6 +188,15 @@ function actualizarInspeccion(data) {
       if (data.relevamiento !== undefined) {
         var rel = data.relevamiento;
         // Si hay fotos en base64, subirlas a Drive
+        // Flujo nuevo: fotos ya subidas progresivamente desde el frontend
+        if (rel.fotosLinks && rel.fotosLinks.length > 0 && (!rel.fotos || rel.fotos.length === 0)) {
+          rel.cantFotos = rel.fotosLinks.length;
+          try {
+            var folder = getOrCreateFolder('Inspeccion_' + data.id);
+            rel.carpetaUrl = folder.getUrl();
+          } catch(eF) {}
+        }
+        // Flujo legacy: fotos en base64 (compatibilidad con versiones anteriores)
         if (rel.fotos && rel.fotos.length > 0) {
           try {
             var folder = getOrCreateFolder('Inspeccion_' + data.id);
@@ -205,6 +252,27 @@ function actualizarInspeccion(data) {
           });
         }
       }
+      // Edición completa de campos básicos (desde modal de edición)
+      if (data.sin !== undefined)       sheet.getRange(i+1, 2).setValue(data.sin);
+      if (data.cia !== undefined)       sheet.getRange(i+1, 3).setValue(data.cia);
+      if (data.tipo !== undefined)      sheet.getRange(i+1, 4).setValue(data.tipo);
+      if (data.finsp !== undefined)     sheet.getRange(i+1, 5).setValue(data.finsp);
+      if (data.fsin !== undefined)      sheet.getRange(i+1, 6).setValue(data.fsin);
+      if (data.pat !== undefined)       sheet.getRange(i+1, 7).setValue(data.pat);
+      if (data.mod !== undefined)       sheet.getRange(i+1, 8).setValue(data.mod);
+      if (data.anio !== undefined)      sheet.getRange(i+1, 9).setValue(data.anio);
+      if (data.chasis !== undefined)    sheet.getRange(i+1, 10).setValue(data.chasis);
+      if (data.motor !== undefined)     sheet.getRange(i+1, 11).setValue(data.motor);
+      if (data.km !== undefined)        sheet.getRange(i+1, 12).setValue(data.km);
+      if (data.aseg !== undefined)      sheet.getRange(i+1, 13).setValue(data.aseg);
+      if (data.tel !== undefined)       sheet.getRange(i+1, 14).setValue(data.tel);
+      if (data.dir !== undefined)       sheet.getRange(i+1, 15).setValue(data.dir);
+      if (data.localidad !== undefined) sheet.getRange(i+1, 16).setValue(data.localidad);
+      if (data.danos !== undefined)     sheet.getRange(i+1, 17).setValue(data.danos);
+      if (data.danosDen !== undefined) {
+        var ddCol = getDanosDenCol(sheet);
+        sheet.getRange(i+1, ddCol).setValue(data.danosDen);
+      }
       return resp({ok:true});
     }
   }
@@ -259,6 +327,14 @@ function archivarInspecciones() {
   return {ok: true, archivadas: archivadas};
 }
 
+// Devuelve la casilla remitente según la compañía
+function mailPorCompania(cia) {
+  if (cia && cia.toLowerCase().indexOf('rivadavia') !== -1) {
+    return 'inspeccionespatitucci@gmail.com';
+  }
+  return 'patitucciestudio@gmail.com';
+}
+
 function enviarMail(data) {
   var asunto = 'Inspeccion asignada - Siniestro ' + data.sin;
   var cuerpo = 'ESTUDIO PATITUCCI\n'
@@ -287,10 +363,8 @@ function enviarMail(data) {
     + 'Saludos,\n'
     + 'Estudio Patitucci';
 
-  MailApp.sendEmail({
-    to: data.mail,
-    subject: asunto,
-    body: cuerpo
+  GmailApp.sendEmail(data.mail, asunto, cuerpo, {
+    from: mailPorCompania(data.cia)
   });
 }
 
@@ -310,10 +384,8 @@ function enviarRecordatorio(data) {
       + 'Saludos,\n'
       + 'Estudio Patitucci';
 
-    MailApp.sendEmail({
-      to: data.mail,
-      subject: asunto,
-      body: cuerpo
+    GmailApp.sendEmail(data.mail, asunto, cuerpo, {
+      from: mailPorCompania(data.cia)
     });
     return resp({ok: true});
   } catch(err) {
@@ -380,11 +452,11 @@ function migrarPermisosExistentes() {
         Logger.log('  ✓ ' + archivo.getName() + ' — permiso aplicado');
       } catch(e) {
         resultados.err++;
-        Logger.log('  ✗ ' + archivo.getName() + ' — ERROR: ' + e.toString());
+        Logger.log('  ✕ ' + archivo.getName() + ' — ERROR: ' + e.toString());
       }
     }
   }
-  
+
   Logger.log('');
   Logger.log('════ Migración completada ════');
   Logger.log('Carpetas procesadas: ' + resultados.carpetas);
@@ -392,44 +464,219 @@ function migrarPermisosExistentes() {
   Logger.log('Errores: ' + resultados.err);
 }
 
-// ════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
 //  MIGRACIÓN — mover carpetas sueltas a la carpeta madre
 //  Correr UNA SOLA VEZ después de hacer deploy
 //  Pasos: seleccionar "migrarCarpetasAMadre" → Ejecutar → Ver Registros
-// ════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════
 function migrarCarpetasAMadre() {
   var madre = getCarpetaMadre();
-  var resultados = { movidas: 0, yaAdentro: 0, err: 0 };
-  
   var query = DriveApp.searchFolders('title contains "Inspeccion_"');
+  var movidas = 0, ya = 0;
   while (query.hasNext()) {
     var carpeta = query.next();
-    var nombre = carpeta.getName();
-    try {
-      // Verificar si ya está dentro de la madre
-      var padres = carpeta.getParents();
-      var yaEstaAdentro = false;
-      while (padres.hasNext()) {
-        if (padres.next().getId() === madre.getId()) { yaEstaAdentro = true; break; }
-      }
-      if (yaEstaAdentro) {
-        resultados.yaAdentro++;
-        Logger.log('Ya está adentro: ' + nombre);
-      } else {
-        madre.addFolder(carpeta);
-        try { DriveApp.getRootFolder().removeFolder(carpeta); } catch(e) {}
-        resultados.movidas++;
-        Logger.log('✓ Movida: ' + nombre);
-      }
-    } catch(e) {
-      resultados.err++;
-      Logger.log('✗ Error con ' + nombre + ': ' + e.toString());
+    var parents = carpeta.getParents();
+    var estaEnMadre = false;
+    while (parents.hasNext()) {
+      if (parents.next().getId() === madre.getId()) { estaEnMadre = true; break; }
+    }
+    if (estaEnMadre) { ya++; continue; }
+    madre.addFolder(carpeta);
+    DriveApp.getRootFolder().removeFolder(carpeta);
+    movidas++;
+    Logger.log('Movida: ' + carpeta.getName());
+  }
+  Logger.log('Ya estaban en madre: ' + ya + ' | Movidas ahora: ' + movidas);
+}
+
+// ================================================================
+//  FEATURE: LINK PARA TALLERES
+//  El admin genera un link unico con vencimiento de 48 hs.
+//  El taller lo abre, carga el relevamiento y lo envia.
+//  No requiere login. El token se invalida al usarse o al vencer.
+// ================================================================
+
+function generarToken32() {
+  var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  var t = '';
+  for (var i = 0; i < 32; i++) t += chars[Math.floor(Math.random() * chars.length)];
+  return t;
+}
+
+function generarTokenTaller(data) {
+  if (!data.id) return resp({ok: false, msg: 'ID requerido'});
+  var sheet = getSheet();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == data.id) {
+      var token = generarToken32();
+      var exp = new Date();
+      exp.setHours(exp.getHours() + 48);
+      sheet.getRange(i+1, 25).setValue(token);        // col TallerToken
+      sheet.getRange(i+1, 26).setValue(exp.toISOString()); // col TallerTokenExp
+      sheet.getRange(i+1, 20).setValue('Esperando taller'); // col Estado
+      var appUrl = 'https://estudiopatitucci.github.io/inspecciones-app/?taller=' + token;
+      return resp({ok: true, link: appUrl, exp: exp.toISOString()});
     }
   }
-  
-  Logger.log('');
-  Logger.log('════ Migración completada ════');
-  Logger.log('Carpetas movidas: ' + resultados.movidas);
-  Logger.log('Ya estaban adentro: ' + resultados.yaAdentro);
-  Logger.log('Errores: ' + resultados.err);
+  return resp({ok: false, msg: 'Inspeccion no encontrada'});
+}
+
+function getTallerInspeccion(tallerToken) {
+  var sheet = getSheet();
+  var rows = sheet.getDataRange().getValues();
+  var headers = rows[0];
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][24] === tallerToken) {               // col 25 = index 24
+      var exp = rows[i][25];                          // col 26 = index 25
+      if (exp && new Date() > new Date(exp)) {
+        return resp({ok: false, msg: 'Link vencido. Solicita uno nuevo al estudio.'});
+      }
+      if (rows[i][21]) {                              // col Relevamiento = index 21
+        return resp({ok: false, msg: 'Este link ya fue utilizado. El relevamiento ya fue enviado.'});
+      }
+      return resp({ok: true, inspeccion: {
+        id:         rows[i][0],
+        siniestro:  rows[i][1],
+        compania:   rows[i][2],
+        tipo:       rows[i][3],
+        fechaInsp:  rows[i][4],
+        patente:    rows[i][6],
+        modelo:     rows[i][7],
+        anio:       rows[i][8],
+        asegurado:  rows[i][12],
+        tel:        rows[i][13],
+        direccion:  rows[i][14],
+        localidad:  rows[i][15],
+        danos:      rows[i][16]
+      }});
+    }
+  }
+  return resp({ok: false, msg: 'Link invalido o expirado.'});
+}
+
+function recibirRelTaller(data) {
+  var tallerToken = data.tallerToken;
+  if (!tallerToken) return resp({ok: false, msg: 'Token requerido'});
+  var sheet = getSheet();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][24] === tallerToken) {
+      var exp = rows[i][25];
+      if (exp && new Date() > new Date(exp)) {
+        return resp({ok: false, msg: 'Link vencido'});
+      }
+      if (rows[i][21]) {
+        return resp({ok: false, msg: 'Este relevamiento ya fue enviado anteriormente.'});
+      }
+      var rel = data.relevamiento || {};
+      // Subir fotos a Drive (misma logica que actualizarInspeccion)
+      // Flujo nuevo: fotos ya subidas progresivamente
+      if (rel.fotosLinks && rel.fotosLinks.length > 0 && (!rel.fotos || rel.fotos.length === 0)) {
+        rel.cantFotos = rel.fotosLinks.length;
+        try {
+          var idInsp = rows[i][0];
+          var folder = getOrCreateFolder('Inspeccion_' + idInsp);
+          rel.carpetaUrl = folder.getUrl();
+        } catch(eF) {}
+      }
+      // Flujo legacy: base64
+      if (rel.fotos && rel.fotos.length > 0) {
+        try {
+          var id = rows[i][0];
+          var folder = getOrCreateFolder('Inspeccion_' + id);
+          try { compartirConAutorizados(folder); } catch(eF) {}
+          var links = [];
+          rel.fotos.forEach(function(base64, idx) {
+            try {
+              var b64 = base64.replace(/^data:image\/\w+;base64,/, '');
+              var blob = Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', 'foto_' + (idx+1) + '.jpg');
+              var file = folder.createFile(blob);
+              try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(eS) {}
+              try { compartirConAutorizados(file); } catch(eV) {}
+              var fileId = file.getId();
+              links.push({viewUrl: file.getUrl(), id: fileId, thumbUrl: 'https://lh3.googleusercontent.com/d/' + fileId + '=w400'});
+            } catch(e) {}
+          });
+          rel.fotosLinks = links;
+          rel.cantFotos = links.length;
+          rel.carpetaUrl = folder.getUrl();
+        } catch(e) {}
+        delete rel.fotos;
+      }
+      rel.origenTaller = true;
+      sheet.getRange(i+1, 22).setValue(JSON.stringify(rel)); // Relevamiento
+      sheet.getRange(i+1, 20).setValue('Pendiente de verificar'); // Estado
+      // Invalidar token para que no se pueda usar dos veces
+      sheet.getRange(i+1, 25).setValue('USADO');
+      sheet.getRange(i+1, 26).setValue('');
+      // Notificar al administrador
+      try {
+        var siniestro = rows[i][1] || '-';
+        var patente   = rows[i][6] || '-';
+        var modelo    = rows[i][7] || '-';
+        var tallerNombre = rel.taller || 'Sin nombre';
+        MailApp.sendEmail({
+          to: 'patitucciestudio@gmail.com',
+          subject: 'Relevamiento de taller recibido — Siniestro ' + siniestro,
+          body: 'ESTUDIO PATITUCCI\n'
+            + 'Pericias - Daños Materiales - Homologación CESVI\n\n'
+            + 'El taller cargó el relevamiento de la siguiente inspección:\n\n'
+            + 'N° Siniestro: ' + siniestro + '\n'
+            + 'Patente: ' + patente + '\n'
+            + 'Modelo: ' + modelo + '\n'
+            + 'Taller: ' + tallerNombre + '\n\n'
+            + 'La inspección fue movida a "Pendiente de verificar".\n'
+            + 'Ingresá al panel para revisarla.\n\n'
+            + 'Saludos,\nEstudio Patitucci'
+        });
+      } catch(eM) {}
+      return resp({ok: true});
+    }
+  }
+  return resp({ok: false, msg: 'Token invalido'});
+}
+
+// ════════════════════════════════════════════════════════
+//  UPLOAD PROGRESIVO DE FOTOS (nueva arquitectura)
+//  Cada foto se sube individualmente al momento de seleccionarla,
+//  para que el envío final solo transmita metadatos y links.
+// ════════════════════════════════════════════════════════
+
+function uploadFotoSingle(data) {
+  if (!data.id) return resp({ok: false, msg: 'ID requerido'});
+  try {
+    var folder = getOrCreateFolder('Inspeccion_' + data.id);
+    try { compartirConAutorizados(folder); } catch(e) {}
+    var b64 = data.foto.replace(/^data:image\/\w+;base64,/, '');
+    var idx = (data.idx !== undefined) ? data.idx + 1 : Date.now();
+    var blob = Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', 'foto_' + idx + '.jpg');
+    var file = folder.createFile(blob);
+    try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e) {}
+    try { compartirConAutorizados(file); } catch(e) {}
+    var fileId = file.getId();
+    return resp({ok: true, link: {
+      viewUrl: file.getUrl(),
+      id: fileId,
+      thumbUrl: 'https://lh3.googleusercontent.com/d/' + fileId + '=w400'
+    }});
+  } catch(err) {
+    return resp({ok: false, msg: err.toString()});
+  }
+}
+
+function uploadFotoTaller(data) {
+  var token = data.tallerToken;
+  if (!token) return resp({ok: false, msg: 'Token requerido'});
+  var sheet = getSheet();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][24] === token) {
+      var exp = rows[i][25];
+      if (exp && new Date() > new Date(exp)) return resp({ok: false, msg: 'Token vencido'});
+      data.id = rows[i][0];
+      return uploadFotoSingle(data);
+    }
+  }
+  return resp({ok: false, msg: 'Token inválido'});
 }

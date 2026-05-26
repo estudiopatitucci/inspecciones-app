@@ -965,8 +965,6 @@ tr:hover td{background:rgba(255,255,255,.02)}
         🔄 Pend. de resolver <span class="badge" id="badge-revision" style="display:none;background:var(--orange);color:#111">0</span>
       </button>
       <button class="sidebar-item" id="smenu-cerradas" onclick="inspTab('cerradas')">✅ Cerradas</button>
-      <div class="sidebar-section">Herramientas</div>
-      <button class="sidebar-item" id="smenu-calculador" onclick="inspTab('calculador')">🧮 Calculador</button>
       <div class="sidebar-section">Cuenta</div>
       <button class="sidebar-item" id="smenu-perfil" onclick="inspTab('perfil')">👤 Mi Perfil</button>
     </div>
@@ -1363,7 +1361,7 @@ async function enviarRecordatorio(id){
   if(!mail){alert('No hay mail registrado para '+i.Inspector+'.');return;}
   if(!confirm('¿Enviar recordatorio de vencimiento a '+i.Inspector+' ('+mail+')?'))return;
   try{
-    var res=await apiCall({action:'recordatorio',id:id,inspector:i.Inspector,mail:mail,
+    var res=await apiCall({action:'recordatorio',id:id,inspector:i.Inspector,mail:mail,cia:i.Compania,
       siniestro:i.Siniestro,patente:i.Patente,direccion:(i.Direccion||'')+', '+(i.Localidad||''),finsp:i.FechaInsp});
     if(res&&res.ok)toast('Recordatorio enviado a '+i.Inspector+'.','ok');
     else toast('Error: '+(res&&res.msg?res.msg:'No se pudo enviar el recordatorio.'),'err');
@@ -2122,20 +2120,96 @@ async function procesarPDF(file){
   try{
     const ab=await file.arrayBuffer();
     const pdf=await pdfjsLib.getDocument({data:ab}).promise;
+
+    // ── Texto general (páginas 1-3) para extraer datos del asegurado/vehículo ──
     let txt='';
     for(let i=1;i<=Math.min(pdf.numPages,3);i++){
       const page=await pdf.getPage(i);
       const c=await page.getTextContent();
       txt+=c.items.map(function(it){return it.str;}).join(' ')+'\n';
     }
-    const datos=ciaActual==='rivadavia'?extraerRivadavia(txt):extraerProvincia(txt);
+
+    // ── Rivadavia: extraer OCURRENCIA y DAÑOS desde página 2 ──
+    // La página tiene 2 columnas idénticas. Estrategia:
+    // 1) Agrupar TODOS los ítems legibles por Y (±5pt).
+    // 2) Por cada fila, si hay ítems en dos clusters de X separados >100pt
+    //    (layout 2 columnas) → quedarse solo con el cluster de X menor (col. izq).
+    // 3) Verificar si rows[0] es el nro de siniestro (DD/DD/DDDDD/DD) y saltarlo
+    //    solo en ese caso; si NO lo es, empezar desde rows[0].
+    // 4) Mayor salto de Y entre filas consecutivas = frontera OCURRENCIA/DAÑOS.
+    let _rvDanosDen='', _rvDanos='';
+    if(ciaActual==='rivadavia' && pdf.numPages>=2){
+      try{
+        const p2=await pdf.getPage(2);
+        const c2=await p2.getTextContent();
+
+        // PASO 1: agrupar por Y (±5pt)
+        var rMap={};
+        c2.items.forEach(function(item){
+          var x=item.transform[4], y=item.transform[5];
+          var s=item.str.trim();
+          if(s.length>0 && /[A-Za-zÀ-ɏ0-9]/.test(s)){
+            var yKey=null, ks=Object.keys(rMap);
+            for(var k=0;k<ks.length;k++){
+              if(Math.abs(Number(ks[k])-y)<=5){yKey=ks[k];break;}
+            }
+            if(yKey===null) yKey=String(Math.round(y));
+            if(!rMap[yKey]) rMap[yKey]=[];
+            rMap[yKey].push({x:x,s:s});
+          }
+        });
+
+        // PASO 2: por cada fila, detectar gap X entre columnas y usar solo col. izq.
+        var rows=Object.keys(rMap).map(function(yk){
+          var its=rMap[yk].sort(function(a,b){return a.x-b.x;});
+          // Buscar el mayor salto entre x consecutivos
+          var mxg=0, xsp=its.length;
+          for(var xi=1;xi<its.length;xi++){
+            var xg=its[xi].x-its[xi-1].x;
+            if(xg>mxg){mxg=xg;xsp=xi;}
+          }
+          // Si gap > 100pt hay 2 columnas distintas → solo la izquierda
+          var col=mxg>100?its.slice(0,xsp):its;
+          var rowText=col.map(function(i){return i.s;}).join(' ').trim();
+          // Dedup textual: si ambas columnas llegaron en un solo item PDF,
+          // el texto contiene la misma línea repetida. Detectarlo por las
+          // primeras 4 palabras que reaparecen en la mitad del string.
+          var wds=rowText.split(/\s+/);
+          if(wds.length>=8){
+            var probe=wds.slice(0,4).join(' ');
+            var idx2=rowText.indexOf(probe,probe.length);
+            if(idx2>0 && idx2<=rowText.length*0.7) rowText=rowText.substring(0,idx2).trim();
+          }
+          return {y:Number(yk), text:rowText};
+        }).filter(function(r){return r.text.length>0;})
+          .sort(function(a,b){return b.y-a.y;}); // de arriba hacia abajo
+
+        if(rows.length>0){
+          // PASO 3: ¿rows[0] es el nro de siniestro? Solo saltarlo si coincide
+          var sinPat=/\d{2}\/\d{2}\/\d{5,6}\/\d{2}/;
+          var cStart=sinPat.test(rows[0].text)?1:0;
+
+          // PASO 4: mayor gap de Y (a partir de la 2da fila de contenido)
+          // determina dónde termina OCURRENCIA y empieza DETALLE DE DAÑOS
+          var maxGap=0, splitIdx=rows.length;
+          for(var ri=cStart+1;ri<rows.length;ri++){
+            var gap=rows[ri-1].y-rows[ri].y;
+            if(gap>maxGap){maxGap=gap;splitIdx=ri;}
+          }
+          _rvDanosDen=rows.slice(cStart,splitIdx).map(function(r){return r.text;}).join(' ').replace(/\s{2,}/g,' ').trim();
+          _rvDanos=rows.slice(splitIdx).map(function(r){return r.text;}).join(' ').replace(/\s{2,}/g,' ').trim();
+        }
+      }catch(e2){console.warn('Rivadavia p2 parse error:',e2);}
+    }
+
+    const datos=ciaActual==='rivadavia'?extraerRivadavia(txt,_rvDanosDen,_rvDanos):extraerProvincia(txt);
     llenarFormulario(datos);
     hide('pdf-loading');hide('paso-pdf');show('paso-form');
     s('paso-form-titulo').textContent='Revisá los datos — editá lo que necesites';
   }catch(err){hide('pdf-loading');s('pdf-error').textContent='Error al leer PDF: '+err.message;}
 }
 
-function extraerRivadavia(txt){
+function extraerRivadavia(txt,danosDen,danos){
   function find(ps){for(var j=0;j<ps.length;j++){var m=txt.match(ps[j]);if(m&&m[1])return m[1].trim();}return'';}
   function findDate(ps){for(var j=0;j<ps.length;j++){var m=txt.match(ps[j]);if(m&&m[1]){var d=m[1].trim(),pts=d.split('/');if(pts.length===3)return pts[2]+'-'+pts[1].padStart(2,'0')+'-'+pts[0].padStart(2,'0');return d;}}return'';}
 
@@ -2175,42 +2249,8 @@ function extraerRivadavia(txt){
   // Localidad: texto antes de 'Buenos Aires'
   var localidad=find([/([A-Z][A-Z\s]{2,20}?)\s+Buenos\s+Aires/i]);
 
-  // ── Daños denunciados: sección "OCURRENCIA DEL SINIESTRO" ─────────────────
-  var danosDen='';
-  var _mOcSec=txt.match(/OCURRENCIA\s+DEL\s+SINIESTRO\s+([\s\S]+?)(?=DETALLE\s+DE\s+DA|\n\n|$)/i);
-  if(_mOcSec&&_mOcSec[1].trim().length>5){
-    danosDen=_mOcSec[1].replace(/\s{2,}/g,' ').trim();
-  } else {
-    // Fallback: buscar por verbo de inicio de narrativa
-    var mOcurr=txt.match(/\b(VENIA|VENÍA|VENÍ|CIRCULABA|CONDUCÍA|CONDUCIENDO|TRANSITABA|ESTABA|ESTACIONADO|CIRCULANDO|MANEJABA|MANEJANDO|IBAN|IBA|ENCONTRABA|LLEGABA|VIAJABA|MARCHABA|TRANSITANDO|DETUVE|DETENIDO)\b/i);
-    if(mOcurr){
-      var posIni=txt.indexOf(mOcurr[0]);
-      var _lb=txt.substring(Math.max(0,posIni-8),posIni);
-      var _mLb=_lb.match(/\b([A-ZÀ-ÿ]{1,5})\s+$/i);
-      if(_mLb) posIni-=_mLb[0].length;
-      var _endMarkers=['DEL LUGAR.','SIN PODER MOVERSE.','MOVERSE.','VERIFICAR.'];
-      var posFin=-1;
-      for(var _mi=0;_mi<_endMarkers.length;_mi++){var _p=txt.indexOf(_endMarkers[_mi],posIni);if(_p>posIni){posFin=_p+_endMarkers[_mi].length;break;}}
-      danosDen=(posFin>posIni?txt.substring(posIni,posFin):txt.substring(posIni,posIni+800)).trim();
-      danosDen=danosDen.replace(/\s{2,}/g,' ');
-    }
-  }
-
-  // ── Daños declarados: sección "DETALLE DE DAÑOS DECLARADOS…" ──────────────
-  var danos='';
-  var _mDanSec=txt.match(/DETALLE\s+DE\s+DA[N\xd1]OS\s+DECLARADOS\s*(?:POR\s+EL\s+SOCIO|DEL\s+ASEGURADO|DEL\s+TERCERO|DEL\s+VEH[I\xcd]CULO|POR\s+EL\s+TERCERO)?\s*([\s\S]+?)(?:\s*\n|\d{2}\/\d{2}\/\d{4}|$)/i);
-  if(_mDanSec&&_mDanSec[1].trim().length>2){
-    danos=_mDanSec[1].replace(/\s{2,}/g,' ').trim();
-  } else {
-    // Fallback: buscar tras fin de narrativa o por palabras de daño
-    var _dp=[
-      /(?:MOVERSE\.|DEL\s+LUGAR\.)\s*([^\n]{10,300})/i,
-      /((?:PUERTA|PARAGOLPE|CAPOT|GUARDABARROS|RUEDA|EXTREMO|DEFENSA|FARO|ESPEJO|MECANICO|FRENO)[^.]+\.(?:[^.]+\.)?)/i
-    ];
-    for(var _di=0;_di<_dp.length;_di++){var _dm=txt.match(_dp[_di]);if(_dm&&_dm[1]&&_dm[1].trim().length>3){danos=_dm[1].replace(/\s{2,}/g,' ').trim();break;}}
-  }
-
-  return{sin,cia:'Seguros Rivadavia',tipo,finsp,fsin,pat:pat?pat.toUpperCase():'',mod,anio,chasis,motor,km:'',aseg,tel,dir,localidad,danos,danosDen};
+  // danosDen y danos vienen pre-extraídos desde página 2 (ver procesarPDF)
+  return{sin,cia:'Seguros Rivadavia',tipo,finsp,fsin,pat:pat?pat.toUpperCase():'',mod,anio,chasis,motor,km:'',aseg,tel,dir,localidad,danos:danos||'',danosDen:danosDen||''};
 }
 
 function extraerProvincia(txt){
@@ -3336,7 +3376,7 @@ async function guardarEdicion(){
   var me=s('msg-editar');
   me.className='msg';me.textContent='Guardando...';
   var datos={
-    action:'editar',id:editId,
+    action:'actualizar',id:editId,
     sin:s('e-sin').value.trim(),
     cia:s('e-cia').value,
     tipo:s('e-tipo').value.trim(),
