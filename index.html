@@ -754,6 +754,63 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <div class="field"><label>Daños declarados</label><textarea id="f-danos" rows="2" style="resize:vertical"></textarea></div>
             <div class="field" style="margin-top:12px"><label>Daños denunciados (ocurrencia del siniestro)</label><textarea id="f-danos-den" rows="4" style="resize:vertical"></textarea></div>
           </div>
+          <!-- ── Presupuesto del taller con IA (opcional) ── -->
+          <div class="card">
+            <p class="section-title">🤖 Presupuesto del taller <span style="font-size:11px;color:var(--text3);font-weight:400">(opcional — IA pre-carga el calculador para el inspector)</span></p>
+
+            <!-- Selector de tipo de vehículo para el análisis IA -->
+            <div style="max-width:280px;margin-bottom:12px">
+              <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em">Tipo de vehículo</label>
+              <select id="ia-nueva-tipo" style="width:100%">
+                <option value="">Seleccione para habilitar IA</option>
+                <option>Sedán / Hatchback (4-5 Puertas)</option>
+                <option>Sedán / Hatchback (3 Puertas)</option>
+                <option>SUV / Weekend</option>
+                <option>Utilitario / Furgón</option>
+                <option>Pickup A Cabina Simple</option>
+                <option>Pickup B Cabina Simple</option>
+                <option>Pickup A Cabina Doble</option>
+                <option>Pickup B Cabina Doble</option>
+              </select>
+            </div>
+
+            <!-- Badge de confirmación (se muestra después de confirmar análisis) -->
+            <div id="ia-nueva-badge" style="display:none;padding:10px 14px;background:rgba(46,204,113,.1);border:1px solid rgba(46,204,113,.3);border-radius:8px;margin-bottom:12px;display:none">
+              <span style="font-size:13px;font-weight:600;color:#4caf7d" id="ia-nueva-badge-txt"></span>
+              <button onclick="nuevaIaReset()" style="margin-left:10px;font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;text-decoration:underline">Quitar</button>
+            </div>
+
+            <!-- Botón y file input -->
+            <button onclick="nuevaIaAbrirUpload()" style="display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:9px 14px;border:1.5px dashed var(--accent);border-radius:8px;background:rgba(79,124,255,.06);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer">
+              📎 Subir presupuesto y analizar con IA
+            </button>
+            <input type="file" id="ia-nueva-file-input" accept="image/*,application/pdf" style="display:none" onchange="nuevaIaFileSelected(this)">
+
+            <!-- Panel de Revisión IA -->
+            <div id="ia-nueva-panel" style="display:none;background:var(--bg2);border:1px solid rgba(79,124,255,.35);border-radius:10px;padding:14px;margin-top:12px">
+              <div id="ia-nueva-loading" style="text-align:center;padding:18px 0">
+                <div class="spinner" style="margin:0 auto 10px"></div>
+                <p style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px">Analizando con Gemini...</p>
+                <p style="font-size:11px;color:var(--text3)">Esto puede tardar unos segundos</p>
+              </div>
+              <div id="ia-nueva-results" style="display:none">
+                <p style="font-size:12px;color:var(--text2);background:rgba(240,180,41,.08);border:1px solid rgba(240,180,41,.2);border-radius:6px;padding:7px 10px;margin-bottom:12px">
+                  ℹ️ Las tareas de <strong>Reparar</strong> quedan en nivel <strong>Leve</strong>. El inspector puede ajustarlas.
+                </p>
+                <div id="ia-nueva-mapeadas-list" style="margin-bottom:6px"></div>
+                <div id="ia-nueva-sinmapear-list"></div>
+                <div style="display:flex;gap:8px;margin-top:12px">
+                  <button class="btn-primary btn-sm" style="flex:1" onclick="nuevaIaConfirmar()">✓ Confirmar</button>
+                  <button class="btn-secondary btn-sm" onclick="nuevaIaCancelar()">✕ Cancelar</button>
+                </div>
+              </div>
+              <div id="ia-nueva-error" style="display:none;text-align:center;padding:8px 0">
+                <p style="font-size:13px;color:var(--red)" id="ia-nueva-error-msg"></p>
+                <button class="btn-secondary btn-sm" style="margin-top:8px" onclick="nuevaIaCancelar()">Cerrar</button>
+              </div>
+            </div>
+          </div>
+
           <div class="card">
             <p class="section-title">Asignar inspector</p>
             <div class="insp-grid" id="insp-btns">
@@ -763,6 +820,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
               <button class="insp-btn" onclick="selInsp('Sebastián')">Sebastián</button>
               <button class="insp-btn" onclick="selInsp('Mariano')">Mariano</button>
               <button class="insp-btn" onclick="selInsp('Bruno')">Bruno</button>
+              <button class="insp-btn" onclick="selInsp('Majo')">Majo</button>
               <button class="insp-btn" id="btn-sel-taller" onclick="selTaller()" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)">🔧 Taller</button>
             </div>
             <div id="bloque-taller" style="display:none;margin-top:12px">
@@ -1314,7 +1372,9 @@ tr:hover td{background:rgba(255,255,255,.02)}
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const API='https://script.google.com/macros/s/AKfycbySXXZa9C6OgR-vojaFfvxOfF2HwuvDr49ncq04opIV5q54vMGf3nBTYLQ4TAix9m9X/exec';
 const SECRET_TOKEN='ep_9k2mX7vQn4pRjL8wZdA3sYtB6uCfHg0E';
-const INSP_MAILS={'Ignacio':'Patitucci.mp@gmail.com','Matías':'Patitucci.mp@gmail.com','Valentino':'valentinopatitucci5@gmail.com','Sebastián':'Patitucci.mp@gmail.com','Mariano':'Patitucci.mp@gmail.com','Bruno':'bruno@estudiopatitucci.com'};
+const INSP_MAILS={'Ignacio':'Patitucci.mp@gmail.com','Matías':'Patitucci.mp@gmail.com','Valentino':'valentinopatitucci5@gmail.com','Sebastián':'Patitucci.mp@gmail.com','Mariano':'Patitucci.mp@gmail.com','Bruno':'bruno@estudiopatitucci.com','Majo':'sanchezmajo2022@gmail.com'};
+// Inspectores con permiso para cambiar el estado de sus propios relevamientos
+const INSP_PUEDE_CAMBIAR_ESTADO = ['Mariano','Valentino','Bruno'];
 // Contraseñas: defaults + lo que esté guardado en localStorage
 var _passDefaults={'Administrador':'123456','Ignacio':'123456','Matías':'123456','Valentino':'123456','Sebastián':'123456','Mariano':'123456','Bruno':'123456'};
 var passwords=(function(){
@@ -1650,6 +1710,95 @@ function renderTablaAdmin(tipo){
 }
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
+// ── Render detallado del calculador para el panel admin ──
+function renderResumenCalcAdmin(calc){
+  var piezas = calc.piezas || [];
+  var ops    = calc.operaciones || [];
+  var tipo   = calc.tipo || '';
+
+  var colores = {Reparar:'#f0b429', Sustituir:'#e05c5c', Pintar:'#5b8dee', Difuminar:'#4caf7d'};
+
+  // Agrupar por zona+pieza
+  var orden=[], grupos={};
+  piezas.forEach(function(p){
+    var key=(p.zona||'')+'||'+(p.pieza||'');
+    if(!grupos[key]){ grupos[key]={zona:p.zona||'',pieza:p.pieza||'',tareas:[]}; orden.push(key); }
+    grupos[key].tareas.push(p);
+  });
+
+  var filas = orden.map(function(key){
+    var g = grupos[key];
+    var chips = g.tareas
+      .sort(function(a,b){ var o={Reparar:1,Sustituir:2,Pintar:3,Difuminar:4}; return (o[a.tarea]||9)-(o[b.tarea]||9); })
+      .map(function(t){
+        var col = colores[t.tarea]||'var(--text3)';
+        var hs  = (t.hsTrabajo||t.horas||0);
+        var hsLabel = (t.tarea!=='Pintar') ? '<span style="font-size:11px;opacity:.8"> · '+(hs||0)+' hs</span>' : '';
+        var nivelLabel = (t.nivelDano&&(t.tarea==='Reparar')) ? '<span style="font-size:10px;opacity:.75"> ('+t.nivelDano.charAt(0)+')</span>' : '';
+        var panosLabel = (t.tarea==='Pintar') ? '<span style="font-size:11px;opacity:.8"> · '+(t.panos||1)+' paño'+(((t.panos||1)>1)?'s':'')+'</span>' : '';
+        var panosLblDif = (t.tarea==='Difuminar') ? '<span style="font-size:11px;opacity:.8"> · ½ paño</span>' : '';
+        return '<span style="display:inline-flex;align-items:center;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;color:#fff;background:'+col+';white-space:nowrap">'
+          +esc(t.tarea)+nivelLabel+hsLabel+panosLabel+panosLblDif+'</span>';
+      }).join('<span style="color:var(--text3);font-size:11px;margin:0 3px">+</span>');
+
+    return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid var(--border);flex-wrap:wrap">'
+      +'<span style="font-size:12px;color:var(--text);flex:1;min-width:120px">'+esc(g.pieza||'sin nombre')+'</span>'
+      +'<div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">'+chips+'</div>'
+      +'</div>';
+  }).join('');
+
+  // Operaciones especiales
+  var opsHtml = '';
+  if(ops.length){
+    opsHtml += '<div style="padding:8px 10px;border-top:1px solid var(--border)">'
+      +'<p style="font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Operaciones especiales</p>';
+    ops.forEach(function(o){
+      var hsOp = (o.operacion==='Banco de estiraje') ? (o.puestaMedicion||0)+(o.tiempoEstiraje||0) : (o.horas||0);
+      opsHtml += '<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0">'
+        +'<span style="color:var(--text)">'+esc(o.operacion||o.nombre||'')+'</span>'
+        +'<span style="color:var(--accent);font-family:\'DM Mono\',monospace">'+hsOp+' hs</span>'
+        +'</div>';
+    });
+    opsHtml += '</div>';
+  }
+
+  // Totales
+  var totHs   = piezas.reduce(function(a,p){return a+(p.hsTrabajo||p.horas||0);},0);
+  var totOpHs = ops.reduce(function(a,o){
+    if(o.operacion==='Banco de estiraje') return a+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
+    return a+(o.horas||0);
+  },0);
+  var totPanos = piezas.reduce(function(a,p){
+    if(p.tarea==='Pintar') return a+(p.panos||1);
+    if(p.tarea==='Difuminar') return a+0.5;
+    return a;
+  },0);
+  var gran = totHs + totOpHs;
+  var dias = gran>0 ? Math.round(gran/8) : 0;
+  var costoChapa = calc.costoChapa||0, costoPano = calc.costoPano||0;
+  var totalCosto = (dias*costoChapa)+(totPanos*costoPano);
+
+  var totalHtml = '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:rgba(79,124,255,.08);border-top:1px solid var(--border)">'
+    +'<span style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Total estimado</span>'
+    +'<div style="display:flex;gap:14px;align-items:center">'
+    +(totPanos?'<span style="font-size:13px;color:var(--text2)">'+totPanos+' paño'+(totPanos!==1?'s':'')+'</span>':'')
+    +'<span style="font-size:16px;font-weight:700;color:var(--accent);font-family:\'DM Mono\',monospace">'+gran+' hs</span>'
+    +'<span style="font-size:12px;color:var(--text3)">('+dias+(dias===1?' día':' días')+')</span>'
+    +(totalCosto>0?'<span style="font-size:13px;font-weight:600;color:var(--green)">$'+totalCosto.toLocaleString('es-AR')+'</span>':'')
+    +'</div></div>';
+
+  return '<div style="margin-bottom:12px">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+    +'<span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;font-weight:600">🧮 Mano de obra</span>'
+    +(tipo?'<span style="font-size:10px;color:var(--text3);background:var(--bg2);padding:2px 7px;border-radius:5px">'+esc(tipo)+'</span>':'')
+    +'</div>'
+    +'<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;overflow:hidden">'
+    +filas
+    +opsHtml
+    +totalHtml
+    +'</div></div>';
+}
+
 function abrirModal(id){
   const i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
   var rel=i.Relevamiento;
@@ -1685,60 +1834,7 @@ function abrirModal(id){
     html+='<div style="margin-bottom:10px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Observaciones del siniestro</span>';
     html+='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.danos||'-')+'</div></div>';
     if(rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length){
-      html+='<div style="margin-bottom:10px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">🧮 Mano de obra · '+esc(rel.calculador.tipo||'')+'</span>';
-      html+='<div style="background:var(--bg3);border-radius:8px;padding:10px">';
-      html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr>'
-        +'<th style="text-align:left;padding:4px 8px;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap">Zona</th>'
-        +'<th style="text-align:left;padding:4px 8px;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border)">Pieza</th>'
-        +'<th style="text-align:left;padding:4px 8px;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap">Tarea</th>'
-        +'<th style="text-align:center;padding:4px 8px;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap">Nivel daño</th>'
-        +'<th style="text-align:center;padding:4px 8px;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap">Hs trabajo</th>'
-        +'<th style="text-align:center;padding:4px 8px;color:var(--text3);font-weight:600;border-bottom:1px solid var(--border)">Paños</th>'
-        +'</tr></thead><tbody>'
-        +(function(){
-          // Agrupar piezas por (zona + pieza) para mostrar 1 fila por pieza
-          var orden=[], grupos={};
-          rel.calculador.piezas.forEach(function(p){
-            var key=(p.zona||'')+'||'+(p.pieza||'');
-            if(!grupos[key]){ grupos[key]={zona:p.zona||'',pieza:p.pieza||'',tareas:[]}; orden.push(key); }
-            grupos[key].tareas.push(p);
-          });
-          return orden.map(function(key){
-            var g=grupos[key];
-            // Tareas principales (R o S) y secundarias (P, D)
-            var principal=g.tareas.find(function(t){return t.tarea==='Reparar'||t.tarea==='Sustituir';});
-            var pintar=g.tareas.find(function(t){return t.tarea==='Pintar';});
-            var difuminar=g.tareas.find(function(t){return t.tarea==='Difuminar';});
-            // Armar label de tareas en orden
-            var tareasLabel=g.tareas.map(function(t){return t.tarea;})
-              .sort(function(a,b){
-                var ord={Reparar:1,Sustituir:1,Pintar:2,Difuminar:3};
-                return (ord[a]||9)-(ord[b]||9);
-              })
-              .filter(function(v,i,arr){return arr.indexOf(v)===i;})
-              .join(' + ');
-            var nivelDano=(principal&&principal.nivelDano)||'';
-            var hs=(principal?(principal.hsTrabajo||principal.horas||0):(difuminar?(difuminar.hsTrabajo||difuminar.horas||0):0));
-            var panos=pintar?(pintar.panos||1):difuminar?0.5:0;
-            var panosLabel=panos===0?'-':panos===0.5?'½':panos;
-            return '<tr>'
-              +'<td style="padding:4px 8px;color:var(--text2);white-space:nowrap">'+esc(g.zona)+'</td>'
-              +'<td style="padding:4px 8px;color:var(--text)">'+esc(g.pieza)+'</td>'
-              +'<td style="padding:4px 8px;color:var(--text2);white-space:nowrap">'+esc(tareasLabel)+'</td>'
-              +'<td style="padding:4px 8px;text-align:center;color:var(--text2)">'+esc(nivelDano||'-')+'</td>'
-              +'<td style="padding:4px 8px;text-align:center;font-family:\'DM Mono\',monospace;color:var(--accent)">'+hs+' hs</td>'
-              +'<td style="padding:4px 8px;text-align:center;color:var(--text2)">'+panosLabel+'</td>'
-              +'</tr>';
-          }).join('');
-        })()
-        +'</tbody><tfoot><tr style="border-top:2px solid var(--border)">'
-        +'<td colspan="4" style="padding:6px 8px;color:var(--text2);font-weight:600">TOTAL</td>'
-        +'<td style="padding:6px 8px;text-align:center;font-family:\'DM Mono\',monospace;color:var(--accent);font-weight:600;font-size:13px">'
-        +rel.calculador.piezas.reduce(function(a,p){return a+(p.hsTrabajo||p.horas||0);},0)+' hs</td>'
-        +'<td style="padding:6px 8px;text-align:center;color:var(--text2);font-weight:600">'
-        +rel.calculador.piezas.reduce(function(a,p){return a+(p.tarea==='Pintar'?(p.panos||1):p.tarea==='Difuminar'?0.5:0);},0)+'</td>'
-        +'</tr></tfoot></table></div>';
-      html+='</div></div>';
+      html+=renderResumenCalcAdmin(rel.calculador);
     } else if(rel.notas){
       html+='<div style="margin-bottom:10px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Mano de obra</span>';
       html+='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.notas)+'</div></div>';
@@ -2420,6 +2516,9 @@ function limpiarForm(){
   hide('bloque-mail');s('mail-prev').textContent='';
   document.querySelectorAll('#insp-btns .insp-btn').forEach(function(b){b.className='insp-btn';});
   inspActual=null;if(s('msg-guard'))s('msg-guard').textContent='';
+  // Resetear estado IA nueva IP
+  nuevaIaReset();
+  var tipoEl=s('ia-nueva-tipo'); if(tipoEl) tipoEl.value='';
 }
 
 function volverPDF(){hide('paso-form');show('paso-pdf');s('pdf-input').value='';s('pdf-error').textContent='';limpiarForm();}
@@ -2584,7 +2683,9 @@ async function guardar(enviarMail){
   }
   msg.className='msg';msg.textContent='Guardando...';
   try{
-    const res=await apiCall({action:'guardar',sin,cia:g('f-cia'),tipo:g('f-tipo'),finsp:g('f-finsp'),fsin:g('f-fsin'),pat:pat.toUpperCase(),mod:g('f-mod'),anio:g('f-anio'),chasis:g('f-chasis'),motor:g('f-motor'),km:g('f-km'),aseg:g('f-aseg'),tel:g('f-tel'),dir:g('f-dir'),localidad:g('f-localidad'),danos:g('f-danos'),danosDen:g('f-danos-den'),inspector:inspActual,mail:s('f-mail').value,estado:'Pendientes de carga',mailEnviado:enviarMail,enviarMail,historial:[{estado:'Pendientes de carga',fecha:new Date().toLocaleString('es-AR'),usuario:'Administrador'}]});
+    // Incluir datos del calculador pre-cargados por IA (si el admin los confirmó)
+    var payloadCalc = _nuevaIpCalcData ? {relevamiento: JSON.stringify({calculador: _nuevaIpCalcData, preloaded: true})} : {};
+    const res=await apiCall(Object.assign({action:'guardar',sin,cia:g('f-cia'),tipo:g('f-tipo'),finsp:g('f-finsp'),fsin:g('f-fsin'),pat:pat.toUpperCase(),mod:g('f-mod'),anio:g('f-anio'),chasis:g('f-chasis'),motor:g('f-motor'),km:g('f-km'),aseg:g('f-aseg'),tel:g('f-tel'),dir:g('f-dir'),localidad:g('f-localidad'),danos:g('f-danos'),danosDen:g('f-danos-den'),inspector:inspActual,mail:s('f-mail').value,estado:'Pendientes de carga',mailEnviado:enviarMail,enviarMail,historial:[{estado:'Pendientes de carga',fecha:new Date().toLocaleString('es-AR'),usuario:'Administrador'}]}, payloadCalc));
     if(res.ok){
       msg.className='msg ok';msg.textContent=enviarMail?'✓ Guardada y mail enviado.':'✓ Guardada.';
       toast(enviarMail?'Inspección guardada. Mail enviado al inspector.':'Inspección guardada correctamente.','ok');
@@ -2693,40 +2794,7 @@ function verDetalleInsp(id){
     html+='<div style="margin-bottom:8px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Observaciones del siniestro</span>';
     html+='<div style="background:var(--bg3);border-radius:6px;padding:8px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.danos||'-')+'</div></div>';
     if(rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length){
-      html+='<div style="margin-bottom:10px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">🧮 Mano de obra · '+esc(rel.calculador.tipo||'')+'</span>';
-      html+='<div style="background:var(--bg3);border-radius:6px;padding:8px">';
-      // Agrupar piezas por (zona+pieza) — una fila por pieza
-      var _orden=[],_grupos={};
-      rel.calculador.piezas.forEach(function(p){
-        var key=(p.zona||'')+'||'+(p.pieza||'');
-        if(!_grupos[key]){_grupos[key]={zona:p.zona||'',pieza:p.pieza||'',tareas:[]};_orden.push(key);}
-        _grupos[key].tareas.push(p);
-      });
-      html+=_orden.map(function(key){
-        var g=_grupos[key];
-        var principal=g.tareas.find(function(t){return t.tarea==='Reparar'||t.tarea==='Sustituir';});
-        var pintar=g.tareas.find(function(t){return t.tarea==='Pintar';});
-        var difuminar=g.tareas.find(function(t){return t.tarea==='Difuminar';});
-        var tareasLabel=g.tareas.map(function(t){return t.tarea;})
-          .sort(function(a,b){var o={Reparar:1,Sustituir:1,Pintar:2,Difuminar:3};return(o[a]||9)-(o[b]||9);})
-          .filter(function(v,i,arr){return arr.indexOf(v)===i;}).join(' + ');
-        var nivel=(principal&&principal.nivelDano)||'';
-        var hs=principal?(principal.hsTrabajo||principal.horas||0):difuminar?(difuminar.hsTrabajo||difuminar.horas||0):0;
-        var panos=pintar?(pintar.panos||1):difuminar?0.5:0;
-        var panosLabel=panos===0?'':panos===0.5?'½ paño':panos+(panos===1?' paño':' paños');
-        return '<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;padding:4px 0;font-size:12px;border-bottom:1px solid var(--border)">'
-          +'<span style="color:var(--text)">'+esc(g.pieza)+'<span style="color:var(--text3)"> — '+esc(tareasLabel)+(nivel?' ('+esc(nivel)+')':'')+'</span></span>'
-          +'<span style="color:var(--text3);white-space:nowrap">'+hs+' hs</span>'
-          +(panosLabel?'<span style="color:var(--text3);white-space:nowrap">'+panosLabel+'</span>':'<span></span>')
-          +'</div>';
-      }).join('');
-      var totHs=rel.calculador.piezas.reduce(function(a,p){return a+(p.hsTrabajo||p.horas||0);},0);
-      var totPanos=rel.calculador.piezas.reduce(function(a,p){return a+(p.tarea==='Pintar'?(p.panos||1):p.tarea==='Difuminar'?0.5:0);},0);
-      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0 0;font-weight:600">'
-        +'<span style="font-size:12px;color:var(--text2)">Total</span>'
-        +'<span style="font-family:\'DM Mono\',monospace;color:var(--accent);font-size:14px">'+totHs+' hs &nbsp;·&nbsp; '+totPanos+' paños</span>'
-        +'</div>';
-      html+='</div></div>';
+      html+=renderResumenCalcAdmin(rel.calculador);
     } else if(rel.notas){
       html+='<div style="margin-bottom:10px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Mano de obra</span>';
       html+='<div style="background:var(--bg3);border-radius:6px;padding:8px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.notas)+'</div></div>';
@@ -2734,8 +2802,52 @@ function verDetalleInsp(id){
     html+=renderFotos(rel, true);
     html+='</div>';
   }
+
+  // Bloque de cambio de estado para inspectores privilegiados
+  if(INSP_PUEDE_CAMBIAR_ESTADO.indexOf(usuarioActual) !== -1) {
+    var insp = inspecciones.find(function(x){return x.ID==id;});
+    var estadoActual = insp ? insp.Estado : '';
+    html += '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px">'
+      +'<p style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Cambiar estado</p>'
+      +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      +'<select id="sel-estado-insp" style="width:220px">'
+      +'<option '+(estadoActual==='Pendiente de verificar'?'selected':'')+'>Pendiente de verificar</option>'
+      +'<option '+(estadoActual==='Pendientes de resolver'?'selected':'')+'>Pendientes de resolver</option>'
+      +'<option '+(estadoActual==='Cerradas'?'selected':'')+'>Cerradas</option>'
+      +'</select>'
+      +'<button class="btn-primary btn-sm" onclick="guardarEstadoInspector(\''+esc(id)+'\')">Guardar</button>'
+      +'<span id="msg-estado-insp" class="msg" style="display:inline-block"></span>'
+      +'</div></div>';
+  }
+
   s('modal-cuerpo').innerHTML=html;
   s('modal').classList.add('open');
+}
+
+async function guardarEstadoInspector(id) {
+  var sel = s('sel-estado-insp');
+  var msg = s('msg-estado-insp');
+  if(!sel) return;
+  var nuevoEstado = sel.value;
+  if(msg) { msg.className='msg'; msg.textContent='Guardando...'; }
+  try {
+    var res = await apiCall({action:'actualizar', id:id, estado:nuevoEstado});
+    if(res && res.ok) {
+      // Actualizar localmente
+      var insp = inspecciones.find(function(x){return x.ID==id;});
+      if(insp) insp.Estado = nuevoEstado;
+      actualizarBadgesInspector();
+      renderSeccionInsp('carga');
+      renderSeccionInsp('revision');
+      renderSeccionInsp('cerradas');
+      if(msg) { msg.className='msg ok'; msg.textContent='✓ Estado actualizado.'; }
+      setTimeout(function(){ cerrarModal(); }, 1200);
+    } else {
+      if(msg) { msg.className='msg err'; msg.textContent='Error: '+(res&&res.msg?res.msg:'desconocido'); }
+    }
+  } catch(e) {
+    if(msg) { msg.className='msg err'; msg.textContent='Error de conexión.'; }
+  }
 }
 
 // ─── BORRADOR ────────────────────────────────────────────────────────────────
@@ -4090,7 +4202,8 @@ var ZONAS_SOLO_SUST=[
   'Mecánica',
   'Tren Delantero y Tracción',
   'Tren Delantero y Tracción 4x4',
-  'Tren Delantero y Suspensión'
+  'Tren Delantero y Suspensión',
+  'Tren Trasero'
 ];
 
 // ── helpers ──
@@ -4155,6 +4268,429 @@ function otraSetTarea(id,t){ var e=relCalcState.piezas.find(function(x){return x
 function otraSetNivel(id,n){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.nivelDano=n;e.hsTrabajo=0; gridRender(); guardarBorrador(); }
 function otraSetHs(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.hsTrabajo=parseFloat(v)||0; gridUpdateAll(); guardarBorrador(); }
 function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.panos=parseInt(v)||0; gridUpdateAll(); guardarBorrador(); }
+
+// ════════════════════════════════════════════════════════
+//  FEATURE: NUEVA IP CON IA
+//  Análisis de presupuestos — flujo del Administrador
+//  al crear una nueva IP. Los datos se pre-cargan para
+//  que el inspector los encuentre listos en su relevamiento.
+// ════════════════════════════════════════════════════════
+
+var _nuevaIpCalcData  = null; // {tipo, piezas[]} confirmado por el admin
+var _nuevaIpPending   = null; // resultado sin confirmar {confirmed, otras}
+
+function nuevaIaAbrirUpload() {
+  var tipo = s('ia-nueva-tipo') && s('ia-nueva-tipo').value;
+  if (!tipo) {
+    toast('Seleccioná el tipo de vehículo antes de analizar.', 'err');
+    return;
+  }
+  var inp = s('ia-nueva-file-input');
+  if (inp) inp.click();
+}
+
+function nuevaIaFileSelected(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  input.value = '';
+  if (file.size > 4 * 1024 * 1024) {
+    toast('El archivo es muy grande. Usá una imagen de menos de 4 MB.', 'err');
+    return;
+  }
+  nuevaIaShowPanel('loading');
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      var res = await apiCall({
+        action:     'analizarPresupuesto',
+        fileBase64: e.target.result,
+        mimeType:   file.type || 'image/jpeg'
+      });
+      if (!res || !res.ok) {
+        nuevaIaShowPanel('error', (res && res.msg) ? res.msg : 'No se pudo analizar el presupuesto.');
+        return;
+      }
+      // Usar el tipo seleccionado en el form de nueva IP para resolver contra CALC_DATA_GRID
+      var tipoSel = s('ia-nueva-tipo').value;
+      var resuelto = iaResolverPiezasConTipo(res.mapeadas || [], res.sinMapear || [], tipoSel);
+      _nuevaIpPending = resuelto;
+      nuevaIaRenderResultados(resuelto);
+      nuevaIaShowPanel('results');
+    } catch(err) {
+      nuevaIaShowPanel('error', 'Error de conexión. Verificá tu acceso y reintentá.');
+    }
+  };
+  reader.onerror = function() { nuevaIaShowPanel('error', 'No se pudo leer el archivo.'); };
+  reader.readAsDataURL(file);
+}
+
+function nuevaIaConfirmar() {
+  if (!_nuevaIpPending) return;
+  var tipo = s('ia-nueva-tipo') && s('ia-nueva-tipo').value;
+  var piezas = [];
+
+  _nuevaIpPending.confirmed.forEach(function(item) {
+    var panosInit = item.tarea === 'Pintar' ? 1 : item.tarea === 'Difuminar' ? 0.5 : 0;
+    piezas.push({zona: item.zona, pieza: item.pieza, tarea: item.tarea,
+                 nivelDano: item.nivelDano || '', hsTrabajo: 0, panos: panosInit});
+  });
+  _nuevaIpPending.otras.forEach(function(item) {
+    var panosInit = item.tarea === 'Pintar' ? 1 : item.tarea === 'Difuminar' ? 0.5 : 0;
+    piezas.push({zona: 'Otras piezas', pieza: item.piezaOriginal, tarea: item.tarea,
+                 nivelDano: item.nivelDano || '', hsTrabajo: 0, panos: panosInit});
+  });
+
+  _nuevaIpCalcData = {tipo: tipo, piezas: piezas};
+
+  // Mostrar badge de confirmación
+  var badge = s('ia-nueva-badge');
+  var badgeTxt = s('ia-nueva-badge-txt');
+  if (badge && badgeTxt) {
+    badgeTxt.textContent = '✅ ' + piezas.length + ' piezas pre-cargadas para el inspector';
+    badge.style.display = 'block';
+  }
+
+  nuevaIaCancelar();
+  toast('Presupuesto analizado. Se enviará pre-cargado al inspector.', 'ok');
+}
+
+function nuevaIaCancelar() {
+  _nuevaIpPending = null;
+  var panel = s('ia-nueva-panel');
+  if (panel) panel.style.display = 'none';
+}
+
+function nuevaIaReset() {
+  _nuevaIpCalcData = null;
+  _nuevaIpPending  = null;
+  var badge = s('ia-nueva-badge');
+  if (badge) badge.style.display = 'none';
+  var panel = s('ia-nueva-panel');
+  if (panel) panel.style.display = 'none';
+}
+
+function nuevaIaShowPanel(estado, errorMsg) {
+  var panel = s('ia-nueva-panel'); if (!panel) return;
+  panel.style.display = 'block';
+  var loading = s('ia-nueva-loading');
+  var results = s('ia-nueva-results');
+  var error   = s('ia-nueva-error');
+  if (loading) loading.style.display = estado === 'loading' ? 'block' : 'none';
+  if (results) results.style.display = estado === 'results' ? 'block' : 'none';
+  if (error)   error.style.display   = estado === 'error'   ? 'block' : 'none';
+  if (estado === 'error' && errorMsg) { var el = s('ia-nueva-error-msg'); if (el) el.textContent = errorMsg; }
+}
+
+function nuevaIaRenderResultados(resuelto) {
+  var tareaLabel = {Reparar:'R', Sustituir:'S', Pintar:'P', Difuminar:'D'};
+  var tareaColor = {Reparar:'#f0b429', Sustituir:'#e05c5c', Pintar:'#5b8dee', Difuminar:'#4caf7d'};
+
+  var elM = s('ia-nueva-mapeadas-list');
+  if (elM) {
+    if (!resuelto.confirmed.length) { elM.innerHTML = ''; }
+    else {
+      var html = '<p style="font-size:11px;font-weight:600;color:var(--text2);margin-bottom:7px">✅ '
+        + resuelto.confirmed.length + ' pieza' + (resuelto.confirmed.length !== 1 ? 's' : '') + ' al calculador</p>'
+        + '<div style="display:flex;flex-direction:column;gap:4px">';
+      resuelto.confirmed.forEach(function(item) {
+        var col = tareaColor[item.tarea] || 'var(--text2)';
+        var lbl = tareaLabel[item.tarea] || item.tarea;
+        var nivel = (item.nivelDano && item.tarea === 'Reparar') ? ' · ' + item.nivelDano : '';
+        html += '<div style="display:flex;align-items:center;gap:7px;padding:5px 9px;background:var(--surface1);border-radius:6px;font-size:12px">'
+          + '<span style="min-width:18px;height:18px;border-radius:4px;background:'+col+';color:#fff;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center">'+lbl+'</span>'
+          + '<span style="color:var(--text2);font-size:10px;white-space:nowrap">'+esc(item.zona)+'</span>'
+          + '<span style="color:var(--text);flex:1">'+esc(item.pieza)+'</span>'
+          + (nivel ? '<span style="font-size:10px;color:var(--yellow)">'+esc(nivel.slice(3))+'</span>' : '')
+          + '</div>';
+      });
+      elM.innerHTML = html + '</div>';
+    }
+  }
+
+  var elO = s('ia-nueva-sinmapear-list');
+  if (elO) {
+    if (!resuelto.otras.length) { elO.innerHTML = ''; }
+    else {
+      var html2 = '<p style="font-size:11px;font-weight:600;color:var(--yellow);margin-top:8px;margin-bottom:6px">⚠️ '
+        + resuelto.otras.length + ' pieza' + (resuelto.otras.length !== 1 ? 's' : '') + ' a "Otras piezas"</p>'
+        + '<div style="display:flex;flex-direction:column;gap:4px">';
+      resuelto.otras.forEach(function(item) {
+        var col = tareaColor[item.tarea] || 'var(--text2)';
+        var lbl = tareaLabel[item.tarea] || item.tarea;
+        html2 += '<div style="display:flex;align-items:center;gap:7px;padding:5px 9px;background:rgba(240,180,41,.06);border:1px solid rgba(240,180,41,.2);border-radius:6px;font-size:12px">'
+          + '<span style="min-width:18px;height:18px;border-radius:4px;background:'+col+';color:#fff;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center">'+lbl+'</span>'
+          + '<span style="color:var(--text);flex:1">'+esc(item.piezaOriginal)+'</span></div>';
+      });
+      elO.innerHTML = html2 + '</div>';
+    }
+  }
+}
+
+// Versión de iaResolverPiezas que recibe el tipo explícito (para usar en nueva IP)
+function iaResolverPiezasConTipo(mapeadas, sinMapear, tipo) {
+  var gridData = CALC_DATA_GRID[tipo] || {};
+  var confirmed = [], otras = [];
+  mapeadas.forEach(function(item) {
+    var zonaPiezas = gridData[item.zona] || [];
+    var keyLower   = (item.keyword || '').toLowerCase();
+    var match = null;
+    for (var i = 0; i < zonaPiezas.length; i++) {
+      if (zonaPiezas[i].nombre.toLowerCase().indexOf(keyLower) !== -1) { match = zonaPiezas[i]; break; }
+    }
+    if (match) {
+      confirmed.push({piezaOriginal:item.piezaOriginal, zona:item.zona, pieza:match.nombre,
+                      requierePintura:match.requierePintura||false, tarea:item.tarea,
+                      nivelDano:item.nivelDano ? capitalize(item.nivelDano) : ''});
+    } else {
+      otras.push({piezaOriginal:item.piezaOriginal, tarea:item.tarea,
+                  nivelDano:item.nivelDano ? capitalize(item.nivelDano) : ''});
+    }
+  });
+  sinMapear.forEach(function(item) {
+    otras.push({piezaOriginal:item.piezaOriginal, tarea:item.tarea,
+                nivelDano:item.nivelDano ? capitalize(item.nivelDano) : ''});
+  });
+  return {confirmed:confirmed, otras:otras};
+}
+
+// ════════════════════════════════════════════════════════
+//  FEATURE: NUEVA IP CON IA — (funciones legacy del relevamiento, ya no usadas)
+// ════════════════════════════════════════════════════════
+
+var _iaPendingResult = null;
+
+function iaFileSelected(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+
+  // Resetear el input para que el mismo archivo se pueda volver a seleccionar
+  input.value = '';
+
+  // Verificar tamaño (máximo 4 MB para Gemini free tier)
+  if (file.size > 4 * 1024 * 1024) {
+    toast('El archivo es muy grande. Usá una imagen de menos de 4 MB.', 'err');
+    return;
+  }
+
+  // Mostrar panel en estado de carga
+  iaShowPanel('loading');
+
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      var fileBase64 = e.target.result; // incluye "data:...;base64,..."
+      var mimeType   = file.type || 'image/jpeg';
+
+      var res = await apiCall({
+        action:     'analizarPresupuesto',
+        fileBase64: fileBase64,
+        mimeType:   mimeType
+      });
+
+      if (!res || !res.ok) {
+        iaShowPanel('error', (res && res.msg) ? res.msg : 'No se pudo analizar el presupuesto.');
+        return;
+      }
+
+      // Hacer la resolución final: buscar nombres exactos en CALC_DATA_GRID
+      var resuelto = iaResolverPiezas(res.mapeadas || [], res.sinMapear || []);
+      _iaPendingResult = resuelto;
+      iaRenderResultados(resuelto);
+      iaShowPanel('results');
+
+    } catch(err) {
+      iaShowPanel('error', 'Error de conexión. Verificá tu acceso y reintentá.');
+    }
+  };
+  reader.onerror = function() {
+    iaShowPanel('error', 'No se pudo leer el archivo.');
+  };
+  reader.readAsDataURL(file);
+}
+
+// Resuelve los keywords del GAS contra los nombres reales de CALC_DATA_GRID
+// Piezas resueltas → confirmed[], piezas no resueltas → otras[]
+function iaResolverPiezas(mapeadas, sinMapear) {
+  var confirmed = [];
+  var otras     = [];
+  var tipo      = relCalcState.tipo;
+  var gridData  = CALC_DATA_GRID[tipo] || {};
+
+  mapeadas.forEach(function(item) {
+    var zonaPiezas = gridData[item.zona] || [];
+    var keyLower   = (item.keyword || '').toLowerCase();
+
+    // Buscar pieza cuyo nombre contenga el keyword (insensible a mayúsculas)
+    var match = null;
+    for (var i = 0; i < zonaPiezas.length; i++) {
+      if (zonaPiezas[i].nombre.toLowerCase().indexOf(keyLower) !== -1) {
+        match = zonaPiezas[i];
+        break;
+      }
+    }
+
+    if (match) {
+      confirmed.push({
+        piezaOriginal: item.piezaOriginal,
+        zona:          item.zona,
+        pieza:         match.nombre,
+        requierePintura: match.requierePintura || false,
+        tarea:         item.tarea,
+        nivelDano:     item.nivelDano ? capitalize(item.nivelDano) : ''
+      });
+    } else {
+      // No encontrada en esa zona → va a Otras piezas
+      otras.push({
+        piezaOriginal: item.piezaOriginal,
+        tarea:         item.tarea,
+        nivelDano:     item.nivelDano ? capitalize(item.nivelDano) : ''
+      });
+    }
+  });
+
+  // sinMapear del GAS también van a Otras piezas
+  sinMapear.forEach(function(item) {
+    otras.push({
+      piezaOriginal: item.piezaOriginal,
+      tarea:         item.tarea,
+      nivelDano:     item.nivelDano ? capitalize(item.nivelDano) : ''
+    });
+  });
+
+  return { confirmed: confirmed, otras: otras };
+}
+
+function capitalize(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+
+function iaRenderResultados(resuelto) {
+  var tareaLabel = {Reparar:'R',Sustituir:'S',Pintar:'P',Difuminar:'D'};
+  var tareaColor = {Reparar:'#f0b429',Sustituir:'#e05c5c',Pintar:'#5b8dee',Difuminar:'#4caf7d'};
+
+  // ── Piezas mapeadas al calculador ──
+  var elM = s('ia-mapeadas-list');
+  if (elM) {
+    if (resuelto.confirmed.length === 0) {
+      elM.innerHTML = '';
+    } else {
+      var html = '<p style="font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">'
+        + '✅ ' + resuelto.confirmed.length + ' pieza' + (resuelto.confirmed.length !== 1 ? 's' : '') + ' al calculador</p>'
+        + '<div style="display:flex;flex-direction:column;gap:5px">';
+
+      resuelto.confirmed.forEach(function(item) {
+        var col  = tareaColor[item.tarea] || 'var(--text2)';
+        var lbl  = tareaLabel[item.tarea] || item.tarea;
+        var nivel = (item.nivelDano && item.tarea === 'Reparar') ? ' · ' + item.nivelDano : '';
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--surface1);border-radius:6px;font-size:12px">'
+          + '<span style="min-width:20px;height:20px;border-radius:4px;background:'+col+';color:#fff;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center">'+lbl+'</span>'
+          + '<span style="color:var(--text2);font-size:10px;white-space:nowrap">'+esc(item.zona)+'</span>'
+          + '<span style="color:var(--text);flex:1">'+esc(item.pieza)+'</span>'
+          + (nivel ? '<span style="font-size:10px;color:var(--yellow);background:rgba(240,180,41,.12);padding:2px 6px;border-radius:4px">'+esc(nivel.slice(3))+'</span>' : '')
+          + '</div>';
+      });
+      html += '</div>';
+      elM.innerHTML = html;
+    }
+  }
+
+  // ── Piezas a "Otras piezas" ──
+  var elO = s('ia-sinmapear-list');
+  if (elO) {
+    if (resuelto.otras.length === 0) {
+      elO.innerHTML = '';
+    } else {
+      var html2 = '<p style="font-size:11px;font-weight:600;color:var(--yellow);text-transform:uppercase;letter-spacing:.05em;margin-top:10px;margin-bottom:8px">'
+        + '⚠️ ' + resuelto.otras.length + ' pieza' + (resuelto.otras.length !== 1 ? 's' : '') + ' a "Otras piezas" — revisá manualmente</p>'
+        + '<div style="display:flex;flex-direction:column;gap:4px">';
+
+      resuelto.otras.forEach(function(item) {
+        var col = tareaColor[item.tarea] || 'var(--text2)';
+        var lbl = tareaLabel[item.tarea] || item.tarea;
+        html2 += '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:rgba(240,180,41,.06);border:1px solid rgba(240,180,41,.2);border-radius:6px;font-size:12px">'
+          + '<span style="min-width:20px;height:20px;border-radius:4px;background:'+col+';color:#fff;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center">'+lbl+'</span>'
+          + '<span style="color:var(--text);flex:1">'+esc(item.piezaOriginal)+'</span>'
+          + '</div>';
+      });
+      html2 += '</div>';
+      elO.innerHTML = html2;
+    }
+  }
+}
+
+function iaConfirmar() {
+  if (!_iaPendingResult) return;
+
+  var confirmados = _iaPendingResult.confirmed;
+  var otras       = _iaPendingResult.otras;
+
+  // Agregar piezas confirmadas a relCalcState.piezas
+  confirmados.forEach(function(item) {
+    // Evitar duplicado exacto (misma zona + pieza + tarea)
+    var existe = relCalcState.piezas.find(function(p) {
+      return p.zona === item.zona && p.pieza === item.pieza && p.tarea === item.tarea;
+    });
+    if (existe) return;
+
+    var panosInit = (item.tarea === 'Pintar') ? 1 : (item.tarea === 'Difuminar') ? 0.5 : 0;
+    relCalcState.piezas.push({
+      _id:       relCalcIdx++,
+      zona:      item.zona,
+      pieza:     item.pieza,
+      tarea:     item.tarea,
+      nivelDano: item.nivelDano || '',
+      hsTrabajo: 0,
+      panos:     panosInit
+    });
+  });
+
+  // Agregar piezas no resueltas a "Otras piezas"
+  otras.forEach(function(item) {
+    var panosInit = (item.tarea === 'Pintar') ? 1 : (item.tarea === 'Difuminar') ? 0.5 : 0;
+    relCalcState.piezas.push({
+      _id:       relCalcIdx++,
+      zona:      'Otras piezas',
+      pieza:     item.piezaOriginal,
+      tarea:     item.tarea,
+      nivelDano: item.nivelDano || '',
+      hsTrabajo: 0,
+      panos:     panosInit
+    });
+  });
+
+  // Actualizar la UI
+  gridRender();
+  guardarBorrador();
+
+  // Ocultar el panel y limpiar estado
+  iaCancelar();
+
+  var total = confirmados.length + otras.length;
+  toast('✅ ' + total + ' fila' + (total !== 1 ? 's' : '') + ' cargada' + (total !== 1 ? 's' : '') + ' al calculador.', 'ok');
+}
+
+function iaCancelar() {
+  _iaPendingResult = null;
+  var panel = s('ia-panel');
+  if (panel) panel.style.display = 'none';
+}
+
+function iaShowPanel(estado, errorMsg) {
+  var panel = s('ia-panel');
+  if (!panel) return;
+  panel.style.display = 'block';
+  var loading = s('ia-loading');
+  var results = s('ia-results');
+  var error   = s('ia-error');
+  if (loading) loading.style.display = estado === 'loading'  ? 'block' : 'none';
+  if (results) results.style.display = estado === 'results'  ? 'block' : 'none';
+  if (error)   error.style.display   = estado === 'error'    ? 'block' : 'none';
+  if (estado === 'error' && errorMsg) {
+    var el = s('ia-error-msg');
+    if (el) el.textContent = errorMsg;
+  }
+}
 
 // ── buscador ──
 function gridSearch(valor){
@@ -4384,8 +4920,10 @@ var _p=function(n,r){return {nombre:n,requierePintura:!!r};};
 var S=true,N=false;
 var _Z9_SEG=[
   _p('Airbag conductor',N),_p('Airbag acompañante',N),
-  _p('Airbag rodilla conductor',N),_p('Airbag lateral izquierdo',N),
-  _p('Airbag lateral derecho',N),_p('Cinturón / pretensor conductor',N),
+  _p('Airbag rodilla conductor',N),
+  _p('Airbag de butaca conductor',N),_p('Airbag de butaca acompañante',N),
+  _p('Airbag cortina lateral izquierdo',N),_p('Airbag cortina lateral derecho',N),
+  _p('Cinturón / pretensor conductor',N),
   _p('Cinturón / pretensor acompañante',N),_p('Módulo airbag / pretensores',N)
 ];
 var _B1_Z1=[
@@ -4403,8 +4941,8 @@ var _B1_Z1=[
   _p('Óptica principal izquierda',N),_p('Óptica principal derecha',N),
   _p('Faro auxiliar izquierdo (Antiniebla)',N),_p('Faro auxiliar derecho (Antiniebla)',N),
   _p('Guardabarros delantero izquierdo',S),_p('Guardabarros delantero derecho',S),
-  _p('Pasarruedas plástico (Plastibarros) izquierdo',N),_p('Pasarruedas plástico (Plastibarros) derecho',N),
-  _p('Panel frontal (Marco de radiador completo)',N),_p('Travesaño superior de panel frontal',N),
+  _p('Guardaplast izquierdo',N),_p('Guardaplast derecho',N),
+  _p('Máscara plástica',N),_p('Travesaño superior de panel frontal',N),
   _p('Travesaño inferior de panel frontal',N)
 ];
 var _B1_Z2=[
@@ -4417,10 +4955,11 @@ var _B1_Z2=[
   _p('Cristal de espejo retrovisor izquierdo',N),_p('Zócalo exterior izquierdo',S),
   _p('Moldura de puerta delantera izquierda',S),_p('Moldura de puerta trasera izquierda',S),
   _p('Moldura de guardabarro delantero izquierdo',S),_p('Moldura de guardabarro trasero izquierdo',S),
-  _p('Coliza de puerta delantera izquierda',N),_p('Coliza de puerta trasera izquierda',N),
+  _p('Coliza barrevidrio puerta delantera izquierda',N),_p('Coliza marco puerta delantera izquierda',N),
+  _p('Coliza barrevidrio puerta trasera izquierda',N),_p('Coliza marco puerta trasera izquierda',N),
   _p('Guardabarro trasero izquierdo',S),_p('Tapa de carga de combustible',S),
   _p('Portezuela interna de carga de combustible',N),_p('Parante A (Delantero) izquierdo',S),
-  _p('Parante B (Central) izquierdo',S),_p('Parante C (Trasero) izquierdo',S),
+  _p('Parante central izquierdo',S),
   _p('Pasarruedas interno estructural delantero izquierdo',N),_p('Pasarruedas interno estructural trasero izquierdo',N)
 ];
 var _B1_Z3=[
@@ -4433,9 +4972,10 @@ var _B1_Z3=[
   _p('Cristal de espejo retrovisor derecho',N),_p('Zócalo exterior derecho',S),
   _p('Moldura de puerta delantera derecha',S),_p('Moldura de puerta trasera derecha',S),
   _p('Moldura de guardabarro delantero derecho',S),_p('Moldura de guardabarro trasero derecho',S),
-  _p('Coliza de puerta delantera derecha',N),_p('Coliza de puerta trasera derecha',N),
+  _p('Coliza barrevidrio puerta delantera derecha',N),_p('Coliza marco puerta delantera derecha',N),
+  _p('Coliza barrevidrio puerta trasera derecha',N),_p('Coliza marco puerta trasera derecha',N),
   _p('Guardabarro trasero derecho',S),_p('Parante A (Delantero) derecho',S),
-  _p('Parante B (Central) derecho',S),_p('Parante C (Trasero) derecho',S),
+  _p('Parante central derecho',S),
   _p('Pasarruedas interno estructural delantero derecho',N),_p('Pasarruedas interno estructural trasero derecho',N)
 ];
 var _B1_Z4=[
@@ -4446,10 +4986,10 @@ var _B1_Z4=[
   _p('Portón trasero (Modelos Hatchback / SUV)',S),_p('Bisagra de tapa o portón trasero izquierda',N),
   _p('Bisagra de tapa o portón trasero derecha',N),_p('Amortiguador neumático de portón izquierdo',N),
   _p('Amortiguador neumático de portón derecho',N),_p('Cerradura de baúl / portón trasero',N),
-  _p('Botón de apertura exterior de baúl',N),_p('Óptica trasera izquierda fija (En carrocería)',N),
-  _p('Óptica trasera derecha fija (En carrocería)',N),_p('Óptica trasera izquierda móvil (En tapa / portón)',N),
-  _p('Óptica trasera derecha móvil (En tapa / portón)',N),_p('Spoiler trasero de techo / Deflector trasero',S),
-  _p('Portapatente trasero',N),_p('Embellecedor de patente trasera',S),_p('Panel de cola',S),
+  _p('Botón de apertura exterior de baúl',N),_p('Faro trasero izquierdo fijo (En carrocería)',N),
+  _p('Faro trasero derecho fijo (En carrocería)',N),_p('Extensión de faro trasero izquierdo (En tapa / portón)',N),
+  _p('Extensión de faro trasero derecho (En tapa / portón)',N),_p('Spoiler trasero de techo / Deflector trasero',S),
+  _p('Moldurón negro de paragolpes trasero',S),_p('Portapatente trasero',N),_p('Panel de cola',S),
   _p('Sede de faro trasero izquierdo',N),_p('Sede de faro trasero derecho',N),
   _p('Piso de baúl',N),_p('Alojamiento de rueda de auxilio',N),
   _p('Larguero estructural trasero izquierdo',N),_p('Larguero estructural trasero derecho',N)
@@ -4460,33 +5000,59 @@ var _B1_Z5=[
   _p('Cazoleta de amortiguador delantero derecho',N),_p('Parrilla de suspensión inferior izquierda',N),
   _p('Parrilla de suspensión inferior derecha',N),_p('Rótula de suspensión izquierda',N),_p('Rótula de suspensión derecha',N),
   _p('Barra estabilizadora delantera',N),_p('Bieleta de barra estabilizadora izquierda',N),_p('Bieleta de barra estabilizadora derecha',N),
-  _p('Caja de dirección (Hidráulica / Eléctrica)',N),_p('Cremallera de dirección',N),
+  _p('Caja de dirección (Hidráulica / Eléctrica)',N),
   _p('Precap (Axial de dirección) izquierdo',N),_p('Precap (Axial de dirección) derecho',N),
   _p('Extremo de dirección izquierdo',N),_p('Extremo de dirección derecho',N),
   _p('Portamaza delantero izquierdo',N),_p('Portamaza delantero derecho',N),
   _p('Maza de rueda delantera izquierda',N),_p('Maza de rueda delantera derecha',N),
-  _p('Semieje izquierdo completo',N),_p('Semieje derecho completo',N)
+  _p('Semieje izquierdo completo',N),_p('Semieje derecho completo',N),
+  _p('Disco de freno delantero izquierdo',N),_p('Disco de freno delantero derecho',N),
+  _p('Caliper delantero izquierdo',N),_p('Caliper delantero derecho',N),
+  _p('Pastillas de freno delanteras',N),
+  _p('Campana de freno delantera izquierda',N),_p('Campana de freno delantera derecha',N)
+];
+var _Z_TREN_TRA_SED=[
+  _p('Amortiguador trasero izquierdo',N),_p('Amortiguador trasero derecho',N),
+  _p('Espiral trasero izquierdo',N),_p('Espiral trasero derecho',N),
+  _p('Eje trasero',N),_p('Punta de eje trasero izquierdo',N),_p('Punta de eje trasero derecho',N),
+  _p('Maza de rueda trasera izquierda',N),_p('Maza de rueda trasera derecha',N),
+  _p('Rodamiento trasero izquierdo',N),_p('Rodamiento trasero derecho',N),
+  _p('Barra estabilizadora trasera',N),_p('Bieleta trasera izquierda',N),_p('Bieleta trasera derecha',N),
+  _p('Disco de freno trasero izquierdo',N),_p('Disco de freno trasero derecho',N),
+  _p('Caliper trasero izquierdo',N),_p('Caliper trasero derecho',N),
+  _p('Pastillas de freno traseras',N),
+  _p('Campana de freno trasera izquierda',N),_p('Campana de freno trasera derecha',N)
 ];
 var _B1_Z6=[
   _p('Block de motor',N),_p('Cárter de aceite',N),_p('Tapa de cilindros',N),_p('Tapa de válvulas',N),
   _p('Soporte / Pata de motor izquierda',N),_p('Soporte / Pata de motor derecha',N),
-  _p('Soporte / Pata de motor trasera',N),_p('Soporte / Pata de caja de cambios',N),
+  _p('Soporte / Pata de motor trasera',N),
+  _p('Filtro de aire (Elemento)',N),_p('Carcaza de filtro de aire',N),_p('Toma de aire (Entrada)',N),
   _p('Radiador de agua de motor',N),_p('Condensador de aire acondicionado',N),_p('Intercooler',N),
   _p('Electroventilador completo (Carenado y aspas)',N),_p('Depósito de expansión de refrigerante',N),
   _p('Batería',N),_p('Bandeja de sujeción de batería',N),_p('Computadora de motor (ECU)',N),
   _p('Fusiblera del vano motor',N),_p('Módulo de control ABS / ESP',N),_p('Servoasistencia (Servofreno)',N),
-  _p('Bomba de freno',N),_p('Alternador',N),_p('Compresor de aire acondicionado',N)
+  _p('Bomba de freno',N),_p('Alternador',N),_p('Compresor de aire acondicionado',N),
+  _p('Agua desmineralizada',N),_p('Líquido refrigerante',N),_p('Aceite de motor',N),
+  _p('Aceite de caja',N),_p('Líquido de frenos',N)
 ];
-var _B1_Z7=[_p('Panel de chapa de techo',S),_p('Refuerzo transversal de techo',N)];
+var _B1_Z7=[
+  _p('Panel de chapa de techo',S),_p('Refuerzo transversal de techo',N),
+  _p('Tapizado de techo',N),_p('Cristal de techo',N),_p('Mecanismo de apertura de cristal de techo',N),
+  _p('Antena',N),_p('Base de antena',N),
+  _p('Moldura de techo derecha',S),_p('Moldura de techo izquierda',S)
+];
 var _B1_Z8=[
   _p('Parabrisas delantero',N),_p('Luneta trasera',N),
   _p('Cristal de puerta delantera izquierda',N),_p('Cristal de puerta delantera derecha',N),
   _p('Cristal de puerta trasera izquierda',N),_p('Cristal de puerta trasera derecha',N),
   _p('Cristal fijo de custodia lateral izquierdo',N),_p('Cristal fijo de custodia lateral derecho',N),
   _p('Mecanismo levantacristal delantero izquierdo',N),_p('Mecanismo levantacristal delantero derecho',N),
-  _p('Mecanismo levantacristal trasero izquierdo',N),_p('Mecanismo levantacristal trasero derecho',N)
+  _p('Mecanismo levantacristal trasero izquierdo',N),_p('Mecanismo levantacristal trasero derecho',N),
+  _p('Moldura lateral de parabrisas derecha',N),_p('Moldura lateral de parabrisas izquierda',N),
+  _p('Rejilla bajo parabrisas',N)
 ];
-var _BASE1={'Frontal':_B1_Z1,'Lateral Izquierda':_B1_Z2,'Lateral Derecha':_B1_Z3,'Trasera':_B1_Z4,'Tren Delantero y Tracción':_B1_Z5,'Mecánica / Vano Motor':_B1_Z6,'Techo':_B1_Z7,'Cristales':_B1_Z8,'Seguridad':_Z9_SEG};
+var _BASE1={'Frontal':_B1_Z1,'Lateral Izquierda':_B1_Z2,'Lateral Derecha':_B1_Z3,'Trasera':_B1_Z4,'Tren Delantero y Tracción':_B1_Z5,'Tren Trasero':_Z_TREN_TRA_SED,'Mecánica / Vano Motor':_B1_Z6,'Techo':_B1_Z7,'Cristales':_B1_Z8,'Seguridad':_Z9_SEG};
 
 var _B2_Z2=[
   _p('Puerta delantera izquierda (Diseño largo - Panel exterior)',S),_p('Bisagra de puerta delantera izquierda superior (Reforzada)',N),
@@ -4496,7 +5062,7 @@ var _B2_Z2=[
   _p('Zócalo exterior izquierdo (Largo)',S),_p('Moldura de puerta delantera izquierda (Larga)',S),
   _p('Moldura de guardabarro delantero izquierdo',S),_p('Moldura de guardabarro trasero izquierdo',S),
   _p('Guardabarro trasero izquierdo (Estructural grande)',S),_p('Parante A (Delantero) izquierdo',S),
-  _p('Parante B (Central desplazado) izquierdo',S),_p('Parante C (Trasero) izquierdo',S)
+  _p('Parante central izquierdo',S)
 ];
 var _B2_Z3=[
   _p('Puerta delantera derecha (Diseño largo - Panel exterior)',S),_p('Bisagra de puerta delantera derecha superior (Reforzada)',N),
@@ -4506,15 +5072,15 @@ var _B2_Z3=[
   _p('Zócalo exterior derecho (Largo)',S),_p('Moldura de puerta delantera derecha (Larga)',S),
   _p('Moldura de guardabarro delantero derecho',S),_p('Moldura de guardabarro trasero derecho',S),
   _p('Guardabarro trasero derecho (Estructural grande)',S),_p('Parante A (Delantero) derecho',S),
-  _p('Parante B (Central desplazado) derecho',S),_p('Parante C (Trasero) derecho',S)
+  _p('Parante central derecho',S)
 ];
 var _B2_Z4=[
   _p('Paragolpes trasero (Diseño específico corto)',S),_p('Alma metálica de paragolpes trasero',N),
   _p('Soporte de paragolpes trasero izquierdo',N),_p('Soporte de paragolpes trasero derecho',N),
   _p('Portón trasero corto',S),_p('Bisagra de portón trasero izquierda',N),_p('Bisagra de portón trasero derecha',N),
   _p('Amortiguador neumático de portón izquierdo',N),_p('Amortiguador neumático de portón derecho',N),
-  _p('Cerradura de portón trasero',N),_p('Óptica trasera izquierda fija',N),_p('Óptica trasera derecha fija',N),
-  _p('Panel de cola',S),_p('Piso de baúl',N),_p('Larguero estructural trasero izquierdo',N),_p('Larguero estructural trasero derecho',N)
+  _p('Cerradura de portón trasero',N),_p('Faro trasero izquierdo fijo',N),_p('Faro trasero derecho fijo',N),
+  _p('Moldurón negro de paragolpes trasero',S),_p('Panel de cola',S),_p('Piso de baúl',N),_p('Larguero estructural trasero izquierdo',N),_p('Larguero estructural trasero derecho',N)
 ];
 var _B2_Z8=[
   _p('Parabrisas delantero',N),_p('Luneta trasera',N),
@@ -4522,7 +5088,7 @@ var _B2_Z8=[
   _p('Cristal lateral trasero izquierdo (Fijo o pivotante)',N),_p('Cristal lateral trasero derecho (Fijo o pivotante)',N),
   _p('Mecanismo levantacristal delantero izquierdo',N),_p('Mecanismo levantacristal delantero derecho',N)
 ];
-var _BASE2={'Frontal':_B1_Z1,'Lateral Izquierda':_B2_Z2,'Lateral Derecha':_B2_Z3,'Trasera':_B2_Z4,'Tren Delantero y Tracción':_B1_Z5,'Mecánica / Vano Motor':_B1_Z6,'Techo':_B1_Z7,'Cristales':_B2_Z8,'Seguridad':_Z9_SEG};
+var _BASE2={'Frontal':_B1_Z1,'Lateral Izquierda':_B2_Z2,'Lateral Derecha':_B2_Z3,'Trasera':_B2_Z4,'Tren Delantero y Tracción':_B1_Z5,'Tren Trasero':_Z_TREN_TRA_SED,'Mecánica / Vano Motor':_B1_Z6,'Techo':_B1_Z7,'Cristales':_B2_Z8,'Seguridad':_Z9_SEG};
 
 var _B3_Z1=[
   _p('Paragolpes delantero (Reforzado / Cromado / Plástico)',S),_p('Alma de paragolpes delantero',N),
@@ -4533,8 +5099,8 @@ var _B3_Z1=[
   _p('Óptica principal izquierda',N),_p('Óptica principal derecha',N),
   _p('Faro auxiliar izquierdo (Antiniebla)',N),_p('Faro auxiliar derecho (Antiniebla)',N),
   _p('Guardabarros delantero izquierdo',S),_p('Guardabarros delantero derecho',S),
-  _p('Pasarruedas plástico (Plastibarros) izquierdo',N),_p('Pasarruedas plástico (Plastibarros) derecho',N),
-  _p('Panel frontal pesado (Marco de radiador)',N),_p('Travesaño superior de panel frontal',N),_p('Travesaño inferior de panel frontal',N)
+  _p('Guardaplast izquierdo',N),_p('Guardaplast derecho',N),
+  _p('Máscara plástica',N),_p('Travesaño superior de panel frontal',N),_p('Travesaño inferior de panel frontal',N)
 ];
 var _B3_Z2=[
   _p('Puerta de cabina izquierda (Panel exterior)',S),_p('Bisagra de puerta izquierda superior',N),_p('Bisagra de puerta izquierda inferior',N),
@@ -4558,7 +5124,7 @@ var _B3_Z4=[
   _p('Portón trasero de caja de carga (Panel de chapa)',S),_p('Manija de apertura de portón trasero',N),
   _p('Bisagra de portón de caja izquierda',N),_p('Bisagra de portón de caja derecha',N),
   _p('Cable de retención de portón izquierdo',N),_p('Cable de retención de portón derecho',N),
-  _p('Paragolpes trasero (Tipo estribo, cromado o negro)',N),_p('Óptica trasera izquierda',N),_p('Óptica trasera derecha',N),
+  _p('Paragolpes trasero (Tipo estribo, cromado o negro)',N),_p('Faro trasero izquierdo',N),_p('Faro trasero derecho',N),
   _p('Barra antivuelco (San Antonio)',N),_p('Lona marítima de cobertura de caja',N),_p('Cúpula rígida trasera',S),
   _p('Portapatente trasero',N),_p('Panel de cola de caja de carga',S),
   _p('Piso de carga de chapa',N),_p('Larguero estructural de chasis trasero izquierdo',N),_p('Larguero estructural de chasis trasero derecho',N),
@@ -4576,21 +5142,33 @@ var _B3_Z5=[
   _p('Diferencial delantero (Bocha delantera)',N),_p('Palier / Semieje delantero izquierdo',N),_p('Palier / Semieje delantero derecho',N),
   _p('Actuador de acople de doble tracción',N),
   _p('Paquete de elásticos traseros izquierdo (Hojas ballesta)',N),_p('Paquete de elásticos traseros derecho (Hojas ballesta)',N),
-  _p('Amortiguador trasero izquierdo',N),_p('Amortiguador trasero derecho',N)
+  _p('Amortiguador trasero izquierdo',N),_p('Amortiguador trasero derecho',N),
+  _p('Eje trasero',N),_p('Punta de eje trasero izquierdo',N),_p('Punta de eje trasero derecho',N),
+  _p('Maza de rueda trasera izquierda',N),_p('Maza de rueda trasera derecha',N),
+  _p('Rodamiento trasero izquierdo',N),_p('Rodamiento trasero derecho',N),
+  _p('Diferencial trasero (Bocha trasera)',N),_p('Palier trasero izquierdo',N),_p('Palier trasero derecho',N),
+  _p('Disco de freno trasero izquierdo',N),_p('Disco de freno trasero derecho',N),
+  _p('Caliper trasero izquierdo',N),_p('Caliper trasero derecho',N),
+  _p('Pastillas de freno traseras',N),
+  _p('Campana de freno trasera izquierda',N),_p('Campana de freno trasera derecha',N)
 ];
 var _B3_Z6=[
   _p('Block motor',N),_p('Cárter de aceite reforzado',N),_p('Turboalimentador',N),_p('Intercooler',N),
+  _p('Filtro de aire (Elemento)',N),_p('Carcaza de filtro de aire',N),_p('Toma de aire (Entrada)',N),
   _p('Radiador de agua pesado',N),_p('Condensador de aire acondicionado',N),
   _p('Soporte de motor reforzado izquierdo',N),_p('Soporte de motor reforzado derecho',N),
-  _p('Caja de transferencia (Alta / Baja 4x4)',N),_p('Cardán delantero completo',N),_p('Cardán trasero completo',N)
+  _p('Caja de transferencia (Alta / Baja 4x4)',N),_p('Cardán delantero completo',N),_p('Cardán trasero completo',N),
+  _p('Agua desmineralizada',N),_p('Líquido refrigerante',N),_p('Aceite de motor',N),
+  _p('Aceite de caja',N),_p('Líquido de frenos',N)
 ];
-var _B3_Z7=[_p('Panel de chapa de techo de cabina corta',S)];
+var _B3_Z7=[_p('Panel de chapa de techo de cabina corta',S),_p('Antena',N),_p('Base de antena',N)];
 var _B3_Z8=[
   _p('Parabrisas delantero',N),_p('Luneta trasera de cabina (Fija o corrediza central)',N),
   _p('Cristal de puerta de cabina izquierda',N),_p('Cristal de puerta de cabina derecha',N),
   _p('Mecanismo levantacristal izquierdo',N),_p('Mecanismo levantacristal derecho',N)
 ];
 var _BASE3={'Frontal':_B3_Z1,'Lateral Izquierda':_B3_Z2,'Lateral Derecha':_B3_Z3,'Trasera / Caja de Carga':_B3_Z4,'Tren Delantero y Tracción 4x4':_B3_Z5,'Mecánica':_B3_Z6,'Techo':_B3_Z7,'Cristales':_B3_Z8,'Seguridad':_Z9_SEG};
+// Nota: Pickup cabina simple no tiene Tren Trasero separado (incluido en Tren Delantero y Tracción 4x4)
 
 var _B4_Z2=[
   _p('Puerta delantera izquierda (Panel exterior)',S),_p('Puerta trasera izquierda (Panel exterior)',S),
@@ -4601,7 +5179,7 @@ var _B4_Z2=[
   _p('Cristal de espejo retrovisor izquierdo',N),_p('Zócalo inferior de cabina doble izquierdo (Largo)',S),
   _p('Estribo lateral izquierdo (Versión larga)',N),_p('Moldura de puerta delantera izquierda',S),_p('Moldura de puerta trasera izquierda',S),
   _p('Moldura de guardabarro delantero izquierdo',S),_p('Moldura de lateral exterior de caja izquierdo (Overfender / Buchi)',S),
-  _p('Parante A (Delantero) izquierdo',S),_p('Parante B (Central) izquierdo',S),_p('Parante C (Trasero de cabina larga) izquierdo',S)
+  _p('Parante A (Delantero) izquierdo',S),_p('Parante central izquierdo',S),_p('Parante C (Trasero de cabina larga) izquierdo',S)
 ];
 var _B4_Z3=[
   _p('Puerta delantera derecha (Panel exterior)',S),_p('Puerta trasera derecha (Panel exterior)',S),
@@ -4612,7 +5190,7 @@ var _B4_Z3=[
   _p('Cristal de espejo retrovisor derecho',N),_p('Zócalo inferior de cabina doble derecho (Largo)',S),
   _p('Estribo lateral derecho (Versión larga)',N),_p('Moldura de puerta delantera derecha',S),_p('Moldura de puerta trasera derecha',S),
   _p('Moldura de guardabarro delantero derecho',S),_p('Moldura de lateral exterior de caja derecho (Overfender / Buchi)',S),
-  _p('Parante A (Delantero) derecho',S),_p('Parante B (Central) derecho',S),_p('Parante C (Trasero de cabina larga) derecho',S)
+  _p('Parante A (Delantero) derecho',S),_p('Parante central derecho',S),_p('Parante C (Trasero de cabina larga) derecho',S)
 ];
 var _B4_Z8=[
   _p('Parabrisas delantero',N),_p('Luneta trasera de cabina (Fija o corrediza)',N),
@@ -4630,8 +5208,8 @@ var _BASE5={
     _p('Bisagra de capot izquierda',N),_p('Bisagra de capot derecha',N),_p('Cerradura de capot',N),
     _p('Óptica principal izquierda',N),_p('Óptica principal derecha',N),
     _p('Guardabarros delantero izquierdo',S),_p('Guardabarros delantero derecho',S),
-    _p('Pasarruedas plástico (Plastibarros) izquierdo',N),_p('Pasarruedas plástico (Plastibarros) derecho',N),
-    _p('Panel frontal / Marco de radiador',N)
+    _p('Guardaplast izquierdo',N),_p('Guardaplast derecho',N),
+    _p('Máscara plástica',N)
   ],
   'Lateral Izquierda':[
     _p('Puerta delantera izquierda / Conductor (Panel exterior)',S),
