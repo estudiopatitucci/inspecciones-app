@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mejoras App Estudio Patitucci 29-05</title>
+<meta name="description" content="10 mejoras implementadas: nuevas zonas del calculador, lógica R·S·P·D, flujo de fotos y más.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://estudiopatitucci.com.ar/resumen-avances-29mayo.html">
+<meta property="og:title" content="Mejoras App Estudio Patitucci 29-05">
+<meta property="og:description" content="10 mejoras implementadas hoy: nuevas zonas del calculador, lógica de tareas R·S·P·D, flujo de fotos mejorado y más.">
+<meta property="og:image" content="https://estudiopatitucci.com.ar/og-banner.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="es_AR">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Mejoras App Estudio Patitucci 29-05">
+<meta name="twitter:image" content="https://estudiopatitucci.com.ar/og-banner.jpg">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f7; color: #1d1d1f; min-height: 100vh; padding: 24px 16px; }
+  .container { max-width: 680px; margin: 0 auto; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; background: #e8f0fe; color: #1a56db; font-size: 12px; font-weight: 500; padding: 4px 12px; border-radius: 8px; margin-bottom: 12px; }
+  h1 { font-size: 22px; font-weight: 600; color: #1d1d1f; margin-bottom: 4px; }
+  .subtitle { font-size: 14px; color: #6e6e73; margin-bottom: 24px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 28px; }
+  .stat { background: #fff; border-radius: 10px; padding: 14px; text-align: center; border: 1px solid #e5e5ea; }
+  .stat-num { font-size: 26px; font-weight: 600; color: #1d1d1f; display: block; }
+  .stat-lbl { font-size: 11px; color: #6e6e73; margin-top: 2px; display: block; }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: #aeaeb2; margin-bottom: 10px; margin-top: 4px; }
+  .card { background: #fff; border: 1px solid #e5e5ea; border-radius: 14px; padding: 16px; margin-bottom: 10px; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+  .card:hover { border-color: #c7c7cc; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+  .card-header { display: flex; align-items: flex-start; gap: 12px; }
+  .icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+  .icon-blue { background: #e8f0fe; }
+  .icon-green { background: #e6f4ea; }
+  .icon-amber { background: #fef3c7; }
+  .icon-purple { background: #ede9fe; }
+  .card-body { flex: 1; }
+  .card-title { font-size: 15px; font-weight: 600; color: #1d1d1f; margin-bottom: 3px; }
+  .card-desc { font-size: 13px; color: #6e6e73; line-height: 1.5; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 6px; margin-top: 6px; font-weight: 500; }
+  .tag-fix { background: #e6f4ea; color: #1e7e34; }
+  .tag-feature { background: #e8f0fe; color: #1a56db; }
+  .tag-update { background: #fef3c7; color: #92400e; }
+  .chevron { margin-left: auto; font-size: 16px; color: #aeaeb2; transition: transform 0.2s; flex-shrink: 0; line-height: 38px; }
+  .chevron.open { transform: rotate(180deg); }
+  .detail { margin-top: 14px; padding-top: 14px; border-top: 1px solid #f2f2f7; display: none; }
+  .detail.open { display: block; }
+  .detail-sub { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: #aeaeb2; margin: 10px 0 5px; }
+  .detail-item { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: #3a3a3c; padding: 3px 0; line-height: 1.5; }
+  .dot-ok { color: #34c759; font-size: 16px; flex-shrink: 0; }
+  .dot-del { color: #ff3b30; font-size: 16px; flex-shrink: 0; }
+  .dot-add { color: #007aff; font-size: 16px; flex-shrink: 0; }
+  .code-block { font-family: 'SF Mono', 'Menlo', monospace; font-size: 11px; background: #f5f5f7; border-radius: 8px; padding: 10px 12px; margin-top: 10px; color: #3a3a3c; line-height: 1.7; border: 1px solid #e5e5ea; }
+  .footer { margin-top: 28px; padding-top: 20px; border-top: 1px solid #e5e5ea; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .footer-text { font-size: 13px; color: #aeaeb2; }
+  .footer-logo { font-size: 13px; font-weight: 600; color: #1d1d1f; }
+  @media (max-width: 480px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .stat-num { font-size: 22px; }
+    body { padding: 16px 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="badge">📅 29 de mayo, 2026</div>
+  <h1>App Estudio Patitucci</h1>
+  <p class="subtitle">Avances del día · Tocá cada item para ver el detalle</p>
+
+  <div class="stats">
+    <div class="stat"><span class="stat-num">10</span><span class="stat-lbl">Mejoras implementadas</span></div>
+    <div class="stat"><span class="stat-num">6</span><span class="stat-lbl">Zonas del calculador</span></div>
+    <div class="stat"><span class="stat-num">6</span><span class="stat-lbl">Tipos de vehículo</span></div>
+    <div class="stat"><span class="stat-num">1</span><span class="stat-lbl">Bug corregido</span></div>
+  </div>
+
+  <p class="section-label">Lista maestra del calculador — Repuestos y zonas</p>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-purple">🚗</div>
+      <div class="card-body">
+        <p class="card-title">Zona frontal</p>
+        <p class="card-desc">Renombres y eliminación de duplicados en la zona delantera.</p>
+        <span class="tag tag-update">Actualización</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <div class="detail-item"><span class="dot-add">✎</span><span>"Pasarruedas plástico (Plastibarros)" → "Guardaplast izquierdo / derecho"</span></div>
+      <div class="detail-item"><span class="dot-add">✎</span><span>"Panel frontal (Marco de radiador completo)" → "Máscara plástica"</span></div>
+      <div class="detail-item"><span class="dot-del">✕</span><span>Eliminada "Cremallera de dirección" (duplicado de "Caja de dirección")</span></div>
+    </div>
+  </div>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-purple">🚪</div>
+      <div class="card-body">
+        <p class="card-title">Zona lateral izquierda / derecha</p>
+        <p class="card-desc">Separación de colizas, limpieza de parantes y ajuste por tipo de vehículo.</p>
+        <span class="tag tag-update">Actualización</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <div class="detail-item"><span class="dot-add">+</span><span>"Coliza de puerta" separada en: "Coliza barrevidrio" y "Coliza marco" (para cada puerta)</span></div>
+      <div class="detail-item"><span class="dot-add">✎</span><span>"Parante B (Central)" → "Parante central" (sin la letra B)</span></div>
+      <div class="detail-item"><span class="dot-del">✕</span><span>"Parante C (Trasero)" eliminado en Sedán/SUV, conservado solo en Pickup doble cabina</span></div>
+    </div>
+  </div>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-purple">🔲</div>
+      <div class="card-body">
+        <p class="card-title">Zona trasera</p>
+        <p class="card-desc">Renombres de ópticas, eliminación de embellecedor y nuevo spoiler.</p>
+        <span class="tag tag-update">Actualización</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <div class="detail-item"><span class="dot-add">✎</span><span>"Óptica trasera fija" → "Faro trasero fijo"</span></div>
+      <div class="detail-item"><span class="dot-add">✎</span><span>"Óptica trasera móvil" → "Extensión de faro trasero"</span></div>
+      <div class="detail-item"><span class="dot-del">✕</span><span>Eliminado "Embellecedor de patente trasera"</span></div>
+      <div class="detail-item"><span class="dot-add">+</span><span>Agregado "Spoiler / Moldurón negro de paragolpes trasero"</span></div>
+    </div>
+  </div>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-purple">⚙️</div>
+      <div class="card-body">
+        <p class="card-title">Tren delantero + nuevo tren trasero</p>
+        <p class="card-desc">Sistema de frenos delanteros completo y nueva sección de tren trasero.</p>
+        <span class="tag tag-feature">Nueva sección</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <p class="detail-sub">Tren delantero — frenos</p>
+      <div class="detail-item"><span class="dot-add">+</span><span>Discos, calipers, pastillas, campanas (derecho / izquierdo)</span></div>
+      <p class="detail-sub">Tren trasero — nueva sección</p>
+      <div class="detail-item"><span class="dot-add">+</span><span>Eje trasero, puntas de eje, masas, rodamientos, amortiguadores traseros</span></div>
+      <div class="detail-item"><span class="dot-add">+</span><span>Frenos traseros: discos, calipers, pastillas, campanas (derecho / izquierdo)</span></div>
+    </div>
+  </div>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-purple">🔧</div>
+      <div class="card-body">
+        <p class="card-title">Mecánica / Vano motor</p>
+        <p class="card-desc">Nuevos componentes de admisión, fluidos y eliminación de duplicado.</p>
+        <span class="tag tag-update">Actualización</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <div class="detail-item"><span class="dot-add">+</span><span>Filtro de aire, carcaza del filtro, toma de aire</span></div>
+      <div class="detail-item"><span class="dot-del">✕</span><span>Eliminada "Pata de caja de cambios" (duplicado de pata de motor izquierda)</span></div>
+      <p class="detail-sub">Fluidos agregados</p>
+      <div class="detail-item"><span class="dot-add">+</span><span>Agua desmineralizada, líquido refrigerante, aceite de motor, aceite de caja, líquido de frenos</span></div>
+    </div>
+  </div>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-purple">🪟</div>
+      <div class="card-body">
+        <p class="card-title">Techo, cristales y seguridad</p>
+        <p class="card-desc">Nuevas piezas en tres zonas: techo, molduras de parabrisas y airbags.</p>
+        <span class="tag tag-feature">Nuevas piezas</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <p class="detail-sub">Techo</p>
+      <div class="detail-item"><span class="dot-add">+</span><span>Tapizado, cristal de techo, mecanismo de apertura, antena, base de antena, molduras laterales der/izq</span></div>
+      <p class="detail-sub">Cristales</p>
+      <div class="detail-item"><span class="dot-add">+</span><span>Moldura lateral de parabrisas derecha/izquierda, rejilla bajo parabrisas</span></div>
+      <p class="detail-sub">Seguridad</p>
+      <div class="detail-item"><span class="dot-add">+</span><span>Airbag butaca conductor, airbag butaca acompañante</span></div>
+      <div class="detail-item"><span class="dot-add">✎</span><span>"Airbag lateral" → "Airbag cortina lateral"</span></div>
+    </div>
+  </div>
+
+  <p class="section-label" style="margin-top:20px">Calculador — Lógica y organización</p>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-blue">🕐</div>
+      <div class="card-body">
+        <p class="card-title">Horas en incrementos de 0,5</p>
+        <p class="card-desc">Todos los selectores de horas muestran valores en pasos de media hora.</p>
+        <span class="tag tag-feature">Mejora</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Escala: 0,5 / 1 / 1,5 / 2 / 2,5 / 3... en lugar de valores enteros</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Aplicado a todos los selectores del calculador en todos los tipos de vehículo</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Permite presupuestar trabajos cortos con mayor precisión</span></div>
+    </div>
+  </div>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-blue">📋</div>
+      <div class="card-body">
+        <p class="card-title">Campo "Tareas a realizar" automático</p>
+        <p class="card-desc">Se genera y actualiza solo cada vez que se modifica el calculador.</p>
+        <span class="tag tag-feature">Nueva funcionalidad</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Aparece automáticamente entre el costo de materiales y la sección de kilometraje</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Se auto-rellena con cada cambio, sin necesidad de escribir nada</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Incluye días, paños, materiales Orión, montos de mano de obra y operaciones</span></div>
+      <div class="code-block">Estimación al 29/05/2026:<br>2 días x $150.000 = $300.000<br>5 paños x $165.000 = $825.000<br>Materiales de pintura ORIÓN: $0<br>Monto mano de obra Total: $1.125.000<br>Operaciones: (R) Capot: 8H 2P; (S) Paragolpes del.: 4H; ...</div>
+    </div>
+  </div>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-blue">📑</div>
+      <div class="card-body">
+        <p class="card-title">Agrupamiento de piezas en laterales</p>
+        <p class="card-desc">Las piezas de cada lateral se organizan en subgrupos para todos los tipos de vehículo.</p>
+        <span class="tag tag-feature">Nueva funcionalidad</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Puerta delantera izq/der: panel + bisagras + manija + molduras + colizas</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Puerta trasera izq/der: mismo criterio</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Espejo izq/der: retrovisor + carcasa + cristal</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Aplicado a Sedán 4/5p, Sedán 3p, SUV, Pickup simple, Pickup doble</span></div>
+    </div>
+  </div>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-blue">⚖️</div>
+      <div class="card-body">
+        <p class="card-title">Lógica de tareas R · S · P · D</p>
+        <p class="card-desc">Piezas estructurales con todas las opciones; resto solo sustitución en 0 hs por defecto.</p>
+        <span class="tag tag-feature">Nueva funcionalidad</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <div class="detail-item"><span class="dot-ok">✓</span><span>R+S+P+D: paragolpes, capot, puertas, zócalos, guardabarros, parantes, pasarruedas, panel de cola, tapa de baúl, portón, piso de baúl, largueros, techo, travesaños</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Solo S en 0 hs: bisagras, manijas, molduras, espejos, faros y demás accesorios</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Aplicado a todos los tipos incluyendo Utilitario</span></div>
+    </div>
+  </div>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-blue">🏷️</div>
+      <div class="card-body">
+        <p class="card-title">Renombrado general de piezas</p>
+        <p class="card-desc">Nombres más limpios y directos en todo el calculador.</p>
+        <span class="tag tag-update">Mejora</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <div class="detail-item"><span class="dot-add">✎</span><span>"Puerta delantera/trasera izq/der (Panel exterior)" → sin "(Panel exterior)"</span></div>
+      <div class="detail-item"><span class="dot-add">✎</span><span>"Parante A (Delantero)" → "Parante delantero"</span></div>
+      <div class="detail-item"><span class="dot-add">✎</span><span>"Paragolpes trasero (Cuerpo principal)" → "Paragolpes trasero"</span></div>
+    </div>
+  </div>
+
+  <p class="section-label" style="margin-top:20px">Módulo de fotos y correcciones</p>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-green">📷</div>
+      <div class="card-body">
+        <p class="card-title">Flujo de carga de fotos mejorado</p>
+        <p class="card-desc">Sacar todas las fotos primero y subir todo junto al final.</p>
+        <span class="tag tag-feature">Nueva funcionalidad</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Fotos se acumulan con ⏳ sin subir automáticamente</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Botón "📤 Subir X fotos" aparece cuando hay fotos listas</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>"Enviar relevamiento" bloqueado hasta que se suban las fotos</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Botón ↺ para reintentar fotos con error individualmente</span></div>
+    </div>
+  </div>
+
+  <div class="card" onclick="toggle(this)">
+    <div class="card-header">
+      <div class="icon icon-amber">🐛</div>
+      <div class="card-body">
+        <p class="card-title">Botón "Guardar sin enviar" duplicado</p>
+        <p class="card-desc">Aparecía dos veces en el flujo del taller. Corregido.</p>
+        <span class="tag tag-fix">Bug corregido</span>
+      </div>
+      <span class="chevron">⌄</span>
+    </div>
+    <div class="detail">
+      <div class="detail-item"><span class="dot-ok">✓</span><span>El botón del inspector se oculta cuando entra el flujo del taller</span></div>
+      <div class="detail-item"><span class="dot-ok">✓</span><span>Cada flujo muestra un único botón, sin duplicados</span></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="footer-logo">Estudio Patitucci</span>
+    <span class="footer-text">App en desarrollo · v29/05/2026</span>
+  </div>
+
+</div>
+<script>
+function toggle(card) {
+  var detail = card.querySelector('.detail');
+  var chevron = card.querySelector('.chevron');
+  var isOpen = detail.classList.contains('open');
+  detail.classList.toggle('open');
+  chevron.classList.toggle('open');
+}
+</script>
+</body>
+</html>
