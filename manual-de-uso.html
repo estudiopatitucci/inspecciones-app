@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de Uso — App Estudio Patitucci</title>
+<meta property="og:title" content="Manual de Uso — App Estudio Patitucci">
+<meta property="og:description" content="Guía completa para inspectores y administración del sistema de gestión de inspecciones.">
+<meta property="og:image" content="https://estudiopatitucci.com.ar/og-banner.jpg">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f7; color: #1d1d1f; }
+
+/* NAV */
+.nav { position: sticky; top: 0; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid #e5e5ea; z-index: 100; padding: 0 20px; }
+.nav-inner { max-width: 800px; margin: 0 auto; display: flex; align-items: center; gap: 0; overflow-x: auto; scrollbar-width: none; }
+.nav-inner::-webkit-scrollbar { display: none; }
+.nav-tab { flex-shrink: 0; padding: 14px 18px; font-size: 13px; font-weight: 500; color: #6e6e73; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; background: none; border-top: none; border-left: none; border-right: none; }
+.nav-tab:hover { color: #1d1d1f; }
+.nav-tab.active { color: #007aff; border-bottom-color: #007aff; }
+
+/* HERO */
+.hero { background: linear-gradient(135deg, #0f1423 0%, #1a2550 100%); color: #fff; padding: 48px 20px 40px; text-align: center; }
+.hero-badge { display: inline-block; background: rgba(100,150,255,0.2); border: 1px solid rgba(100,150,255,0.35); color: #a0b8ff; font-size: 12px; font-weight: 500; padding: 4px 14px; border-radius: 20px; margin-bottom: 16px; }
+.hero h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+.hero p { font-size: 15px; color: rgba(255,255,255,0.65); max-width: 500px; margin: 0 auto 24px; line-height: 1.6; }
+.hero-roles { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.hero-role { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+.hero-role:hover { background: rgba(255,255,255,0.14); }
+
+/* CONTENT */
+.content { max-width: 800px; margin: 0 auto; padding: 32px 20px 60px; }
+
+/* SECTIONS */
+.section { display: none; }
+.section.active { display: block; }
+
+/* CARDS */
+.step-card { background: #fff; border: 1px solid #e5e5ea; border-radius: 14px; margin-bottom: 16px; overflow: hidden; }
+.step-header { display: flex; align-items: center; gap: 14px; padding: 18px 20px; cursor: pointer; }
+.step-num { width: 32px; height: 32px; border-radius: 50%; background: #007aff; color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.step-num.green { background: #34c759; }
+.step-num.amber { background: #f59e0b; }
+.step-num.purple { background: #8b5cf6; }
+.step-title { font-size: 15px; font-weight: 600; color: #1d1d1f; }
+.step-desc { font-size: 13px; color: #6e6e73; margin-top: 2px; }
+.step-chevron { margin-left: auto; font-size: 18px; color: #aeaeb2; transition: transform 0.2s; }
+.step-chevron.open { transform: rotate(180deg); }
+.step-body { display: none; padding: 0 20px 20px; border-top: 1px solid #f2f2f7; }
+.step-body.open { display: block; }
+
+/* TIPS */
+.tip { display: flex; gap: 10px; background: #f0f7ff; border-left: 3px solid #007aff; border-radius: 0 8px 8px 0; padding: 12px 14px; margin: 14px 0; font-size: 13px; color: #1d1d1f; line-height: 1.6; }
+.tip-warn { background: #fffbeb; border-left-color: #f59e0b; }
+.tip-ok { background: #f0fdf4; border-left-color: #34c759; }
+.tip-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* ITEMS */
+.item-list { list-style: none; padding: 0; margin: 12px 0; }
+.item-list li { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; font-size: 13px; color: #3a3a3c; line-height: 1.5; border-bottom: 1px solid #f2f2f7; }
+.item-list li:last-child { border-bottom: none; }
+.item-list li::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #007aff; margin-top: 6px; flex-shrink: 0; }
+.item-list.green li::before { background: #34c759; }
+.item-list.amber li::before { background: #f59e0b; }
+
+/* ESTADOS */
+.estados { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.estado-row { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+.pill-blue { background: #dbeafe; color: #1e40af; }
+.pill-yellow { background: #fef9c3; color: #854d0e; }
+.pill-orange { background: #ffedd5; color: #c2410c; }
+.pill-amber { background: #fef3c7; color: #92400e; }
+.pill-green { background: #dcfce7; color: #166534; }
+.estado-desc { color: #6e6e73; }
+
+/* SCREENSHOTS MOCK */
+.mockup { background: #1d1d1f; border-radius: 12px; padding: 14px 16px; margin: 14px 0; font-family: 'SF Mono', 'Menlo', monospace; font-size: 12px; color: #a8ff78; line-height: 1.8; }
+.mockup .label { color: #6e6e73; font-family: -apple-system, sans-serif; font-size: 11px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* DIVIDER */
+.divider { height: 1px; background: #e5e5ea; margin: 28px 0; }
+
+/* SECTION TITLE */
+.sec-title { font-size: 20px; font-weight: 700; color: #1d1d1f; margin-bottom: 6px; }
+.sec-subtitle { font-size: 14px; color: #6e6e73; margin-bottom: 24px; line-height: 1.5; }
+
+/* ROLE BADGE */
+.role-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 20px; margin-bottom: 20px; }
+.role-badge.inspector { background: #dbeafe; color: #1e40af; }
+.role-badge.admin { background: #f3e8ff; color: #6b21a8; }
+.role-badge.taller { background: #fef3c7; color: #92400e; }
+
+/* INDEX */
+.index-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 28px; }
+.index-card { background: #fff; border: 1px solid #e5e5ea; border-radius: 12px; padding: 16px; cursor: pointer; transition: border-color 0.15s, transform 0.1s; }
+.index-card:hover { border-color: #007aff; transform: translateY(-1px); }
+.index-card-icon { font-size: 24px; margin-bottom: 8px; }
+.index-card-title { font-size: 14px; font-weight: 600; color: #1d1d1f; margin-bottom: 4px; }
+.index-card-desc { font-size: 12px; color: #6e6e73; line-height: 1.4; }
+
+@media (max-width: 480px) {
+  .hero h1 { font-size: 22px; }
+  .hero-roles { flex-direction: column; align-items: center; }
+  .hero-role { width: 100%; max-width: 280px; text-align: center; }
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-badge">Manual de uso · v29/05/2026</div>
+  <h1>App Estudio Patitucci</h1>
+  <p>Sistema de gestión de inspecciones y presupuestos. Seleccioná tu rol para ir directo a lo que necesitás.</p>
+  <div class="hero-roles">
+    <div class="hero-role" onclick="showSection('inspector')">👷 Soy inspector</div>
+    <div class="hero-role" onclick="showSection('admin')">🏢 Soy del estudio</div>
+    <div class="hero-role" onclick="showSection('taller')">🔧 Soy del taller</div>
+  </div>
+</div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <button class="nav-tab active" onclick="showSection('inicio')">Inicio</button>
+    <button class="nav-tab" onclick="showSection('inspector')">Inspector</button>
+    <button class="nav-tab" onclick="showSection('admin')">Administración</button>
+    <button class="nav-tab" onclick="showSection('taller')">Taller</button>
+    <button class="nav-tab" onclick="showSection('estados')">Estados</button>
+    <button class="nav-tab" onclick="showSection('faq')">Preguntas frecuentes</button>
+  </div>
+</nav>
+
+<div class="content">
+
+  <!-- INICIO -->
+  <div class="section active" id="sec-inicio">
+    <p class="sec-title">¿Cómo funciona la app?</p>
+    <p class="sec-subtitle">La app centraliza todo el flujo de una inspección: desde que se carga en el sistema hasta que se cierra con el presupuesto aprobado.</p>
+
+    <div class="index-grid">
+      <div class="index-card" onclick="showSection('inspector')">
+        <div class="index-card-icon">👷</div>
+        <div class="index-card-title">Inspector</div>
+        <div class="index-card-desc">Cómo ver tus inspecciones, completar el relevamiento y enviar fotos.</div>
+      </div>
+      <div class="index-card" onclick="showSection('admin')">
+        <div class="index-card-icon">🏢</div>
+        <div class="index-card-title">Administración</div>
+        <div class="index-card-desc">Cómo cargar nuevas inspecciones, revisar relevamientos y gestionar estados.</div>
+      </div>
+      <div class="index-card" onclick="showSection('taller')">
+        <div class="index-card-icon">🔧</div>
+        <div class="index-card-title">Taller</div>
+        <div class="index-card-desc">Cómo completar el relevamiento desde el link que recibiste por WhatsApp.</div>
+      </div>
+      <div class="index-card" onclick="showSection('estados')">
+        <div class="index-card-icon">🏷️</div>
+        <div class="index-card-title">Estados</div>
+        <div class="index-card-desc">Qué significa cada estado y cómo avanza una inspección en el sistema.</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <p style="font-size:15px;font-weight:600;margin-bottom:14px">Flujo general de una inspección</p>
+    <div class="step-card">
+      <div class="step-header" style="cursor:default">
+        <div class="step-num">1</div>
+        <div><div class="step-title">El estudio carga la inspección</div><div class="step-desc">Se registran los datos del vehículo y se asigna al inspector.</div></div>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-header" style="cursor:default">
+        <div class="step-num">2</div>
+        <div><div class="step-title">El inspector completa el relevamiento</div><div class="step-desc">Usa el calculador de piezas, registra daños y sube las fotos.</div></div>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-header" style="cursor:default">
+        <div class="step-num green">3</div>
+        <div><div class="step-title">El estudio revisa y aprueba</div><div class="step-desc">Verifica el presupuesto y cierra la inspección o solicita correcciones.</div></div>
+      </div>
+    </div>
+    <div class="step-card">
+      <div class="step-header" style="cursor:default">
+        <div class="step-num amber">4</div>
+        <div><div class="step-title">El taller completa su parte (si aplica)</div><div class="step-desc">Recibe un link por WhatsApp y sube sus fotos y presupuesto.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INSPECTOR -->
+  <div class="section" id="sec-inspector">
+    <span class="role-badge inspector">👷 Guía para inspectores</span>
+    <p class="sec-title">¿Qué tenés que hacer?</p>
+    <p class="sec-subtitle">Tu trabajo es completar el relevamiento de cada inspección que te asignan: datos del vehículo, piezas con daño, fotos y enviarlo al estudio.</p>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num">1</div>
+        <div><div class="step-title">Cómo ingresar a la app</div><div class="step-desc">Acceso con tu nombre y contraseña.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>Abrí el navegador y entrá a <strong>estudiopatitucci.com.ar</strong></li>
+          <li>Seleccioná tu nombre en el menú desplegable</li>
+          <li>Ingresá tu contraseña y tocá <strong>Ingresar</strong></li>
+        </ul>
+        <div class="tip"><span class="tip-icon">💡</span>Si no recordás tu contraseña, contactá al estudio para que te la reenvíen.</div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num">2</div>
+        <div><div class="step-title">Ver tus inspecciones asignadas</div><div class="step-desc">La pantalla principal muestra todas las que tenés pendientes.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>Al ingresar ves directamente la lista de inspecciones asignadas a vos</li>
+          <li>Cada tarjeta muestra: número de IP, asegurado, compañía y estado</li>
+          <li>Las que están en <span class="pill pill-blue">Pendientes de carga</span> son las que necesitás completar</li>
+        </ul>
+        <div class="tip tip-warn"><span class="tip-icon">⚠️</span>Solo vas a ver las inspecciones que el estudio te asignó a vos. Si falta alguna, consultá con el estudio.</div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num">3</div>
+        <div><div class="step-title">Completar el relevamiento</div><div class="step-desc">Datos del taller, calculador de piezas y daños.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>Tocá la inspección para abrirla y luego <strong>Cargar relevamiento</strong></li>
+          <li><strong>Datos del taller/asegurado:</strong> completá nombre, teléfono, mail y CUIT</li>
+          <li><strong>Calculador:</strong> seleccioná el tipo de vehículo y marcá las piezas dañadas con la tarea correspondiente (R = Reparar, S = Sustituir, P = Pintar, D = Difuminar)</li>
+          <li><strong>Kilometraje y daños:</strong> completá el KM y describí los daños observados</li>
+          <li><strong>Tareas a realizar:</strong> se genera automáticamente con el resumen del presupuesto</li>
+        </ul>
+        <div class="tip tip-ok"><span class="tip-icon">✅</span>Las piezas estructurales (paragolpes, capot, puertas, etc.) tienen todas las opciones R·S·P·D. Las piezas pequeñas (bisagras, manijas, molduras) solo tienen S, empezando en 0 hs.</div>
+        <div class="tip"><span class="tip-icon">💡</span>Las horas se seleccionan en incrementos de 0,5: podés elegir 0,5 / 1 / 1,5 / 2 / 2,5...</div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num">4</div>
+        <div><div class="step-title">Cargar las fotos</div><div class="step-desc">Nuevo flujo: sacás todas las fotos primero y después las subís juntas.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>Tocá <strong>📷 Sacar foto</strong> para abrir la cámara, o <strong>🖼 Desde galería</strong> para seleccionar fotos existentes</li>
+          <li>Cada foto que tomás aparece con un ⏳ — <strong>no se sube todavía</strong></li>
+          <li>Seguí sacando todas las fotos que necesitás (máx. 30)</li>
+          <li>Cuando terminaste, aparece el botón verde <strong>📤 Subir X fotos</strong> — tocalo para subirlas todas juntas</li>
+          <li>Esperá que todas queden con el tilde verde ✓ antes de continuar</li>
+        </ul>
+        <div class="tip tip-warn"><span class="tip-icon">⚠️</span>Si alguna foto falla, aparece un botón ↺ para reintentarla. No podés enviar el relevamiento hasta que todas estén subidas correctamente.</div>
+        <div class="tip"><span class="tip-icon">💡</span>Se comprimen automáticamente para que suban más rápido. Máximo 30 fotos por relevamiento.</div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num green">5</div>
+        <div><div class="step-title">Enviar el relevamiento</div><div class="step-desc">Una vez que todo está completo, enviás al estudio.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>Verificá que todos los campos obligatorios estén completos (nombre, teléfono, mail, CUIT, KM)</li>
+          <li>Verificá que los costos de chapa y paño estén cargados (no pueden ser $0)</li>
+          <li>Verificá que todas las fotos estén subidas (botón verde desaparece)</li>
+          <li>Tocá <strong>Enviar relevamiento</strong></li>
+          <li>La inspección pasa automáticamente a <span class="pill pill-yellow">Pendiente de verificar</span></li>
+        </ul>
+        <div class="tip tip-ok"><span class="tip-icon">✅</span>También podés guardar un borrador con <strong>💾 Guardar sin enviar</strong> si necesitás completarlo más tarde. Se restaura automáticamente la próxima vez que abrís la inspección.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="section" id="sec-admin">
+    <span class="role-badge admin">🏢 Guía para el estudio</span>
+    <p class="sec-title">Panel de administración</p>
+    <p class="sec-subtitle">Desde acá gestionás todo el ciclo de vida de cada inspección: carga, seguimiento, revisión y cierre.</p>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num purple">1</div>
+        <div><div class="step-title">Ingresar al sistema</div><div class="step-desc">Acceso completo para el equipo del estudio.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>Entrá a <strong>estudiopatitucci.com.ar</strong></li>
+          <li>Seleccioná tu nombre y usá tu contraseña</li>
+          <li>Accedés al panel completo con todas las inspecciones</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num purple">2</div>
+        <div><div class="step-title">Cargar una nueva inspección</div><div class="step-desc">Registrar una IP con todos sus datos.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>En el menú lateral tocá <strong>Nueva inspección</strong></li>
+          <li>Completá: compañía, número de IP, asegurado, domicilio, vehículo (marca, modelo, año, patente, color)</li>
+          <li>En <strong>Asignar inspector</strong>: elegís un inspector del equipo — o bien tocás <strong>🔧 Taller</strong> si la manda directo el taller</li>
+          <li>Opcionalmente podés pegar el presupuesto del taller para que la IA pre-cargue el calculador</li>
+          <li>Tocá <strong>Guardar inspección</strong></li>
+        </ul>
+        <div class="tip"><span class="tip-icon">💡</span>Si asignás la inspección al taller, queda en estado <span class="pill pill-amber">Esperando taller</span>. Desde el detalle podés generar y enviar el link al taller.</div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num purple">3</div>
+        <div><div class="step-title">Seguimiento y filtros</div><div class="step-desc">Ver el estado de todas las inspecciones activas.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>El <strong>Dashboard</strong> muestra un resumen con contadores por estado</li>
+          <li>Desde el menú lateral podés filtrar: <em>Pendientes de carga, Pendiente de verificar, Pendientes de resolver, Cerradas</em></li>
+          <li>También podés filtrar <strong>por inspector</strong> para ver la carga de trabajo de cada uno</li>
+          <li>La sección <strong>🔧 Pend. fotos taller</strong> muestra las inspecciones que esperan que el taller cargue su relevamiento</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num purple">4</div>
+        <div><div class="step-title">Revisar un relevamiento</div><div class="step-desc">Cuando el inspector envía, aparece en "Pendiente de verificar".</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>Abrí la inspección desde la lista <strong>Pendiente de verificar</strong></li>
+          <li>Revisás: datos del taller, calculador completo (piezas, horas, paños), tareas a realizar y fotos</li>
+          <li>Las fotos se pueden ver en miniatura directamente o abriendo la carpeta en Drive</li>
+          <li>Si todo está bien: cambiás el estado a <span class="pill pill-green">Cerradas</span></li>
+          <li>Si necesita corrección: cambiás el estado a <span class="pill pill-orange">Pendientes de resolver</span> y el inspector recibe aviso</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num purple">5</div>
+        <div><div class="step-title">Generar link para el taller</div><div class="step-desc">Cuando una inspección espera fotos del taller.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>Desde el menú lateral entrá a <strong>🔧 Pend. fotos taller</strong></li>
+          <li>Buscá la inspección correspondiente</li>
+          <li>Tocá <strong>Generar link</strong> — se crea un link único para ese taller</li>
+          <li>Copiá el link y enviáselo al taller por WhatsApp o mail</li>
+          <li>El taller accede sin necesidad de contraseña — el link ya tiene su acceso</li>
+        </ul>
+        <div class="tip"><span class="tip-icon">💡</span>El link es de un solo uso por inspección. Podés regenerarlo si el taller dice que no le funciona.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TALLER -->
+  <div class="section" id="sec-taller">
+    <span class="role-badge taller">🔧 Guía para talleres</span>
+    <p class="sec-title">Recibiste un link del estudio</p>
+    <p class="sec-subtitle">No necesitás contraseña. Con el link que te enviaron por WhatsApp o mail entrás directo a tu formulario.</p>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num amber">1</div>
+        <div><div class="step-title">Abrir el link</div><div class="step-desc">Te llega por WhatsApp o mail desde el estudio.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>Tocá el link que te envió el Estudio Patitucci</li>
+          <li>Se abre directamente el formulario de relevamiento — sin login ni contraseña</li>
+          <li>El link está vinculado a tu inspección específica</li>
+        </ul>
+        <div class="tip tip-warn"><span class="tip-icon">⚠️</span>No compartas el link con otras personas. Es único para tu taller y esa inspección.</div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num amber">2</div>
+        <div><div class="step-title">Completar los datos</div><div class="step-desc">Datos de contacto del taller y costos.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li><strong>Nombre del taller</strong> (obligatorio)</li>
+          <li><strong>Teléfono</strong> — solo números, mínimo 7 dígitos (obligatorio)</li>
+          <li><strong>Mail</strong> — con formato válido ej: taller@dominio.com (obligatorio)</li>
+          <li><strong>CUIT</strong> — 11 dígitos numéricos (obligatorio)</li>
+          <li><strong>Costo día de chapa</strong> y <strong>Costo paño de pintura</strong> — no pueden ser $0</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num amber">3</div>
+        <div><div class="step-title">Sacar y subir las fotos</div><div class="step-desc">Primero sacás todas, después subís.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>Tocá <strong>📷 Sacar foto</strong> para abrir la cámara del celular</li>
+          <li>Sacá todas las fotos que necesitás — cada una aparece con ⏳</li>
+          <li>Cuando terminaste, tocá el botón verde <strong>📤 Subir X fotos</strong></li>
+          <li>Esperá que todas tengan el tilde verde ✓</li>
+        </ul>
+        <div class="tip tip-ok"><span class="tip-icon">✅</span>Recomendamos sacar fotos de todos los ángulos del vehículo: frente, laterales, trasera, techo e interior si hay daños.</div>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num green">4</div>
+        <div><div class="step-title">Enviar al estudio</div><div class="step-desc">Con un toque enviás todo.</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>Verificá que todos los campos estén completos y las fotos subidas</li>
+          <li>Tocá el botón naranja <strong>🚀 Enviar al Estudio Patitucci</strong></li>
+          <li>El estudio recibe todo automáticamente</li>
+        </ul>
+        <div class="tip"><span class="tip-icon">💡</span>Si necesitás parar a mitad y continuar después, tocá <strong>💾 Guardar sin enviar</strong>. Se guarda en tu dispositivo y podés retomarlo más tarde desde el mismo link.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ESTADOS -->
+  <div class="section" id="sec-estados">
+    <p class="sec-title">Estados de una inspección</p>
+    <p class="sec-subtitle">Cada inspección avanza por distintos estados que indican en qué etapa del proceso está.</p>
+
+    <div class="step-card">
+      <div class="step-header" style="cursor:default">
+        <div class="step-num">–</div>
+        <div><div class="step-title">Ciclo de vida completo</div></div>
+      </div>
+    </div>
+
+    <div class="estados">
+      <div class="estado-row">
+        <span class="pill pill-blue" style="min-width:160px;text-align:center">Pendientes de carga</span>
+        <span class="estado-desc">El inspector tiene que completar el relevamiento.</span>
+      </div>
+      <div class="estado-row">
+        <span class="pill pill-amber" style="min-width:160px;text-align:center">Esperando taller</span>
+        <span class="estado-desc">Se envió el link al taller y se espera que cargue su relevamiento.</span>
+      </div>
+      <div class="estado-row">
+        <span class="pill pill-yellow" style="min-width:160px;text-align:center">Pendiente de verificar</span>
+        <span class="estado-desc">El inspector envió el relevamiento. El estudio debe revisarlo.</span>
+      </div>
+      <div class="estado-row">
+        <span class="pill pill-orange" style="min-width:160px;text-align:center">Pendientes de resolver</span>
+        <span class="estado-desc">El estudio pidió correcciones. El inspector debe ajustar y reenviar.</span>
+      </div>
+      <div class="estado-row">
+        <span class="pill pill-green" style="min-width:160px;text-align:center">Cerradas</span>
+        <span class="estado-desc">El relevamiento fue aprobado y la inspección está finalizada.</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="tip tip-ok"><span class="tip-icon">✅</span><span>El estado cambia automáticamente cuando el inspector envía el relevamiento (pasa a <em>Pendiente de verificar</em>). El resto de los cambios los hace el estudio manualmente.</span></div>
+  </div>
+
+  <!-- FAQ -->
+  <div class="section" id="sec-faq">
+    <p class="sec-title">Preguntas frecuentes</p>
+    <p class="sec-subtitle">Las dudas más comunes del día a día.</p>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num">?</div>
+        <div><div class="step-title">No me aparece ninguna inspección al ingresar</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <p style="font-size:13px;color:#3a3a3c;line-height:1.6">Las inspecciones que ves son las que el estudio te asignó específicamente. Si no ves ninguna, puede ser que todavía no te asignaron ninguna o que hayas ingresado con el usuario equivocado. Contactá al estudio para verificar.</p>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num">?</div>
+        <div><div class="step-title">El botón "Enviar relevamiento" está gris y no funciona</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <ul class="item-list">
+          <li>Verificá que todos los campos obligatorios estén completos (nombre, tel, mail, CUIT, KM)</li>
+          <li>El costo de día de chapa y el paño de pintura no pueden ser $0</li>
+          <li>Tiene que haber al menos una foto subida</li>
+          <li>Si hay fotos con ⏳ pendientes, hay que tocar <strong>📤 Subir fotos</strong> primero</li>
+          <li>Si alguna foto tiene error (!), usá el botón ↺ para reintentarla</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num">?</div>
+        <div><div class="step-title">Una foto falló al subir</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <p style="font-size:13px;color:#3a3a3c;line-height:1.6">Si una foto muestra el ícono de error (!), tocá el botón ↺ que aparece sobre esa foto para reintentarla. Verificá que tenés conexión a internet. Si el problema persiste, eliminá esa foto (×) y volvé a sacarla.</p>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num">?</div>
+        <div><div class="step-title">Cerré la app a mitad del relevamiento, ¿perdí todo?</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <p style="font-size:13px;color:#3a3a3c;line-height:1.6">No. La app guarda un borrador automáticamente. La próxima vez que entrás a esa inspección, te va a preguntar si querés restaurar el borrador. Tocá <strong>Restaurar</strong> y continúa desde donde estabas, incluyendo las fotos ya subidas.</p>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num">?</div>
+        <div><div class="step-title">El link del taller no funciona o dice que venció</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <p style="font-size:13px;color:#3a3a3c;line-height:1.6">Contactá al estudio para que regeneren el link desde el panel de <strong>🔧 Pend. fotos taller</strong>. El nuevo link reemplaza al anterior y funciona normalmente.</p>
+      </div>
+    </div>
+
+    <div class="step-card">
+      <div class="step-header" onclick="toggle(this)">
+        <div class="step-num">?</div>
+        <div><div class="step-title">¿Cómo sé qué tarea usar: R, S, P o D?</div></div>
+        <span class="step-chevron">⌄</span>
+      </div>
+      <div class="step-body">
+        <div class="estados" style="margin-top:4px">
+          <div class="estado-row"><span class="pill pill-blue" style="min-width:30px;text-align:center">R</span><span class="estado-desc"><strong>Reparar</strong> — la pieza tiene daño pero se puede reparar sin reemplazar.</span></div>
+          <div class="estado-row"><span class="pill pill-yellow" style="min-width:30px;text-align:center">S</span><span class="estado-desc"><strong>Sustituir</strong> — la pieza está dañada más allá de la reparación y hay que reemplazarla.</span></div>
+          <div class="estado-row"><span class="pill pill-orange" style="min-width:30px;text-align:center">P</span><span class="estado-desc"><strong>Pintar</strong> — la pieza necesita pintura completa.</span></div>
+          <div class="estado-row"><span class="pill pill-green" style="min-width:30px;text-align:center">D</span><span class="estado-desc"><strong>Difuminar</strong> — pequeña intervención de pintura para igualar el color en los bordes.</span></div>
+        </div>
+        <div class="tip" style="margin-top:12px"><span class="tip-icon">💡</span>Las tareas que quedan en R por la IA están en nivel <em>Leve</em> por defecto. El inspector puede ajustar el nivel de daño.</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div style="background:#1d1d1f;color:rgba(255,255,255,0.4);text-align:center;padding:20px;font-size:12px;">
+  Estudio Pericial Patitucci · estudiopatitucci.com.ar · Manual v29/05/2026
+</div>
+
+<script>
+function showSection(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  var sec = document.getElementById('sec-' + id);
+  if (sec) sec.classList.add('active');
+  var tabs = document.querySelectorAll('.nav-tab');
+  tabs.forEach(function(t) {
+    if (t.getAttribute('onclick') && t.getAttribute('onclick').indexOf("'" + id + "'") !== -1) {
+      t.classList.add('active');
+    }
+  });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function toggle(header) {
+  var body = header.nextElementSibling;
+  var chevron = header.querySelector('.step-chevron');
+  if (!body) return;
+  body.classList.toggle('open');
+  if (chevron) chevron.classList.toggle('open');
+}
+</script>
+</body>
+</html>
