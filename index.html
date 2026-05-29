@@ -1289,7 +1289,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:4px">
           <button class="btn-primary" onclick="enviarRel()" style="padding:10px 24px;font-size:14px">Enviar relevamiento</button>
-          <button class="btn-secondary" onclick="guardarBorradorCompleto()" style="padding:10px 18px;font-size:14px">💾 Guardar sin enviar</button>
+          <button id="btn-guardar-inspector" class="btn-secondary" onclick="guardarBorradorCompleto()" style="padding:10px 18px;font-size:14px">💾 Guardar sin enviar</button>
         </div>
         <div id="msg-rel" class="msg"></div>
         <div id="upload-progress-wrap" style="display:none;margin-top:10px">
@@ -3712,7 +3712,9 @@ function mostrarPantallaTaller(insp){
       btnEnv.textContent='🚀 Enviar al Estudio Patitucci';
       btnEnv.style.background='#f59e0b';
       btnEnv.style.color='#111';
-      // Agregar botón "Guardar sin enviar" al lado
+      // Ocultar botón guardar del inspector y agregar el del taller
+      var btnGuardarInsp=document.getElementById('btn-guardar-inspector');
+      if(btnGuardarInsp)btnGuardarInsp.style.display='none';
       if(!document.getElementById('btn-guardar-taller')){
         var btnGuardar=document.createElement('button');
         btnGuardar.id='btn-guardar-taller';
