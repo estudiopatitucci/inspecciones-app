@@ -1247,6 +1247,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
             </div>
           </div>
         </div>
+        <!-- ── Tareas a realizar (auto-generado) ── -->
+        <div class="card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+            <p class="section-title" style="margin-bottom:0">📋 Tareas a realizar</p>
+            <button class="btn-secondary btn-sm" onclick="relGenerarTareas()">↻ Actualizar</button>
+          </div>
+          <textarea id="rel-tareas" rows="8" style="resize:vertical;font-size:12px;font-family:'DM Mono',monospace;line-height:1.6" placeholder="Se completa automáticamente al cargar el calculador…"></textarea>
+        </div>
+
         <!-- ── 4. Kilometraje + Observaciones ── -->
         <div class="card">
           <p class="section-title">Vehículo verificado</p>
@@ -3338,7 +3347,8 @@ async function enviarRel(){
   var _costoTotal=_costoChapa+_costoPintura+_totalOpCosto;
   var calcData={tipo:relCalcState.tipo,piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};}),total:calcTotalHs+calcTotalOpHs,totalPanos:calcTotalPanos,costoDiaChapa:relCostoDiaChapa,costoPanoPintura:relCostoPanoPintura,costoTotal:_costoTotal};
   var _fl=fotosPendientes.filter(function(f){return f.driveLink;}).map(function(f){return f.driveLink;});
-  var rel={km,danos,calculador:calcData,taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),fotosLinks:_fl,cantFotos:_fl.length,fechaEnvio:new Date().toISOString()};
+  var tareasText = s('rel-tareas') ? s('rel-tareas').value.trim() : '';
+  var rel={km,danos,calculador:calcData,taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),fotosLinks:_fl,cantFotos:_fl.length,fechaEnvio:new Date().toISOString(),tareasARealizar:tareasText};
   try{
     var i=inspecciones.find(function(x){return x.ID==relId;});
     var res=await apiCall({action:'actualizar',id:relId,relevamiento:rel,estado:'Pendiente de verificar'});
@@ -3973,6 +3983,7 @@ function relSetCosto(tipo, valor){
   if(tipo==='chapa') relCostoDiaChapa = parseFloat(valor)||0;
   else relCostoPanoPintura = parseFloat(valor)||0;
   relActualizarCosto();
+  relGenerarTareas();
 }
 
 function relActualizarCosto(){
@@ -4014,6 +4025,107 @@ function relActualizarCosto(){
   if(opsRow) opsRow.style.display = totalCostoOps > 0 ? 'flex' : 'none';
   if(s('rel-c-ops-val')) s('rel-c-ops-val').textContent = fmt(totalCostoOps);
   if(s('rel-c-total')) s('rel-c-total').textContent = fmt(total);
+}
+
+function relGenerarTareas(){
+  var el = s('rel-tareas'); if(!el) return;
+
+  var piezas     = relCalcState.piezas || [];
+  var ops        = relOpState || [];
+  var costoChapa = relCostoDiaChapa || 0;
+  var costoPano  = relCostoPanoPintura || 0;
+
+  if(!piezas.length && !ops.length) { el.value=''; return; }
+
+  // ── Totales ──
+  var totalHs = piezas.reduce(function(a,p){return a+(p.hsTrabajo||0);},0);
+  var totalOpHs = ops.reduce(function(a,o){
+    if(o.operacion==='Banco de estiraje') return a+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
+    if(o.operacion==='Desmontaje y montaje de accesorios') return a+(o.horas||0);
+    return a;
+  },0);
+  var granTotalHs = totalHs + totalOpHs;
+  var dias = Math.round(granTotalHs / 8);
+  var totalPanos = piezas.reduce(function(a,p){
+    if(p.tarea==='Pintar')    return a+(p.panos||0);
+    if(p.tarea==='Difuminar') return a+0.5;
+    return a;
+  },0);
+  var totalCostoOps = ops.reduce(function(a,o){return a+(o.costo||0);},0); // Varios
+
+  var costoManoObra  = dias * costoChapa;
+  var costoPintura   = totalPanos * costoPano;
+  var materialOrion  = 0; // siempre 0 por ahora
+  var varios         = totalCostoOps;
+  var montoNeto      = costoManoObra + costoPintura + materialOrion;
+  var montoTotal     = montoNeto + varios;
+
+  // ── Formato de moneda ──
+  var fmt = function(n){
+    return '$'+n.toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  };
+
+  // ── Fecha de hoy ──
+  var hoy = new Date();
+  var fechaStr = hoy.getDate().toString().padStart(2,'0')+'/'+(hoy.getMonth()+1).toString().padStart(2,'0')+'/'+hoy.getFullYear();
+
+  // ── Agrupar piezas por zona+pieza ──
+  var orden=[], grupos={};
+  piezas.forEach(function(p){
+    var key=(p.zona||'')+'||'+(p.pieza||'');
+    if(!grupos[key]){ grupos[key]={pieza:p.pieza||'',tareas:[]}; orden.push(key); }
+    grupos[key].tareas.push(p);
+  });
+
+  var abrev = {Reparar:'R', Sustituir:'S', Pintar:'P', Difuminar:'D'};
+
+  var operacionesList = orden.map(function(key){
+    var g = grupos[key];
+    // Tarea principal (R o S), luego D, luego P
+    var principal = g.tareas.find(function(t){return t.tarea==='Reparar'||t.tarea==='Sustituir';})
+                 || g.tareas.find(function(t){return t.tarea==='Difuminar';})
+                 || g.tareas[0];
+    if(!principal) return null;
+    var pintar    = g.tareas.find(function(t){return t.tarea==='Pintar';});
+    var difuminar = g.tareas.find(function(t){return t.tarea==='Difuminar';});
+
+    var ab    = abrev[principal.tarea] || principal.tarea.charAt(0);
+    var hs    = (principal.hsTrabajo||0);
+    var panos = pintar?(pintar.panos||0):difuminar?0.5:0;
+
+    // Excluir piezas sin tiempo ni paños cargados
+    if(hs===0 && panos===0) return null;
+
+    var partes = [];
+    if(hs)    partes.push(hs.toString().replace('.',',')+'H');
+    if(panos) partes.push(panos.toString().replace('.',',')+'P');
+
+    return '('+ab+') '+g.pieza+': '+partes.join(' ');
+  }).filter(Boolean);
+
+  // Agregar operaciones especiales como líneas extra
+  ops.forEach(function(o){
+    var hs = (o.operacion==='Banco de estiraje')
+      ? (o.puestaMedicion||0)+(o.tiempoEstiraje||0)
+      : (o.horas||0);
+    if(o.operacion||o.nombre){
+      operacionesList.push('(Op) '+(o.operacion||o.nombre||'')+(hs?' '+hs.toString().replace('.',',')+'H':''));
+    }
+  });
+
+  // ── Armar el texto ──
+  var lineas = [
+    'Estimación al '+fechaStr+':',
+    dias+' día'+(dias!==1?'s':'')+' x '+fmt(costoChapa)+' = '+fmt(costoManoObra),
+    totalPanos+' paño'+(totalPanos!==1?'s':'')+' x '+fmt(costoPano)+' = '+fmt(costoPintura),
+    'Materiales de pintura ORIÓN: '+fmt(materialOrion),
+    'Varios: '+fmt(varios),
+    'Monto mano de obra Neto Mat. de pintura Orión: '+fmt(montoNeto),
+    'Monto mano de obra Total: '+fmt(montoTotal),
+    'Operaciones a realizar: '+operacionesList.join('; ')+(operacionesList.length?';':'')
+  ];
+
+  el.value = lineas.join('\n');
 }
 
 function relCalcSetTipo(){
@@ -4075,6 +4187,7 @@ function relOpUpdate(uid, campo, valor){
     // No re-renderizar: evita perder foco y posición del cursor al tipear
     o.costo=parseFloat(valor)||0;
     relActualizarCosto();
+    relGenerarTareas();
     guardarBorrador();
     return;
   }
@@ -4209,14 +4322,20 @@ var ZONAS_SOLO_SUST=[
 // ── helpers ──
 function gFind(zona,pieza,tarea){ return relCalcState.piezas.find(function(x){return x.zona===zona&&x.pieza===pieza&&x.tarea===tarea;}); }
 function gCount(zona){ return relCalcState.piezas.filter(function(x){return x.zona===zona;}).length; }
+// Genera rango: medias horas 0.5→3.5, luego enteros hasta 'hasta'
+function _hsRango(hasta){
+  var r=[0.5,1,1.5,2,2.5,3,3.5];
+  for(var v=4;v<=hasta;v++) r.push(v);
+  return r;
+}
 function getHsRango(nombrePieza,tarea,nivelDano){
   var esSust=tarea==='Sustituir';
-  if(esSust&&SUSTITUIR_16HS_GRID.indexOf(nombrePieza)!==-1) return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
-  if(esSust)               return [1,2,3,4,5,6,7,8];
-  if(nivelDano==='Leve')   return [1,2,3,4];
+  if(esSust&&SUSTITUIR_16HS_GRID.indexOf(nombrePieza)!==-1) return _hsRango(16);
+  if(esSust)               return _hsRango(12);
+  if(nivelDano==='Leve')   return _hsRango(4);
   if(nivelDano==='Medio')  return [4,5,6,7,8];
-  if(nivelDano==='Fuerte') return [8,9,10,11,12,13,14,15,16];
-  return [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
+  if(nivelDano==='Fuerte') return [8,9,10,11,12];
+  return _hsRango(12);
 }
 
 // ── zona toggle ──
@@ -4787,7 +4906,7 @@ function renderPiezaRow(zona,pieza,mostrarZona){
     var hsOpts=hsRango.map(function(h){return '<option value="'+h+'"'+(e.hsTrabajo===h?' selected':'')+'>'+h+' hs</option>';}).join('');
     var panosHtml='';
     if(esPintura){
-      var panosOpts=[1,2,3].map(function(n){return '<option value="'+n+'"'+(e.panos===n?' selected':'')+'>'+n+(n===1?' paño':' paños')+'</option>';}).join('');
+      var panosOpts=[0.5,1,1.5,2,2.5,3].map(function(n){return '<option value="'+n+'"'+(e.panos===n?' selected':'')+'>'+n+(n===1?' paño':' paños')+'</option>';}).join('');
       panosHtml='<select class="sel-panos" onchange="gridSetPanos('+rid+',\''+t+'\',this.value)">'+panosOpts+'</select>';
     }
     expanded+='<div class="task-exp-row"><span class="task-lbl '+tCls+'">'+tCls+'</span>'
@@ -4824,7 +4943,7 @@ function renderAcordeonOtras(){
     var hsOpts=hsRango.map(function(h){return '<option value="'+h+'"'+(pr.hsTrabajo===h?' selected':'')+'>'+h+' hs</option>';}).join('');
     var panosHtml='';
     if(pr.tarea==='Pintar'||pr.tarea==='Difuminar'){
-      var panosOpts=[1,2,3].map(function(n){return '<option value="'+n+'"'+(pr.panos===n?' selected':'')+'>'+n+(n===1?' paño':' paños')+'</option>';}).join('');
+      var panosOpts=[0.5,1,1.5,2,2.5,3].map(function(n){return '<option value="'+n+'"'+(pr.panos===n?' selected':'')+'>'+n+(n===1?' paño':' paños')+'</option>';}).join('');
       panosHtml='<select class="sel-panos" onchange="otraSetPanos('+pr._id+',this.value)">'+panosOpts+'</select>';
     }
     return '<div class="g-otra-row"><div style="flex:1"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">'
@@ -4841,7 +4960,7 @@ function renderAcordeonOtras(){
 }
 
 // ── actualizaciones reactivas ──
-function gridUpdateAll(){ gridUpdateResumen(); gridUpdateTotal(); relActualizarCosto(); }
+function gridUpdateAll(){ gridUpdateResumen(); gridUpdateTotal(); relActualizarCosto(); relGenerarTareas(); }
 function gridUpdateResumen(){
   var el=s('g-resumen'),card=s('g-resumen-card'); if(!el) return;
   var piezas=relCalcState.piezas;
@@ -4906,13 +5025,24 @@ function gridInitFromState(){
 // ════════════════════════════════════════════════════════
 //  CALC_DATA_GRID — Estructura v4 con requierePintura
 // ════════════════════════════════════════════════════════
+// Solo estas piezas pueden tener hasta 16 hs. El resto tiene máximo 12.
 var SUSTITUIR_16HS_GRID = [
-  'Capot (Panel exterior)','Capot',
-  'Panel de chapa de techo','Panel de chapa de techo de cabina corta',
-  'Panel de chapa de techo extendido / elevado',
-  'Tapa de baúl (Modelos Sedán)','Portón trasero (Modelos Hatchback / SUV)',
-  'Portón trasero corto','Portón trasero de caja de carga (Panel de chapa)',
-  'Panel de cola','Panel de cola de caja de carga'
+  'Guardabarro trasero izquierdo',
+  'Guardabarro trasero derecho',
+  'Guardabarro trasero izquierdo (Estructural grande)',
+  'Guardabarro trasero derecho (Estructural grande)',
+  'Lateral caja pick-up izquierdo',
+  'Lateral caja pick-up derecho',
+  'Lateral de caja izquierdo',
+  'Lateral de caja derecho',
+  'Panel lateral de carga izquierdo (Chapa ciega o estructural)',
+  'Panel lateral de carga derecho (Tramo fijo)',
+  'Lateral utilitario izquierdo',
+  'Lateral utilitario derecho',
+  'Piso de baúl',
+  'Piso de caja',
+  'Piso de carga de chapa',
+  'Piso de carga de chapa acanalada'
 ];
 
 (function(){
@@ -4927,22 +5057,43 @@ var _Z9_SEG=[
   _p('Cinturón / pretensor acompañante',N),_p('Módulo airbag / pretensores',N)
 ];
 var _B1_Z1=[
-  _p('Paragolpes delantero (Cuerpo principal)',S),_p('Alma metálica de paragolpes delantero',N),
-  _p('Absorbedor de impacto interno de paragolpes',N),_p('Soporte de paragolpes delantero izquierdo',N),
-  _p('Soporte de paragolpes delantero derecho',N),_p('Guía lateral de paragolpes delantero izquierda',N),
-  _p('Guía lateral de paragolpes delantero derecha',N),_p('Rejilla frontal superior (Central)',N),
-  _p('Rejilla frontal inferior (Central)',N),_p('Marco de faro auxiliar izquierdo',N),
-  _p('Marco de faro auxiliar derecho',N),_p('Embellecedor de paragolpes delantero izquierdo',S),
-  _p('Embellecedor de paragolpes delantero derecho',S),_p('Spoiler inferior de paragolpes delantero',N),
-  _p('Deflector de aire inferior de paragolpes delantero',N),_p('Portapatente delantero',N),
-  _p('Capot (Panel exterior)',S),_p('Manta aislante de capot (Insonorizador)',N),
-  _p('Burlete de capot',N),_p('Bisagra de capot izquierda',N),_p('Bisagra de capot derecha',N),
-  _p('Cerradura de capot',N),_p('Traba de seguridad de capot',N),
-  _p('Óptica principal izquierda',N),_p('Óptica principal derecha',N),
-  _p('Faro auxiliar izquierdo (Antiniebla)',N),_p('Faro auxiliar derecho (Antiniebla)',N),
-  _p('Guardabarros delantero izquierdo',S),_p('Guardabarros delantero derecho',S),
-  _p('Guardaplast izquierdo',N),_p('Guardaplast derecho',N),
-  _p('Máscara plástica',N),_p('Travesaño superior de panel frontal',N),
+  // ── Paragolpes delantero ──────────────────────────────
+  _p('Paragolpes delantero',S),
+  _p('Alma metálica de paragolpes delantero',N),
+  _p('Absorbedor de impacto interno de paragolpes',N),
+  _p('Soporte de paragolpes delantero izquierdo',N),
+  _p('Soporte de paragolpes delantero derecho',N),
+  _p('Guía lateral de paragolpes delantero izquierda',N),
+  _p('Guía lateral de paragolpes delantero derecha',N),
+  _p('Rejilla frontal superior (Central)',N),
+  _p('Rejilla frontal inferior (Central)',N),
+  _p('Marco de faro auxiliar izquierdo',N),
+  _p('Marco de faro auxiliar derecho',N),
+  _p('Faro auxiliar izquierdo (Antiniebla)',N),
+  _p('Faro auxiliar derecho (Antiniebla)',N),
+  _p('Embellecedor de paragolpes delantero izquierdo',S),
+  _p('Embellecedor de paragolpes delantero derecho',S),
+  _p('Spoiler inferior de paragolpes delantero',N),
+  _p('Deflector de aire inferior de paragolpes delantero',N),
+  // ── Capot ─────────────────────────────────────────────
+  _p('Capot',S),
+  _p('Manta aislante de capot (Insonorizador)',N),
+  _p('Burlete de capot',N),
+  _p('Bisagra de capot izquierda',N),
+  _p('Bisagra de capot derecha',N),
+  _p('Cerradura de capot',N),
+  _p('Traba de seguridad de capot',N),
+  // ── Lateral izquierdo ─────────────────────────────────
+  _p('Guardabarros delantero izquierdo',S),
+  _p('Óptica principal izquierda',N),
+  _p('Guardaplast izquierdo',N),
+  // ── Lateral derecho ───────────────────────────────────
+  _p('Guardabarros delantero derecho',S),
+  _p('Óptica principal derecha',N),
+  _p('Guardaplast derecho',N),
+  // ── Estructura ────────────────────────────────────────
+  _p('Máscara plástica',N),
+  _p('Travesaño superior de panel frontal',N),
   _p('Travesaño inferior de panel frontal',N)
 ];
 var _B1_Z2=[
