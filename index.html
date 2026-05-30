@@ -653,6 +653,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <div class="sidebar-section">Reportes</div>
       <button class="sidebar-item" id="amenu-stats" onclick="adminTab('stats')">📈 Estadísticas</button>
       <button class="sidebar-item" id="amenu-archivo" onclick="adminTab('archivo')">📦 Archivo</button>
+      <div class="sidebar-section">Ayuda</div>
+      <button class="sidebar-item" onclick="window.open('https://estudiopatitucci.com.ar/manual-de-uso.html','_blank')">📖 Manual de uso</button>
       <div class="sidebar-section">Cuenta</div>
       <button class="sidebar-item" id="amenu-perfil" onclick="adminTab('perfil')">👤 Mi Perfil</button>
     </div>
@@ -1023,6 +1025,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
         🔄 Pend. de resolver <span class="badge" id="badge-revision" style="display:none;background:var(--orange);color:#111">0</span>
       </button>
       <button class="sidebar-item" id="smenu-cerradas" onclick="inspTab('cerradas')">✅ Cerradas</button>
+      <div class="sidebar-section">Ayuda</div>
+      <button class="sidebar-item" onclick="window.open('https://estudiopatitucci.com.ar/manual-de-uso.html','_blank')">📖 Manual de uso</button>
       <div class="sidebar-section">Cuenta</div>
       <button class="sidebar-item" id="smenu-perfil" onclick="inspTab('perfil')">👤 Mi Perfil</button>
     </div>
@@ -5137,11 +5141,11 @@ var _B1_Z1=[
   _p('Cerradura de capot',N),
   _p('Traba de seguridad de capot',N),
   // ── Lateral izquierdo ─────────────────────────────────
-  _p('Guardabarros delantero izquierdo',N),
+  _p('Guardabarros delantero izquierdo',S,4,1),
   _p('Óptica principal izquierda',N),
   _p('Guardaplast izquierdo',N),
   // ── Lateral derecho ───────────────────────────────────
-  _p('Guardabarros delantero derecho',N),
+  _p('Guardabarros delantero derecho',S,4,1),
   _p('Óptica principal derecha',N),
   _p('Guardaplast derecho',N),
   // ── Estructura ────────────────────────────────────────
@@ -5357,7 +5361,7 @@ var _B3_Z1=[
   _p('Bisagra de capot izquierda',N),_p('Bisagra de capot derecha',N),_p('Cerradura de capot',N),
   _p('Óptica principal izquierda',N),_p('Óptica principal derecha',N),
   _p('Faro auxiliar izquierdo (Antiniebla)',N),_p('Faro auxiliar derecho (Antiniebla)',N),
-  _p('Guardabarros delantero izquierdo',N),_p('Guardabarros delantero derecho',N),
+  _p('Guardabarros delantero izquierdo',S,4,1),_p('Guardabarros delantero derecho',S,4,1),
   _p('Guardaplast izquierdo',N),_p('Guardaplast derecho',N),
   _p('Máscara plástica',N),_p('Travesaño superior de panel frontal',S,4,0.5),_p('Travesaño inferior de panel frontal',S,4,0.5)
 ];
@@ -5516,7 +5520,7 @@ var _BASE5={
     _p('Parrilla frontal central',N),_p('Portapatente delantero',N),_p('Capot',S,3,3),
     _p('Bisagra de capot izquierda',N),_p('Bisagra de capot derecha',N),_p('Cerradura de capot',N),
     _p('Óptica principal izquierda',N),_p('Óptica principal derecha',N),
-    _p('Guardabarros delantero izquierdo',N),_p('Guardabarros delantero derecho',N),
+    _p('Guardabarros delantero izquierdo',S,4,1),_p('Guardabarros delantero derecho',S,4,1),
     _p('Guardaplast izquierdo',N),_p('Guardaplast derecho',N),
     _p('Máscara plástica',N),_p('Travesaño superior de panel frontal',S,4,0.5),_p('Travesaño inferior de panel frontal',S,4,0.5)
   ],
