@@ -1912,9 +1912,8 @@ function abrirModal(id){
   html+='<button class="btn-secondary btn-sm" onclick="abrirEditar(\''+esc(i.ID)+'\')">✏ Editar</button>';
   var urgStyle=i.Urgente?'background:rgba(229,83,83,.15);color:var(--red);border:1px solid rgba(229,83,83,.3)':'background:var(--bg3);color:var(--text2);border:1px solid var(--border)';
   html+='<button class="btn-sm" style="'+urgStyle+'" onclick="toggleUrgente(\''+esc(i.ID)+'\')">'+(i.Urgente?'🔴 Quitar urgencia':'⚪ Marcar urgente')+'</button>';
-  html+='<button class="btn-secondary btn-sm" onclick="generarPDF(\''+esc(i.ID)+'\')">📄 PDF Inspección</button>';
+  html+='<button class="btn-secondary btn-sm" onclick="generarPDFCompleto(\''+esc(i.ID)+'\')">📄 Informe PDF</button>';
   if(i.Estado==='Pendientes de carga'||i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)" onclick="enviarATaller(\''+esc(i.ID)+'\')">&#x1F517; Enviar a taller</button>';
-  html+='<button class="btn-secondary btn-sm" onclick="generarPDFRel(\''+esc(i.ID)+'\')">📋 PDF Relevamiento</button>';
   html+='<button class="btn-danger btn-sm" onclick="eliminarInsp(\''+esc(i.ID)+'\')">Eliminar</button>';
   html+='<button class="btn-secondary btn-sm" onclick="cerrarModal()" style="margin-left:auto">✕ Cerrar</button>';
   html+='</div>';
@@ -3426,88 +3425,170 @@ async function enviarRel(){
 }
 
 // ─── PDFs ─────────────────────────────────────────────────────────────────────
-function generarPDF(id){
+function generarPDF(id){ generarPDFCompleto(id); }
+function generarPDFRel(id){ generarPDFCompleto(id); }
+function generarPDFCompleto(id){
   var i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
-  var fecha=new Date().toLocaleDateString('es-AR');
-  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#111}.mb{display:flex;justify-content:space-between;border-bottom:2px solid #1a1a6e;padding-bottom:12px;margin-bottom:18px}h2{font-size:13px;background:#1a1a6e;color:#fff;padding:5px 10px;border-radius:4px;margin:14px 0 8px}.g{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px}.c{margin-bottom:4px}.c span{color:#555;font-size:11px}.c p{margin:0;font-weight:500}.full{grid-column:1/-1}footer{margin-top:30px;border-top:1px solid #ccc;padding-top:8px;font-size:10px;color:#888;text-align:center}</style></head><body>'
-    +'<div class="mb"><div><h1 style="font-size:18px;margin:0;color:#1a1a6e">Estudio Patitucci</h1><p style="font-size:11px;color:#555;margin:2px 0">Pericias - Danos Materiales - Homologacion CESVI</p></div><div style="text-align:right"><strong>INFORME DE INSPECCION</strong><br/>'+fecha+'</div></div>'
-    +'<h2>Siniestro</h2><div class="g"><div class="c"><span>N Siniestro</span><p>'+(esc(i.Siniestro)||'-')+'</p></div><div class="c"><span>Compania</span><p>'+(esc(i.Compania)||'-')+'</p></div><div class="c"><span>Tipo</span><p>'+(esc(i.Tipo)||'-')+'</p></div><div class="c"><span>Fecha inspeccion</span><p>'+esc(formatFecha(i.FechaInsp))+'</p></div><div class="c"><span>Fecha siniestro</span><p>'+esc(formatFecha(i.FechaSin))+'</p></div><div class="c"><span>Inspector</span><p>'+(esc(i.Inspector)||'-')+'</p></div></div>'
-    +'<h2>Vehiculo</h2><div class="g"><div class="c"><span>Patente</span><p>'+(esc(i.Patente)||'-')+'</p></div><div class="c"><span>Modelo</span><p>'+(esc(i.Modelo)||'-')+' '+(i.Anio?'('+esc(i.Anio)+')':"")+'</p></div><div class="c"><span>Chasis</span><p>'+(esc(i.Chasis)||'-')+'</p></div><div class="c"><span>Motor</span><p>'+(esc(i.Motor)||'-')+'</p></div><div class="c"><span>Km declarado</span><p>'+(esc(i.Km)||'-')+'</p></div></div>'
-    +'<h2>Asegurado</h2><div class="g"><div class="c"><span>Nombre</span><p>'+(esc(i.Asegurado)||'-')+'</p></div><div class="c"><span>Tel</span><p>'+(esc(i.Tel)||'-')+'</p></div><div class="c full"><span>Direccion</span><p>'+(esc(i.Direccion)||'-')+', '+(esc(i.Localidad)||'')+'</p></div><div class="c full"><span>Danos</span><p>'+(esc(i.Danos)||'-')+'</p></div></div>'
-    +(i.Relevamiento&&i.Relevamiento.km?'<h2>Relevamiento</h2><div class="g"><div class="c"><span>Km verificado</span><p>'+esc(i.Relevamiento.km)+'</p></div><div class="c full"><span>Danos verificados</span><p>'+(esc(i.Relevamiento.danos)||'-')+'</p></div>'+(i.Relevamiento.notas?'<div class="c full"><span>Mano de obra</span><p>'+esc(i.Relevamiento.notas)+'</p></div>':'')+'</div>':'<p style="color:#888;font-style:italic">Relevamiento pendiente.</p>')
-    +'<footer>Estudio Patitucci - '+fecha+'</footer></body></html>';
-  var win=window.open('','_blank');if(win){win.document.write(html);win.document.close();setTimeout(function(){win.print();},600);}
-}
-
-function generarPDFRel(id){
-  var i=inspecciones.find(function(x){return x.ID==id;});
-  if(!i){return;}
   var rel=i.Relevamiento;if(typeof rel==='string'){try{rel=JSON.parse(rel);}catch(e){rel=null;}}
-  if(!rel||!rel.km){alert('No hay relevamiento.');return;}
   var fecha=new Date().toLocaleDateString('es-AR');
-  var fechaRel=rel.fechaEnvio?new Date(rel.fechaEnvio).toLocaleDateString('es-AR'):'-';
-  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;font-size:12px;padding:24px;color:#111}.mb{display:flex;justify-content:space-between;border-bottom:2px solid #1a1a6e;padding-bottom:12px;margin-bottom:18px}h2{font-size:13px;background:#1a1a6e;color:#fff;padding:5px 10px;border-radius:4px;margin:14px 0 8px}.g{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px}.c{margin-bottom:6px}.c span{color:#555;font-size:11px;display:block}.c p{margin:0;font-weight:500}.full{grid-column:1/-1}.ref{background:#f5f5f5;border-left:3px solid #1a1a6e;padding:8px 12px;margin-bottom:10px}.firma{margin-top:40px;display:grid;grid-template-columns:1fr 1fr;gap:40px}.fl{border-top:1px solid #333;padding-top:6px;font-size:11px;color:#555;text-align:center}footer{margin-top:30px;border-top:1px solid #ccc;padding-top:8px;font-size:10px;color:#888;text-align:center}</style></head><body>'
-    +'<div class="mb"><div><h1 style="font-size:18px;margin:0;color:#1a1a6e">Estudio Patitucci</h1><p style="font-size:11px;color:#555;margin:2px 0">Pericias - Danos Materiales - Homologacion CESVI</p></div><div style="text-align:right"><strong>INFORME DE RELEVAMIENTO</strong><br/>'+fechaRel+'</div></div>'
-    +'<h2>Referencia</h2><div class="ref"><p><strong>Siniestro:</strong> '+(esc(i.Siniestro)||'-')+' - <strong>Compania:</strong> '+(esc(i.Compania)||'-')+'</p><p><strong>Patente:</strong> '+(esc(i.Patente)||'-')+' - <strong>Vehiculo:</strong> '+(esc(i.Modelo)||'-')+' '+(i.Anio?'('+esc(i.Anio)+')':"")+'</p><p><strong>Inspector:</strong> '+(esc(i.Inspector)||'-')+' - <strong>Lugar:</strong> '+(esc(i.Direccion)||'-')+', '+(esc(i.Localidad)||'')+'</p></div>'
-    +'<h2>Datos Verificados</h2><div class="g"><div class="c"><span>Km verificado</span><p>'+(esc(rel.km)||'-')+'</p></div><div class="c"><span>Chasis</span><p>'+(esc(i.Chasis)||'-')+'</p></div><div class="c"><span>Motor</span><p>'+(esc(i.Motor)||'-')+'</p></div></div>'
-    +'<h2>Taller</h2><div class="g"><div class="c"><span>Nombre</span><p>'+(esc(rel.taller)||'-')+'</p></div><div class="c"><span>Tel</span><p>'+(esc(rel.telTaller)||'-')+'</p></div><div class="c"><span>Mail</span><p>'+(esc(rel.mailTaller)||'-')+'</p></div><div class="c"><span>CUIT</span><p>'+(esc(rel.cuit)||'-')+'</p></div></div>'
-    +'<h2>Danos Verificados</h2><div style="background:#fff8f0;border:1px solid #fdd;border-radius:4px;padding:10px;min-height:50px"><p style="margin:0;line-height:1.6">'+(esc(rel.danos)||'-')+'</p></div>'
-    +(function(){
-  var calc=rel.calculador;
-  if(!calc||!calc.piezas||!calc.piezas.length){
-    return rel.notas?'<h2>Mano de Obra</h2><div style="background:#f8f8ff;border:1px solid #dde;border-radius:4px;padding:10px"><p style="margin:0;line-height:1.6">'+esc(rel.notas)+'</p></div>':'';
+  var fechaRel=rel&&rel.fechaEnvio?new Date(rel.fechaEnvio).toLocaleDateString('es-AR'):'-';
+  var fmt=function(n){return Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});};
+
+  // ── Tabla de mano de obra ──
+  var tablaCalc='';
+  if(rel&&rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length){
+    var calc=rel.calculador;
+    var orden=[],grupos={};
+    calc.piezas.forEach(function(p){
+      var key=(p.zona||'')+'||'+(p.pieza||'');
+      if(!grupos[key]){grupos[key]={zona:p.zona||'',pieza:p.pieza||'',tareas:[]};orden.push(key);}
+      grupos[key].tareas.push(p);
+    });
+    var filas=orden.map(function(key){
+      var g=grupos[key];
+      var principal=g.tareas.find(function(t){return t.tarea==='Reparar'||t.tarea==='Sustituir';});
+      var pintar=g.tareas.find(function(t){return t.tarea==='Pintar';});
+      var difuminar=g.tareas.find(function(t){return t.tarea==='Difuminar';});
+      var tareasLabel=g.tareas.map(function(t){return t.tarea;})
+        .sort(function(a,b){var o={Reparar:1,Sustituir:1,Pintar:2,Difuminar:3};return(o[a]||9)-(o[b]||9);})
+        .filter(function(v,ii,arr){return arr.indexOf(v)===ii;}).join(' + ');
+      var nivel=(principal&&principal.nivelDano)||'';
+      var hs=principal?(principal.hsTrabajo||principal.horas||0):difuminar?(difuminar.hsTrabajo||difuminar.horas||0):0;
+      var panos=pintar?(pintar.panos||1):difuminar?0.5:0;
+      var panosLabel=panos===0?'-':panos===0.5?'½':String(panos);
+      return '<tr style="border-bottom:1px solid #e8e8e8">'
+        +'<td style="padding:4px 8px;color:#555;font-size:10px">'+esc(g.zona)+'</td>'
+        +'<td style="padding:4px 8px;font-weight:500">'+esc(g.pieza)+'</td>'
+        +'<td style="padding:4px 8px">'+esc(tareasLabel)+'</td>'
+        +'<td style="padding:4px 8px;text-align:center">'+esc(nivel||'-')+'</td>'
+        +'<td style="padding:4px 8px;text-align:center;font-weight:600">'+hs+' hs</td>'
+        +'<td style="padding:4px 8px;text-align:center">'+panosLabel+'</td>'
+        +'</tr>';
+    }).join('');
+    var totalHs=calc.piezas.reduce(function(a,p){return a+(p.hsTrabajo||p.horas||0);},0);
+    var totalPanos=calc.piezas.reduce(function(a,p){return a+(p.tarea==='Pintar'?(p.panos||1):p.tarea==='Difuminar'?0.5:0);},0);
+    var diasTotal=totalHs>0?Math.round(totalHs/8*10)/10:0;
+    // Costos
+    var costoDia=calc.costoDiaChapa||0,costoPano=calc.costoPanoPintura||0;
+    var costoChapa=diasTotal*costoDia;
+    var costoPintura=totalPanos*costoPano;
+    var totalOp=(calc.operaciones||[]).reduce(function(a,o){return a+(o.costo||0);},0);
+    var costoTotal=costoChapa+costoPintura+totalOp;
+    // Operaciones especiales
+    var filasOp='';
+    if(calc.operaciones&&calc.operaciones.length){
+      filasOp=(calc.operaciones||[]).map(function(o){
+        return '<tr style="border-bottom:1px solid #e8e8e8">'
+          +'<td style="padding:4px 8px" colspan="2">'+esc(o.operacion||o.nombre||'-')+'</td>'
+          +'<td style="padding:4px 8px;text-align:right;font-weight:600">$'+fmt(o.costo)+'</td></tr>';
+      }).join('');
+    }
+    tablaCalc=''
+      +'<h2>Mano de Obra — '+esc(calc.tipo||'')+'</h2>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px">'
+      +'<thead><tr style="background:#1a1a6e;color:#fff">'
+      +'<th style="padding:5px 8px;text-align:left;font-size:10px">Zona</th>'
+      +'<th style="padding:5px 8px;text-align:left">Pieza</th>'
+      +'<th style="padding:5px 8px;text-align:left">Tarea</th>'
+      +'<th style="padding:5px 8px;text-align:center">Nivel</th>'
+      +'<th style="padding:5px 8px;text-align:center">Hs</th>'
+      +'<th style="padding:5px 8px;text-align:center">Paños</th>'
+      +'</tr></thead><tbody>'+filas+'</tbody>'
+      +'<tfoot><tr style="background:#e8e8f8;font-weight:700;border-top:2px solid #1a1a6e">'
+      +'<td colspan="4" style="padding:5px 8px">TOTAL</td>'
+      +'<td style="padding:5px 8px;text-align:center">'+totalHs+' hs ('+diasTotal+' días)</td>'
+      +'<td style="padding:5px 8px;text-align:center">'+totalPanos+'</td>'
+      +'</tr></tfoot></table>'
+      +(filasOp?'<h2>Operaciones Especiales</h2><table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px"><thead><tr style="background:#1a1a6e;color:#fff"><th style="padding:5px 8px;text-align:left" colspan="2">Operación</th><th style="padding:5px 8px;text-align:right">Costo</th></tr></thead><tbody>'+filasOp+'</tbody></table>':'')
+      +'<h2>Resumen de Costos</h2>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px">'
+      +'<tbody>'
+      +(costoDia?'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:5px 8px">Chapa</td><td style="padding:5px 8px;color:#555">'+diasTotal+' días × $'+fmt(costoDia)+'</td><td style="padding:5px 8px;text-align:right;font-weight:600">$'+fmt(costoChapa)+'</td></tr>':'')
+      +(costoPano?'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:5px 8px">Pintura</td><td style="padding:5px 8px;color:#555">'+totalPanos+' paños × $'+fmt(costoPano)+'</td><td style="padding:5px 8px;text-align:right;font-weight:600">$'+fmt(costoPintura)+'</td></tr>':'')
+      +(totalOp?'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:5px 8px">Operaciones</td><td style="padding:5px 8px;color:#555">—</td><td style="padding:5px 8px;text-align:right;font-weight:600">$'+fmt(totalOp)+'</td></tr>':'')
+      +'</tbody>'
+      +'<tfoot><tr style="background:#1a1a6e;color:#fff;font-weight:700">'
+      +'<td colspan="2" style="padding:7px 8px;font-size:13px">TOTAL MANO DE OBRA</td>'
+      +'<td style="padding:7px 8px;text-align:right;font-size:14px">$'+fmt(costoTotal)+'</td>'
+      +'</tr></tfoot></table>';
+  } else if(rel&&rel.notas){
+    tablaCalc='<h2>Mano de Obra</h2><div style="background:#f8f8ff;border:1px solid #dde;border-radius:4px;padding:10px"><p style="margin:0;line-height:1.6">'+esc(rel.notas)+'</p></div>';
   }
-  // Agrupar piezas por (zona+pieza) igual que el panel admin
-  var orden=[],grupos={};
-  calc.piezas.forEach(function(p){
-    var key=(p.zona||'')+'||'+(p.pieza||'');
-    if(!grupos[key]){grupos[key]={zona:p.zona||'',pieza:p.pieza||'',tareas:[]};orden.push(key);}
-    grupos[key].tareas.push(p);
-  });
-  var filas=orden.map(function(key){
-    var g=grupos[key];
-    var principal=g.tareas.find(function(t){return t.tarea==='Reparar'||t.tarea==='Sustituir';});
-    var pintar=g.tareas.find(function(t){return t.tarea==='Pintar';});
-    var difuminar=g.tareas.find(function(t){return t.tarea==='Difuminar';});
-    var tareasLabel=g.tareas.map(function(t){return t.tarea;})
-      .sort(function(a,b){var o={Reparar:1,Sustituir:1,Pintar:2,Difuminar:3};return(o[a]||9)-(o[b]||9);})
-      .filter(function(v,i,arr){return arr.indexOf(v)===i;}).join(' + ');
-    var nivel=(principal&&principal.nivelDano)||'';
-    var hs=principal?(principal.hsTrabajo||principal.horas||0):difuminar?(difuminar.hsTrabajo||difuminar.horas||0):0;
-    var panos=pintar?(pintar.panos||1):difuminar?0.5:0;
-    var panosLabel=panos===0?'-':panos===0.5?'½':panos;
-    return '<tr style="border-bottom:1px solid #e0e0e0">'
-      +'<td style="padding:4px 8px;color:#555">'+esc(g.zona)+'</td>'
-      +'<td style="padding:4px 8px;font-weight:500">'+esc(g.pieza)+'</td>'
-      +'<td style="padding:4px 8px">'+esc(tareasLabel)+'</td>'
-      +'<td style="padding:4px 8px;text-align:center">'+esc(nivel||'-')+'</td>'
-      +'<td style="padding:4px 8px;text-align:center;font-weight:600">'+hs+' hs</td>'
-      +'<td style="padding:4px 8px;text-align:center">'+panosLabel+'</td>'
-      +'</tr>';
-  }).join('');
-  var totalHs=calc.piezas.reduce(function(a,p){return a+(p.hsTrabajo||p.horas||0);},0);
-  var totalPanos=calc.piezas.reduce(function(a,p){return a+(p.tarea==='Pintar'?(p.panos||1):p.tarea==='Difuminar'?0.5:0);},0);
-  var diasTotal=totalHs>0?Math.round(totalHs/8*10)/10:0;
-  return '<h2>Mano de Obra — '+esc(calc.tipo||'')+'</h2>'
-    +'<table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px">'
-    +'<thead><tr style="background:#1a1a6e;color:#fff">'
-    +'<th style="padding:5px 8px;text-align:left">Zona</th>'
-    +'<th style="padding:5px 8px;text-align:left">Pieza</th>'
-    +'<th style="padding:5px 8px;text-align:left">Tarea</th>'
-    +'<th style="padding:5px 8px;text-align:center">Nivel</th>'
-    +'<th style="padding:5px 8px;text-align:center">Hs</th>'
-    +'<th style="padding:5px 8px;text-align:center">Paños</th>'
-    +'</tr></thead><tbody>'+filas+'</tbody>'
-    +'<tfoot><tr style="background:#f0f0f8;font-weight:600;border-top:2px solid #1a1a6e">'
-    +'<td colspan="4" style="padding:5px 8px">TOTAL</td>'
-    +'<td style="padding:5px 8px;text-align:center">'+totalHs+' hs'+(diasTotal?' ('+diasTotal+' días)':'')+'</td>'
-    +'<td style="padding:5px 8px;text-align:center">'+(totalPanos||'-')+'</td>'
-    +'</tr></tfoot></table>';
-})()
-    +'<div style="margin-top:16px;font-size:12px;color:#555">Fotos: '+(rel.cantFotos||0)+' - Archivadas en Google Drive.</div>'
-    +'<div class="firma"><div class="fl">Firma Inspector<br/><strong>'+(esc(i.Inspector)||'')+'</strong></div><div class="fl">Sello Estudio Patitucci</div></div>'
-    +'<footer>Estudio Patitucci - '+fecha+'</footer></body></html>';
-  var win=window.open('','_blank');if(win){win.document.write(html);win.document.close();setTimeout(function(){win.print();},600);}
+
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
+    +'*{box-sizing:border-box}'
+    +'body{font-family:Arial,sans-serif;font-size:12px;padding:28px 32px;color:#111;max-width:900px;margin:0 auto}'
+    +'.hdr{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #1a1a6e;padding-bottom:14px;margin-bottom:20px}'
+    +'.hdr-logo h1{font-size:20px;margin:0;color:#1a1a6e;font-weight:700}'
+    +'.hdr-logo p{font-size:10px;color:#666;margin:2px 0 0}'
+    +'.hdr-right{text-align:right;font-size:11px;color:#555}'
+    +'.hdr-right strong{font-size:13px;color:#111;display:block;margin-bottom:4px}'
+    +'h2{font-size:12px;background:#1a1a6e;color:#fff;padding:5px 10px;border-radius:4px;margin:16px 0 8px;letter-spacing:.03em}'
+    +'.g{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;margin-bottom:4px}'
+    +'.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 24px}'
+    +'.c{margin-bottom:4px}.c span{color:#666;font-size:10px;text-transform:uppercase;letter-spacing:.04em;display:block}'
+    +'.c p{margin:2px 0 0;font-weight:600;font-size:12px}'
+    +'.full{grid-column:1/-1}'
+    +'.blk{background:#f7f7f7;border-left:3px solid #1a1a6e;padding:8px 12px;border-radius:0 4px 4px 0;font-size:12px;line-height:1.6;margin-bottom:6px}'
+    +'table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px}'
+    +'th{padding:5px 8px;background:#1a1a6e;color:#fff;font-size:10px;font-weight:600}'
+    +'td{padding:4px 8px}'
+    +'.firma{margin-top:48px;display:grid;grid-template-columns:1fr 1fr;gap:60px}'
+    +'.fl{border-top:1.5px solid #333;padding-top:6px;font-size:11px;color:#555;text-align:center}'
+    +'footer{margin-top:24px;border-top:1px solid #ddd;padding-top:8px;font-size:10px;color:#999;text-align:center}'
+    +'@media print{body{padding:16px}}'
+    +'</style></head><body>'
+    // ── Encabezado ──
+    +'<div class="hdr"><div class="hdr-logo"><h1>Estudio Patitucci</h1><p>Pericias · Daños Materiales · Homologado CESVI</p></div>'
+    +'<div class="hdr-right"><strong>INFORME DE INSPECCIÓN</strong>Fecha: '+fecha+'<br/>Relevamiento: '+fechaRel+'</div></div>'
+    // ── Siniestro ──
+    +'<h2>Datos del Siniestro</h2>'
+    +'<div class="g3">'
+    +'<div class="c"><span>N° Siniestro</span><p>'+esc(i.Siniestro||'-')+'</p></div>'
+    +'<div class="c"><span>Compañía</span><p>'+esc(i.Compania||'-')+'</p></div>'
+    +'<div class="c"><span>Inspector</span><p>'+esc(i.Inspector||'-')+'</p></div>'
+    +'<div class="c"><span>Fecha Inspección</span><p>'+esc(formatFecha(i.FechaInsp))+'</p></div>'
+    +'<div class="c"><span>Fecha Siniestro</span><p>'+esc(formatFecha(i.FechaSin))+'</p></div>'
+    +'<div class="c"><span>Tipo</span><p>'+esc(i.Tipo||'-')+'</p></div>'
+    +'</div>'
+    // ── Vehículo ──
+    +'<h2>Vehículo</h2>'
+    +'<div class="g3">'
+    +'<div class="c"><span>Patente</span><p>'+esc(i.Patente||'-')+'</p></div>'
+    +'<div class="c"><span>Modelo / Año</span><p>'+esc((i.Modelo||'-')+(i.Anio?' ('+i.Anio+')':''))+'</p></div>'
+    +'<div class="c"><span>KM Declarado</span><p>'+esc(i.Km||'-')+'</p></div>'
+    +'<div class="c"><span>Chasis</span><p>'+esc(i.Chasis||'-')+'</p></div>'
+    +'<div class="c"><span>Motor</span><p>'+esc(i.Motor||'-')+'</p></div>'
+    +(rel&&rel.km?'<div class="c"><span>KM Verificado</span><p>'+esc(rel.km)+'</p></div>':'<div class="c"></div>')
+    +'</div>'
+    // ── Asegurado ──
+    +'<h2>Asegurado</h2>'
+    +'<div class="g">'
+    +'<div class="c"><span>Nombre</span><p>'+esc(i.Asegurado||'-')+'</p></div>'
+    +'<div class="c"><span>Teléfono</span><p>'+esc(i.Tel||'-')+'</p></div>'
+    +'<div class="c full"><span>Domicilio</span><p>'+esc((i.Direccion||'-')+(i.Localidad?', '+i.Localidad:''))+'</p></div>'
+    +'</div>'
+    // ── Daños declarados ──
+    +(i.Danos?'<h2>Daños Declarados</h2><div class="blk">'+esc(i.Danos)+'</div>':'')
+    +(i.DanosDen?'<h2>Ocurrencia del Siniestro</h2><div class="blk">'+esc(i.DanosDen)+'</div>':'')
+    // ── Taller (si hay relevamiento) ──
+    +(rel&&rel.taller?'<h2>Taller / Asegurado</h2><div class="g"><div class="c"><span>Nombre</span><p>'+esc(rel.taller||'-')+'</p></div><div class="c"><span>Teléfono</span><p>'+esc(rel.telTaller||'-')+'</p></div><div class="c"><span>Mail</span><p>'+esc(rel.mailTaller||'-')+'</p></div><div class="c"><span>CUIT</span><p>'+esc(rel.cuit||'-')+'</p></div></div>':'')
+    // ── Daños verificados ──
+    +(rel&&rel.danos?'<h2>Daños Verificados</h2><div class="blk">'+esc(rel.danos)+'</div>':'')
+    // ── Calculador / Costos ──
+    +tablaCalc
+    // ── Fotos ──
+    +(rel?'<p style="font-size:11px;color:#666;margin:8px 0">📷 Fotos archivadas en Google Drive: <strong>'+(rel.cantFotos||0)+'</strong></p>':'')
+    // ── Firma ──
+    +'<div class="firma">'
+    +'<div class="fl">Firma Inspector<br/><strong>'+esc(i.Inspector||'')+'</strong></div>'
+    +'<div class="fl">Sello Estudio Patitucci</div>'
+    +'</div>'
+    +'<footer>Estudio Patitucci · estudiopatitucci.com.ar · Homologado CESVI Argentina · '+fecha+'</footer>'
+    +'</body></html>';
+
+  var win=window.open('','_blank');
+  if(win){win.document.write(html);win.document.close();setTimeout(function(){win.print();},700);}
 }
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
