@@ -3084,6 +3084,12 @@ function relLlenarInfoAuto(insp){
       +'<span style="font-size:13px;color:var(--text);font-weight:500'+(c.mono?';font-family:monospace;letter-spacing:.04em':'')+'">'+esc(c.val||'-')+'</span>'
       +'</div>';
   }).join('');
+  if(insp.Danos){
+    html+='<div style="grid-column:1/-1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px">'
+      +'<span style="display:block;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Declaración de daños</span>'
+      +'<span style="font-size:13px;color:var(--text);font-weight:400;line-height:1.5">'+esc(insp.Danos)+'</span>'
+      +'</div>';
+  }
   if(insp.DanosDen){
     html+='<div style="grid-column:1/-1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 12px">'
       +'<span style="display:block;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">Ocurrencia del siniestro</span>'
@@ -4397,11 +4403,14 @@ function gridToggleTask(rid,tarea){
       var e=gFind(ctx.zona,ctx.pieza.nombre,t);
       if(e) relCalcState.piezas=relCalcState.piezas.filter(function(x){return x._id!==e._id;});
     });
-    var panosInit=tarea==='Pintar'?1:tarea==='Difuminar'?0.5:0;
-    relCalcState.piezas.push({_id:relCalcIdx++,zona:ctx.zona,pieza:ctx.pieza.nombre,tarea:tarea,nivelDano:'',hsTrabajo:0,panos:panosInit});
+    var esSustituir=tarea==='Sustituir';
+    var hsInit=esSustituir&&ctx.pieza.defaultHs?ctx.pieza.defaultHs:0;
+    var panosInit=tarea==='Pintar'?1:tarea==='Difuminar'?0.5:esSustituir&&ctx.pieza.defaultPanos?ctx.pieza.defaultPanos:0;
+    relCalcState.piezas.push({_id:relCalcIdx++,zona:ctx.zona,pieza:ctx.pieza.nombre,tarea:tarea,nivelDano:'',hsTrabajo:hsInit,panos:panosInit});
     if(ctx.pieza.requierePintura&&(tarea==='Reparar'||tarea==='Sustituir')){
       if(!gFind(ctx.zona,ctx.pieza.nombre,'Pintar')){
-        relCalcState.piezas.push({_id:relCalcIdx++,zona:ctx.zona,pieza:ctx.pieza.nombre,tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:1});
+        var panosP=esSustituir&&ctx.pieza.defaultPanos?ctx.pieza.defaultPanos:1;
+        relCalcState.piezas.push({_id:relCalcIdx++,zona:ctx.zona,pieza:ctx.pieza.nombre,tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:panosP});
       }
     }
   }
@@ -5090,7 +5099,7 @@ var SUSTITUIR_16HS_GRID = [
 ];
 
 (function(){
-var _p=function(n,r){return {nombre:n,requierePintura:!!r};};
+var _p=function(n,r,hs,panos){return {nombre:n,requierePintura:!!r,defaultHs:hs||0,defaultPanos:panos||0};};
 var S=true,N=false;
 var _Z9_SEG=[
   _p('Airbag conductor',N),_p('Airbag acompañante',N),
@@ -5102,7 +5111,7 @@ var _Z9_SEG=[
 ];
 var _B1_Z1=[
   // ── Paragolpes delantero ──────────────────────────────
-  _p('Paragolpes delantero',S),
+  _p('Paragolpes delantero',S,8,2),
   _p('Alma metálica de paragolpes delantero',N),
   _p('Absorbedor de impacto interno de paragolpes',N),
   _p('Soporte de paragolpes delantero izquierdo',N),
@@ -5120,7 +5129,7 @@ var _B1_Z1=[
   _p('Spoiler inferior de paragolpes delantero',N),
   _p('Deflector de aire inferior de paragolpes delantero',N),
   // ── Capot ─────────────────────────────────────────────
-  _p('Capot',S),
+  _p('Capot',S,3,3),
   _p('Manta aislante de capot (Insonorizador)',N),
   _p('Burlete de capot',N),
   _p('Bisagra de capot izquierda',N),
@@ -5137,12 +5146,12 @@ var _B1_Z1=[
   _p('Guardaplast derecho',N),
   // ── Estructura ────────────────────────────────────────
   _p('Máscara plástica',N),
-  _p('Travesaño superior de panel frontal',S),
-  _p('Travesaño inferior de panel frontal',S)
+  _p('Travesaño superior de panel frontal',S,2,0.5),
+  _p('Travesaño inferior de panel frontal',S,2,0.5)
 ];
 var _B1_Z2=[
   // ── Puerta delantera izquierda ────────────────────────
-  _p('Puerta delantera izquierda',S),
+  _p('Puerta delantera izquierda',S,6,1.5),
   _p('Bisagra de puerta delantera izquierda superior',N),
   _p('Bisagra de puerta delantera izquierda inferior',N),
   _p('Limitador de apertura de puerta delantera izquierda',N),
@@ -5151,7 +5160,7 @@ var _B1_Z2=[
   _p('Coliza barrevidrio puerta delantera izquierda',N),
   _p('Coliza marco puerta delantera izquierda',N),
   // ── Puerta trasera izquierda ──────────────────────────
-  _p('Puerta trasera izquierda',S),
+  _p('Puerta trasera izquierda',S,6,1.5),
   _p('Bisagra de puerta trasera izquierda superior',N),
   _p('Bisagra de puerta trasera izquierda inferior',N),
   _p('Limitador de apertura de puerta trasera izquierda',N),
@@ -5164,20 +5173,20 @@ var _B1_Z2=[
   _p('Carcasa de espejo retrovisor izquierdo',N),
   _p('Cristal de espejo retrovisor izquierdo',N),
   // ── Resto lateral izquierdo ───────────────────────────
-  _p('Zócalo exterior izquierdo',S),
+  _p('Zócalo exterior izquierdo',S,8,1),
   _p('Moldura de guardabarro delantero izquierdo',N),
   _p('Moldura de guardabarro trasero izquierdo',N),
-  _p('Guardabarro trasero izquierdo',S),
+  _p('Guardabarro trasero izquierdo',S,4,1),
   _p('Tapa de carga de combustible',N),
   _p('Portezuela interna de carga de combustible',N),
-  _p('Parante delantero izquierdo',S),
-  _p('Parante central izquierdo',S),
-  _p('Pasarruedas interno estructural delantero izquierdo',S),
-  _p('Pasarruedas interno estructural trasero izquierdo',S)
+  _p('Parante delantero izquierdo',S,8,0.5),
+  _p('Parante central izquierdo',S,8,0.5),
+  _p('Pasarruedas interno estructural delantero izquierdo',S,12,1),
+  _p('Pasarruedas interno estructural trasero izquierdo',S,12,1)
 ];
 var _B1_Z3=[
   // ── Puerta delantera derecha ──────────────────────────
-  _p('Puerta delantera derecha',S),
+  _p('Puerta delantera derecha',S,6,1.5),
   _p('Bisagra de puerta delantera derecha superior',N),
   _p('Bisagra de puerta delantera derecha inferior',N),
   _p('Limitador de apertura de puerta delantera derecha',N),
@@ -5186,7 +5195,7 @@ var _B1_Z3=[
   _p('Coliza barrevidrio puerta delantera derecha',N),
   _p('Coliza marco puerta delantera derecha',N),
   // ── Puerta trasera derecha ────────────────────────────
-  _p('Puerta trasera derecha',S),
+  _p('Puerta trasera derecha',S,6,1.5),
   _p('Bisagra de puerta trasera derecha superior',N),
   _p('Bisagra de puerta trasera derecha inferior',N),
   _p('Limitador de apertura de puerta trasera derecha',N),
@@ -5199,30 +5208,30 @@ var _B1_Z3=[
   _p('Carcasa de espejo retrovisor derecho',N),
   _p('Cristal de espejo retrovisor derecho',N),
   // ── Resto lateral derecho ─────────────────────────────
-  _p('Zócalo exterior derecho',S),
+  _p('Zócalo exterior derecho',S,8,1),
   _p('Moldura de guardabarro delantero derecho',N),
   _p('Moldura de guardabarro trasero derecho',N),
-  _p('Guardabarro trasero derecho',S),
-  _p('Parante delantero derecho',S),
-  _p('Parante central derecho',S),
-  _p('Pasarruedas interno estructural delantero derecho',S),
-  _p('Pasarruedas interno estructural trasero derecho',S)
+  _p('Guardabarro trasero derecho',S,4,1),
+  _p('Parante delantero derecho',S,8,0.5),
+  _p('Parante central derecho',S,8,0.5),
+  _p('Pasarruedas interno estructural delantero derecho',S,12,1),
+  _p('Pasarruedas interno estructural trasero derecho',S,12,1)
 ];
 var _B1_Z4=[
-  _p('Paragolpes trasero',S),_p('Alma metálica de paragolpes trasero',N),
+  _p('Paragolpes trasero',S,6,2),_p('Alma metálica de paragolpes trasero',N),
   _p('Absorbedor de impacto de paragolpes trasero',N),_p('Soporte de paragolpes trasero izquierdo',N),
   _p('Soporte de paragolpes trasero derecho',N),_p('Guía de paragolpes trasero izquierda',N),
-  _p('Guía de paragolpes trasero derecha',N),_p('Tapa de baúl (Modelos Sedán)',S),
-  _p('Portón trasero (Modelos Hatchback / SUV)',S),_p('Bisagra de tapa o portón trasero izquierda',N),
+  _p('Guía de paragolpes trasero derecha',N),_p('Tapa de baúl (Modelos Sedán)',S,3,2.5),
+  _p('Portón trasero (Modelos Hatchback / SUV)',S,6,2.5),_p('Bisagra de tapa o portón trasero izquierda',N),
   _p('Bisagra de tapa o portón trasero derecha',N),_p('Amortiguador neumático de portón izquierdo',N),
   _p('Amortiguador neumático de portón derecho',N),_p('Cerradura de baúl / portón trasero',N),
   _p('Botón de apertura exterior de baúl',N),_p('Faro trasero izquierdo fijo (En carrocería)',N),
   _p('Faro trasero derecho fijo (En carrocería)',N),_p('Extensión de faro trasero izquierdo (En tapa / portón)',N),
   _p('Extensión de faro trasero derecho (En tapa / portón)',N),_p('Spoiler trasero de techo / Deflector trasero',N),
-  _p('Moldurón negro de paragolpes trasero',N),_p('Portapatente trasero',N),_p('Panel de cola',S),
-  _p('Sede de faro trasero izquierdo',S),_p('Sede de faro trasero derecho',S),
-  _p('Piso de baúl',S),_p('Alojamiento de rueda de auxilio',S),
-  _p('Larguero estructural trasero izquierdo',S),_p('Larguero estructural trasero derecho',S)
+  _p('Moldurón negro de paragolpes trasero',N),_p('Portapatente trasero',N),_p('Panel de cola',S,8,1.5),
+  _p('Sede de faro trasero izquierdo',S,4,0.5),_p('Sede de faro trasero derecho',S,4,0.5),
+  _p('Piso de baúl',S,16,2),_p('Alojamiento de rueda de auxilio',S,8,1),
+  _p('Larguero estructural trasero izquierdo',S,16,0.5),_p('Larguero estructural trasero derecho',S,16,0.5)
 ];
 var _B1_Z5=[
   _p('Cuna de motor (Araña / Subchasis)',N),_p('Amortiguador delantero izquierdo',N),_p('Amortiguador delantero derecho',N),
@@ -5267,7 +5276,7 @@ var _B1_Z6=[
   _p('Aceite de caja',N),_p('Líquido de frenos',N)
 ];
 var _B1_Z7=[
-  _p('Panel de chapa de techo',S),_p('Refuerzo transversal de techo',N),
+  _p('Techo',S,12,3),_p('Refuerzo transversal de techo',N),
   _p('Tapizado de techo',N),_p('Cristal de techo',N),_p('Mecanismo de apertura de cristal de techo',N),
   _p('Antena',N),_p('Base de antena',N),
   _p('Moldura de techo derecha',N),_p('Moldura de techo izquierda',N)
@@ -5286,7 +5295,7 @@ var _BASE1={'Frontal':_B1_Z1,'Lateral Izquierda':_B1_Z2,'Lateral Derecha':_B1_Z3
 
 var _B2_Z2=[
   // ── Puerta delantera izquierda ────────────────────────
-  _p('Puerta delantera izquierda',S),
+  _p('Puerta delantera izquierda',S,6,1.5),
   _p('Bisagra de puerta delantera izquierda superior (Reforzada)',N),
   _p('Bisagra de puerta delantera izquierda inferior (Reforzada)',N),
   _p('Limitador de apertura de puerta delantera izquierda (Extendido)',N),
@@ -5297,16 +5306,16 @@ var _B2_Z2=[
   _p('Carcasa de espejo retrovisor izquierdo',N),
   _p('Cristal de espejo retrovisor izquierdo',N),
   // ── Resto lateral izquierdo ───────────────────────────
-  _p('Zócalo exterior izquierdo (Largo)',S),
+  _p('Zócalo exterior izquierdo (Largo)',S,8,1),
   _p('Moldura de guardabarro delantero izquierdo',N),
   _p('Moldura de guardabarro trasero izquierdo',N),
-  _p('Guardabarro trasero izquierdo (Estructural grande)',S),
-  _p('Parante delantero izquierdo',S),
-  _p('Parante central izquierdo',S)
+  _p('Guardabarro trasero izquierdo (Estructural grande)',S,12,2),
+  _p('Parante delantero izquierdo',S,8,0.5),
+  _p('Parante central izquierdo',S,8,0.5)
 ];
 var _B2_Z3=[
   // ── Puerta delantera derecha ──────────────────────────
-  _p('Puerta delantera derecha',S),
+  _p('Puerta delantera derecha',S,6,1.5),
   _p('Bisagra de puerta delantera derecha superior (Reforzada)',N),
   _p('Bisagra de puerta delantera derecha inferior (Reforzada)',N),
   _p('Limitador de apertura de puerta delantera derecha (Extendido)',N),
@@ -5317,20 +5326,20 @@ var _B2_Z3=[
   _p('Carcasa de espejo retrovisor derecho',N),
   _p('Cristal de espejo retrovisor derecho',N),
   // ── Resto lateral derecho ─────────────────────────────
-  _p('Zócalo exterior derecho (Largo)',S),
+  _p('Zócalo exterior derecho (Largo)',S,8,1),
   _p('Moldura de guardabarro delantero derecho',N),
   _p('Moldura de guardabarro trasero derecho',N),
-  _p('Guardabarro trasero derecho (Estructural grande)',S),
-  _p('Parante delantero derecho',S),
-  _p('Parante central derecho',S)
+  _p('Guardabarro trasero derecho (Estructural grande)',S,12,2),
+  _p('Parante delantero derecho',S,8,0.5),
+  _p('Parante central derecho',S,8,0.5)
 ];
 var _B2_Z4=[
-  _p('Paragolpes trasero',S),_p('Alma metálica de paragolpes trasero',N),
+  _p('Paragolpes trasero',S,6,2),_p('Alma metálica de paragolpes trasero',N),
   _p('Soporte de paragolpes trasero izquierdo',N),_p('Soporte de paragolpes trasero derecho',N),
-  _p('Portón trasero corto',S),_p('Bisagra de portón trasero izquierda',N),_p('Bisagra de portón trasero derecha',N),
+  _p('Portón trasero corto',S,6,2.5),_p('Bisagra de portón trasero izquierda',N),_p('Bisagra de portón trasero derecha',N),
   _p('Amortiguador neumático de portón izquierdo',N),_p('Amortiguador neumático de portón derecho',N),
   _p('Cerradura de portón trasero',N),_p('Faro trasero izquierdo fijo',N),_p('Faro trasero derecho fijo',N),
-  _p('Moldurón negro de paragolpes trasero',N),_p('Panel de cola',S),_p('Piso de baúl',S),_p('Larguero estructural trasero izquierdo',S),_p('Larguero estructural trasero derecho',S)
+  _p('Moldurón negro de paragolpes trasero',N),_p('Panel de cola',S,8,1.5),_p('Piso de baúl',S,16,2),_p('Larguero estructural trasero izquierdo',S,16,0.5),_p('Larguero estructural trasero derecho',S,16,0.5)
 ];
 var _B2_Z8=[
   _p('Parabrisas delantero',N),_p('Luneta trasera',N),
@@ -5341,20 +5350,20 @@ var _B2_Z8=[
 var _BASE2={'Frontal':_B1_Z1,'Lateral Izquierda':_B2_Z2,'Lateral Derecha':_B2_Z3,'Trasera':_B2_Z4,'Tren Delantero y Tracción':_B1_Z5,'Tren Trasero':_Z_TREN_TRA_SED,'Mecánica / Vano Motor':_B1_Z6,'Techo':_B1_Z7,'Cristales':_B2_Z8,'Seguridad':_Z9_SEG};
 
 var _B3_Z1=[
-  _p('Paragolpes delantero (Reforzado / Cromado / Plástico)',S),_p('Alma de paragolpes delantero',N),
+  _p('Paragolpes delantero (Reforzado / Cromado / Plástico)',S,8,2),_p('Alma de paragolpes delantero',N),
   _p('Soporte estructural pesado de paragolpes izquierdo',N),_p('Soporte estructural pesado de paragolpes derecho',N),
   _p('Rejilla / Parrilla frontal central (Gran escala)',N),_p('Marco de faro auxiliar izquierdo',N),_p('Marco de faro auxiliar derecho',N),
-  _p('Portapatente delantero',N),_p('Capot',S),_p('Manta aislante de capot',N),
+  _p('Portapatente delantero',N),_p('Capot',S,3,3),_p('Manta aislante de capot',N),
   _p('Bisagra de capot izquierda',N),_p('Bisagra de capot derecha',N),_p('Cerradura de capot',N),
   _p('Óptica principal izquierda',N),_p('Óptica principal derecha',N),
   _p('Faro auxiliar izquierdo (Antiniebla)',N),_p('Faro auxiliar derecho (Antiniebla)',N),
   _p('Guardabarros delantero izquierdo',N),_p('Guardabarros delantero derecho',N),
   _p('Guardaplast izquierdo',N),_p('Guardaplast derecho',N),
-  _p('Máscara plástica',N),_p('Travesaño superior de panel frontal',S),_p('Travesaño inferior de panel frontal',S)
+  _p('Máscara plástica',N),_p('Travesaño superior de panel frontal',S,4,0.5),_p('Travesaño inferior de panel frontal',S,4,0.5)
 ];
 var _B3_Z2=[
   // ── Puerta de cabina izquierda ────────────────────────
-  _p('Puerta de cabina izquierda',S),
+  _p('Puerta de cabina izquierda',S,6,1.5),
   _p('Bisagra de puerta izquierda superior',N),
   _p('Bisagra de puerta izquierda inferior',N),
   _p('Manija exterior de puerta izquierda',N),
@@ -5364,16 +5373,16 @@ var _B3_Z2=[
   _p('Carcasa de espejo retrovisor izquierdo',N),
   _p('Cristal de espejo retrovisor izquierdo',N),
   // ── Resto lateral izquierdo ───────────────────────────
-  _p('Zócalo inferior de cabina izquierdo',S),
+  _p('Zócalo inferior de cabina izquierdo',S,8,1),
   _p('Estribo lateral izquierdo',N),
   _p('Moldura de guardabarro delantero izquierdo',N),
   _p('Moldura de lateral exterior de caja izquierdo (Overfender / Buchi)',N),
-  _p('Parante delantero izquierdo',S),
-  _p('Parante central izquierdo',S)
+  _p('Parante delantero izquierdo',S,8,0.5),
+  _p('Parante central izquierdo',S,8,0.5)
 ];
 var _B3_Z3=[
   // ── Puerta de cabina derecha ──────────────────────────
-  _p('Puerta de cabina derecha',S),
+  _p('Puerta de cabina derecha',S,6,1.5),
   _p('Bisagra de puerta derecha superior',N),
   _p('Bisagra de puerta derecha inferior',N),
   _p('Manija exterior de puerta derecha',N),
@@ -5383,23 +5392,23 @@ var _B3_Z3=[
   _p('Carcasa de espejo retrovisor derecho',N),
   _p('Cristal de espejo retrovisor derecho',N),
   // ── Resto lateral derecho ─────────────────────────────
-  _p('Zócalo inferior de cabina derecho',S),
+  _p('Zócalo inferior de cabina derecho',S,8,1),
   _p('Estribo lateral derecho',N),
   _p('Moldura de guardabarro delantero derecho',N),
   _p('Moldura de lateral exterior de caja derecho (Overfender / Buchi)',N),
-  _p('Parante delantero derecho',S),
-  _p('Parante central derecho',S)
+  _p('Parante delantero derecho',S,8,0.5),
+  _p('Parante central derecho',S,8,0.5)
 ];
 var _B3_Z4=[
-  _p('Portón trasero de caja de carga (Panel de chapa)',S),_p('Manija de apertura de portón trasero',N),
+  _p('Portón trasero de caja de carga (Panel de chapa)',S,6,2),_p('Manija de apertura de portón trasero',N),
   _p('Bisagra de portón de caja izquierda',N),_p('Bisagra de portón de caja derecha',N),
   _p('Cable de retención de portón izquierdo',N),_p('Cable de retención de portón derecho',N),
-  _p('Paragolpes trasero',S),_p('Faro trasero izquierdo',N),_p('Faro trasero derecho',N),
+  _p('Paragolpes trasero',S,6,2),_p('Faro trasero izquierdo',N),_p('Faro trasero derecho',N),
   _p('Barra antivuelco (San Antonio)',N),_p('Lona marítima de cobertura de caja',N),_p('Cúpula rígida trasera',N),
-  _p('Portapatente trasero',N),_p('Panel de cola de caja de carga',S),
-  _p('Piso de carga de chapa',S),_p('Larguero estructural de chasis trasero izquierdo',S),_p('Larguero estructural de chasis trasero derecho',S),
+  _p('Portapatente trasero',N),_p('Panel de cola de caja de carga',S,6,1.5),
+  _p('Piso de carga de chapa',S,16,3),_p('Larguero estructural de chasis trasero izquierdo',S,10,0.5),_p('Larguero estructural de chasis trasero derecho',S,10,0.5),
   _p('Estructura / Panel interno lateral de caja izquierdo',N),_p('Estructura / Panel interno lateral de caja derecho',N),
-  _p('Pasarruedas interno de caja (Buche interior) izquierdo',S),_p('Pasarruedas interno de caja (Buche interior) derecho',S)
+  _p('Pasarruedas interno de caja (Buche interior) izquierdo',S,12,1),_p('Pasarruedas interno de caja (Buche interior) derecho',S,12,1)
 ];
 var _B3_Z5=[
   _p('Amortiguador delantero reforzado izquierdo',N),_p('Amortiguador delantero reforzado derecho',N),
@@ -5442,13 +5451,13 @@ var _BASE3={'Frontal':_B3_Z1,'Lateral Izquierda':_B3_Z2,'Lateral Derecha':_B3_Z3
 
 var _B4_Z2=[
   // ── Puerta delantera izquierda ────────────────────────
-  _p('Puerta delantera izquierda',S),
+  _p('Puerta delantera izquierda',S,6,1.5),
   _p('Bisagra de puerta delantera izquierda superior',N),
   _p('Bisagra de puerta delantera izquierda inferior',N),
   _p('Manija exterior de puerta delantera izquierda',N),
   _p('Moldura de puerta delantera izquierda',N),
   // ── Puerta trasera izquierda ──────────────────────────
-  _p('Puerta trasera izquierda',S),
+  _p('Puerta trasera izquierda',S,6,1.5),
   _p('Bisagra de puerta trasera izquierda superior',N),
   _p('Bisagra de puerta trasera izquierda inferior',N),
   _p('Manija exterior de puerta trasera izquierda',N),
@@ -5458,23 +5467,23 @@ var _B4_Z2=[
   _p('Carcasa de espejo retrovisor izquierdo',N),
   _p('Cristal de espejo retrovisor izquierdo',N),
   // ── Resto lateral izquierdo ───────────────────────────
-  _p('Zócalo inferior de cabina doble izquierdo (Largo)',S),
+  _p('Zócalo inferior de cabina doble izquierdo (Largo)',S,8,1),
   _p('Estribo lateral izquierdo (Versión larga)',N),
   _p('Moldura de guardabarro delantero izquierdo',N),
   _p('Moldura de lateral exterior de caja izquierdo (Overfender / Buchi)',N),
-  _p('Parante delantero izquierdo',S),
-  _p('Parante central izquierdo',S),
+  _p('Parante delantero izquierdo',S,8,1),
+  _p('Parante central izquierdo',S,8,1),
   _p('Parante C (Trasero de cabina larga) izquierdo',N)
 ];
 var _B4_Z3=[
   // ── Puerta delantera derecha ──────────────────────────
-  _p('Puerta delantera derecha',S),
+  _p('Puerta delantera derecha',S,6,1.5),
   _p('Bisagra de puerta delantera derecha superior',N),
   _p('Bisagra de puerta delantera derecha inferior',N),
   _p('Manija exterior de puerta delantera derecha',N),
   _p('Moldura de puerta delantera derecha',N),
   // ── Puerta trasera derecha ────────────────────────────
-  _p('Puerta trasera derecha',S),
+  _p('Puerta trasera derecha',S,6,1.5),
   _p('Bisagra de puerta trasera derecha superior',N),
   _p('Bisagra de puerta trasera derecha inferior',N),
   _p('Manija exterior de puerta trasera derecha',N),
@@ -5484,12 +5493,12 @@ var _B4_Z3=[
   _p('Carcasa de espejo retrovisor derecho',N),
   _p('Cristal de espejo retrovisor derecho',N),
   // ── Resto lateral derecho ─────────────────────────────
-  _p('Zócalo inferior de cabina doble derecho (Largo)',S),
+  _p('Zócalo inferior de cabina doble derecho (Largo)',S,8,1),
   _p('Estribo lateral derecho (Versión larga)',N),
   _p('Moldura de guardabarro delantero derecho',N),
   _p('Moldura de lateral exterior de caja derecho (Overfender / Buchi)',N),
-  _p('Parante delantero derecho',S),
-  _p('Parante central derecho',S),
+  _p('Parante delantero derecho',S,8,1),
+  _p('Parante central derecho',S,8,1),
   _p('Parante C (Trasero de cabina larga) derecho',N)
 ];
 var _B4_Z8=[
@@ -5503,46 +5512,46 @@ var _BASE4={'Frontal':_B3_Z1,'Lateral Izquierda':_B4_Z2,'Lateral Derecha':_B4_Z3
 
 var _BASE5={
   'Frontal':[
-    _p('Paragolpes delantero',S),_p('Alma de paragolpes delantero',N),
-    _p('Parrilla frontal central',N),_p('Portapatente delantero',N),_p('Capot corto',S),
+    _p('Paragolpes delantero',S,8,2),_p('Alma de paragolpes delantero',N),
+    _p('Parrilla frontal central',N),_p('Portapatente delantero',N),_p('Capot',S,3,3),
     _p('Bisagra de capot izquierda',N),_p('Bisagra de capot derecha',N),_p('Cerradura de capot',N),
     _p('Óptica principal izquierda',N),_p('Óptica principal derecha',N),
     _p('Guardabarros delantero izquierdo',N),_p('Guardabarros delantero derecho',N),
     _p('Guardaplast izquierdo',N),_p('Guardaplast derecho',N),
-    _p('Máscara plástica',N),_p('Travesaño superior de panel frontal',S),_p('Travesaño inferior de panel frontal',S)
+    _p('Máscara plástica',N),_p('Travesaño superior de panel frontal',S,4,0.5),_p('Travesaño inferior de panel frontal',S,4,0.5)
   ],
   'Lateral Izquierda':[
-    _p('Puerta delantera izquierda',S),
+    _p('Puerta delantera izquierda',S,6,1.5),
     _p('Bisagra de puerta delantera izquierda superior',N),_p('Bisagra de puerta delantera izquierda inferior',N),
     _p('Manija exterior de puerta delantera izquierda',N),_p('Espejo retrovisor izquierdo (Doble visión / Brazo largo)',N),
     _p('Carcasa de espejo retrovisor izquierdo',N),_p('Cristal de espejo retrovisor izquierdo',N),
-    _p('Zócalo inferior izquierdo (Zona delantera)',S),
-    _p('Panel lateral de carga izquierdo (Chapa ciega o estructural)',S),
+    _p('Zócalo inferior izquierdo (Zona delantera)',S,8,1),
+    _p('Panel lateral de carga izquierdo (Chapa ciega o estructural)',S,16,3),
     _p('Moldura plástica protectora lateral izquierda (Ancha)',N),_p('Moldura de puerta delantera izquierda',N),
     _p('Moldura de guardabarro delantero izquierdo',N),
-    _p('Parante delantero izquierdo',S),_p('Parante central izquierdo',S),
+    _p('Parante delantero izquierdo',S,8,0.5),_p('Parante central izquierdo',S,8,0.5),
     _p('Parante C (Trasero intermedio) izquierdo',N),_p('Parante D (Estructural trasero) izquierdo',N)
   ],
   'Lateral Derecha':[
-    _p('Puerta delantera derecha',S),
+    _p('Puerta delantera derecha',S,6,1.5),
     _p('Bisagra de puerta delantera derecha superior',N),_p('Bisagra de puerta delantera derecha inferior',N),
     _p('Manija exterior de puerta delantera derecha',N),_p('Espejo retrovisor derecho (Doble visión / Brazo largo)',N),
     _p('Carcasa de espejo retrovisor derecho',N),_p('Cristal de espejo retrovisor derecho',N),
-    _p('Zócalo inferior derecho (Zona delantera)',S),
-    _p('Puerta lateral corrediza de carga (Panel de chapa)',S),_p('Riel / Guía exterior de puerta corrediza',N),
+    _p('Zócalo inferior derecho (Zona delantera)',S,8,1),
+    _p('Puerta lateral corrediza de carga (Panel de chapa)',S,6,2),_p('Riel / Guía exterior de puerta corrediza',N),
     _p('Cerradura de puerta lateral corrediza',N),_p('Manija exterior de puerta lateral corrediza',N),
-    _p('Panel lateral de carga derecho (Tramo fijo)',S),_p('Moldura de puerta delantera derecha',N),
-    _p('Parante delantero derecho',S),_p('Parante central derecho',S),
+    _p('Panel lateral de carga derecho (Tramo fijo)',S,8,2),_p('Moldura de puerta delantera derecha',N),
+    _p('Parante delantero derecho',S,8,0.5),_p('Parante central derecho',S,8,0.5),
     _p('Parante C (Trasero intermedio) derecho',N),_p('Parante D (Estructural trasero) derecho',N)
   ],
   'Trasera / Acceso a Carga':[
-    _p('Puerta trasera batiente izquierda',S),_p('Puerta trasera batiente derecha',S),
+    _p('Puerta trasera batiente izquierda',S,6,2),_p('Puerta trasera batiente derecha',S,6,2),
     _p('Bisagra de puerta batiente izquierda superior',N),_p('Bisagra de puerta batiente izquierda inferior',N),
     _p('Bisagra de puerta batiente derecha superior',N),_p('Bisagra de puerta batiente derecha inferior',N),
     _p('Cerradura exterior de puerta trasera batiente',N),_p('Manija exterior de puerta trasera batiente',N),
-    _p('Paragolpes trasero',S),_p('Óptica trasera vertical izquierda',N),_p('Óptica trasera vertical derecha',N),
-    _p('Portapatente trasero con luz de matrícula',N),_p('Panel de cola',S),
-    _p('Piso de carga de chapa acanalada',S),_p('Larguero estructural de chasis trasero izquierdo',S),_p('Larguero estructural de chasis trasero derecho',S),
+    _p('Paragolpes trasero',S,6,2),_p('Óptica trasera vertical izquierda',N),_p('Óptica trasera vertical derecha',N),
+    _p('Portapatente trasero con luz de matrícula',N),_p('Panel de cola',S,8,1.5),
+    _p('Piso de carga de chapa acanalada',S,16,3),_p('Larguero estructural de chasis trasero izquierdo',S,16,0.5),_p('Larguero estructural de chasis trasero derecho',S,16,0.5),
     _p('Tabique / Mampara de separación de cabina (Estructural interno)',N)
   ],
   'Tren Delantero y Suspensión':[
@@ -5562,7 +5571,7 @@ var _BASE5={
     _p('Intercooler',N),_p('Electroventilador de alta eficiencia',N),
     _p('Alternador de alta capacidad',N)
   ],
-  'Techo':[_p('Panel de chapa de techo extendido / elevado',S)],
+  'Techo':[_p('Techo',S,16,3)],
   'Cristales':[
     _p('Parabrisas delantero de gran superficie',N),
     _p('Luneta de puerta trasera batiente izquierda',N),_p('Luneta de puerta trasera batiente derecha',N),
