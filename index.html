@@ -4181,7 +4181,7 @@ async function lpEnviarContacto(e){
 // ════════════════════════════════════════════════════════
 
 var SUSTITUIR_16HS = ['Lateral caja pick-up derecho','Lateral caja pick-up izquierdo','Guardabarros trasero derecho','Guardabarros trasero izquierdo'];
-var OP_LISTA = ['Banco de estiraje','Carga de gas aire acondicionado','Desmontaje y montaje de accesorios','Mecánica y/o electricidad','Pegado parabrisas/luneta','Otra'];
+var OP_LISTA = ['Banco de estiraje','Carga de gas aire acondicionado','Alineación y balanceo','Armado de rueda','Escaneo / reseteo de módulos','Desmontaje y montaje de accesorios','Mecánica y/o electricidad','Pegado parabrisas/luneta','Otra'];
 var relCalcState = {tipo:'', piezas:[]};
 var relCalcIdx = 0;
 var openZones = {};
@@ -4588,10 +4588,12 @@ function gridToggleTask(rid,tarea){
       if(e) relCalcState.piezas=relCalcState.piezas.filter(function(x){return x._id!==e._id;});
     });
     var esSustituir=tarea==='Sustituir';
-    var hsInit=esSustituir&&ctx.pieza.defaultHs?ctx.pieza.defaultHs:0;
+    var esReparar=tarea==='Reparar';
+    var hsInit=esSustituir&&ctx.pieza.defaultHs?ctx.pieza.defaultHs:esReparar&&ctx.pieza.defaultHsR?ctx.pieza.defaultHsR:0;
     var panosInit=tarea==='Pintar'?1:tarea==='Difuminar'?0.5:esSustituir&&ctx.pieza.defaultPanos?ctx.pieza.defaultPanos:0;
     relCalcState.piezas.push({_id:relCalcIdx++,zona:ctx.zona,pieza:ctx.pieza.nombre,tarea:tarea,nivelDano:'',hsTrabajo:hsInit,panos:panosInit});
-    if(ctx.pieza.requierePintura&&(tarea==='Reparar'||tarea==='Sustituir')){
+    var esZonaMec=ZONAS_MECANICA_COSTO.indexOf(ctx.zona)!==-1;
+    if(ctx.pieza.requierePintura&&!esZonaMec&&(tarea==='Reparar'||tarea==='Sustituir')){
       if(!gFind(ctx.zona,ctx.pieza.nombre,'Pintar')){
         var panosP=esSustituir&&ctx.pieza.defaultPanos?ctx.pieza.defaultPanos:1;
         relCalcState.piezas.push({_id:relCalcIdx++,zona:ctx.zona,pieza:ctx.pieza.nombre,tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:panosP});
@@ -5106,11 +5108,18 @@ function renderAcordeon(zona,piezasList){
 function renderPiezaRow(zona,pieza,mostrarZona){
   var rid=_gRid++; _gMap[rid]={zona:zona,pieza:pieza};
   var esSoloSust=ZONAS_SOLO_SUST.indexOf(zona)!==-1;
+  var esMecanica=ZONAS_MECANICA_COSTO.indexOf(zona)!==-1;
   var hasR=!!gFind(zona,pieza.nombre,'Reparar'),hasS=!!gFind(zona,pieza.nombre,'Sustituir');
   var hasP=!!gFind(zona,pieza.nombre,'Pintar'),hasD=!!gFind(zona,pieza.nombre,'Difuminar');
   var blq={Reparar:hasS||hasD,Sustituir:hasR||hasD,Pintar:hasD,Difuminar:hasR||hasS||hasP};
-  // requierePintura=true → R,S,P,D | requierePintura=false → solo S
-  var tareas=(esSoloSust||!pieza.requierePintura)?['Sustituir']:['Reparar','Sustituir','Pintar','Difuminar'];
+  // Zonas mecánicas con requierePintura=true → R+S (sin P ni D)
+  // Zonas mecánicas sin requierePintura → solo S
+  // Zonas chapa con requierePintura=true → R,S,P,D
+  // Zonas chapa sin requierePintura → solo S
+  var tareas;
+  if(esMecanica&&pieza.requierePintura) tareas=['Reparar','Sustituir'];
+  else if(esSoloSust||!pieza.requierePintura) tareas=['Sustituir'];
+  else tareas=['Reparar','Sustituir','Pintar','Difuminar'];
   var labels={Reparar:'R',Sustituir:'S',Pintar:'P',Difuminar:'D'};
   var taskBtns=tareas.map(function(t){
     var e=gFind(zona,pieza.nombre,t),lbl=labels[t],isBlq=!!blq[t];
@@ -5283,15 +5292,16 @@ var SUSTITUIR_16HS_GRID = [
 ];
 
 (function(){
-var _p=function(n,r,hs,panos){return {nombre:n,requierePintura:!!r,defaultHs:hs||0,defaultPanos:panos||0};};
+var _p=function(n,r,hs,panos,hsR){return {nombre:n,requierePintura:!!r,defaultHs:hs||0,defaultPanos:panos||0,defaultHsR:hsR||0};};
 var S=true,N=false;
 var _Z9_SEG=[
-  _p('Airbag conductor',N),_p('Airbag acompañante',N),
-  _p('Airbag rodilla conductor',N),
-  _p('Airbag de butaca conductor',N),_p('Airbag de butaca acompañante',N),
-  _p('Airbag cortina lateral izquierdo',N),_p('Airbag cortina lateral derecho',N),
-  _p('Cinturón / pretensor conductor',N),
-  _p('Cinturón / pretensor acompañante',N),_p('Módulo airbag / pretensores',N)
+  _p('Airbag conductor',N,1),_p('Airbag acompañante',N,1),
+  _p('Plancha abordo',N,4),
+  _p('Airbag rodilla conductor',N,1),
+  _p('Airbag de butaca conductor',N,2),_p('Airbag de butaca acompañante',N,2),
+  _p('Airbag cortina lateral izquierdo',N,2),_p('Airbag cortina lateral derecho',N,2),
+  _p('Cinturón / pretensor conductor',N,1),
+  _p('Cinturón / pretensor acompañante',N,1),_p('Módulo airbag / pretensores',N,1)
 ];
 var _B1_Z1=[
   // ── Paragolpes delantero ──────────────────────────────
@@ -5418,62 +5428,74 @@ var _B1_Z4=[
   _p('Larguero estructural trasero izquierdo',S,16,0.5),_p('Larguero estructural trasero derecho',S,16,0.5)
 ];
 var _B1_Z5=[
-  _p('Cuna de motor (Araña / Subchasis)',N),_p('Amortiguador delantero izquierdo',N),_p('Amortiguador delantero derecho',N),
-  _p('Espiral delantero izquierdo',N),_p('Espiral delantero derecho',N),_p('Cazoleta de amortiguador delantero izquierdo',N),
-  _p('Cazoleta de amortiguador delantero derecho',N),_p('Parrilla de suspensión inferior izquierda',N),
-  _p('Parrilla de suspensión inferior derecha',N),_p('Rótula de suspensión izquierda',N),_p('Rótula de suspensión derecha',N),
-  _p('Barra estabilizadora delantera',N),_p('Bieleta de barra estabilizadora izquierda',N),_p('Bieleta de barra estabilizadora derecha',N),
-  _p('Caja de dirección (Hidráulica / Eléctrica)',N),
-  _p('Precap (Axial de dirección) izquierdo',N),_p('Precap (Axial de dirección) derecho',N),
-  _p('Extremo de dirección izquierdo',N),_p('Extremo de dirección derecho',N),
-  _p('Portamaza delantero izquierdo',N),_p('Portamaza delantero derecho',N),
-  _p('Maza de rueda delantera izquierda',N),_p('Maza de rueda delantera derecha',N),
-  _p('Semieje izquierdo completo',N),_p('Semieje derecho completo',N),
-  _p('Disco de freno delantero izquierdo',N),_p('Disco de freno delantero derecho',N),
-  _p('Caliper delantero izquierdo',N),_p('Caliper delantero derecho',N),
-  _p('Pastillas de freno delanteras',N),
-  _p('Campana de freno delantera izquierda',N),_p('Campana de freno delantera derecha',N)
+  _p('Cuna de motor (Araña / Subchasis)',S,4,0,6),
+  _p('Amortiguador delantero izquierdo',N,1),_p('Amortiguador delantero derecho',N,1),
+  _p('Espiral delantero izquierdo',N,1),_p('Espiral delantero derecho',N,1),
+  _p('Cazoleta de amortiguador delantero izquierdo',N,0.5),_p('Cazoleta de amortiguador delantero derecho',N,0.5),
+  _p('Parrilla de suspensión inferior izquierda',N,1.5),_p('Parrilla de suspensión inferior derecha',N,1.5),
+  _p('Rótula de suspensión izquierda',N,0.5),_p('Rótula de suspensión derecha',N,0.5),
+  _p('Barra estabilizadora delantera',N,0.5),
+  _p('Bieleta de barra estabilizadora izquierda',N,0.5),_p('Bieleta de barra estabilizadora derecha',N,0.5),
+  _p('Caja de dirección (Hidráulica / Eléctrica)',S,3,0,4),
+  _p('Precap (Axial de dirección) izquierdo',N,0.5),_p('Precap (Axial de dirección) derecho',N,0.5),
+  _p('Extremo de dirección izquierdo',N,0.5),_p('Extremo de dirección derecho',N,0.5),
+  _p('Portamaza delantero izquierdo',N,0.5),_p('Portamaza delantero derecho',N,0.5),
+  _p('Maza de rueda delantera izquierda',N,1),_p('Maza de rueda delantera derecha',N,1),
+  _p('Semieje izquierdo completo',S,1.5,0,4),_p('Semieje derecho completo',S,1.5,0,4),
+  _p('Rodamiento de rueda delantera izquierdo',N,0.5),_p('Rodamiento de rueda delantera derecho',N,0.5),
+  _p('Disco de freno delantero izquierdo',N,1),_p('Disco de freno delantero derecho',N,1),
+  _p('Caliper delantero izquierdo',N,0.5),_p('Caliper delantero derecho',N,0.5),
+  _p('Pastillas de freno delanteras',N,0.5),
+  _p('Campana de freno delantera izquierda',N,0.5),_p('Campana de freno delantera derecha',N,0.5),
+  _p('Líquido hidráulico de dirección',N,0),
+  _p('Cubierta delantera izquierda',N,0),_p('Llanta delantera izquierda',S,0,0,1),
+  _p('Cubierta delantera derecha',N,0),_p('Llanta delantera derecha',S,0,0,1),
+  _p('Cubierta trasera izquierda',N,0),_p('Llanta trasera izquierda',S,0,0,1),
+  _p('Cubierta trasera derecha',N,0),_p('Llanta trasera derecha',S,0,0,1)
 ];
 var _Z_TREN_TRA_SED=[
-  _p('Amortiguador trasero izquierdo',N),_p('Amortiguador trasero derecho',N),
-  _p('Espiral trasero izquierdo',N),_p('Espiral trasero derecho',N),
-  _p('Eje trasero',N),_p('Punta de eje trasero izquierdo',N),_p('Punta de eje trasero derecho',N),
-  _p('Maza de rueda trasera izquierda',N),_p('Maza de rueda trasera derecha',N),
-  _p('Rodamiento trasero izquierdo',N),_p('Rodamiento trasero derecho',N),
-  _p('Barra estabilizadora trasera',N),_p('Bieleta trasera izquierda',N),_p('Bieleta trasera derecha',N),
-  _p('Disco de freno trasero izquierdo',N),_p('Disco de freno trasero derecho',N),
-  _p('Caliper trasero izquierdo',N),_p('Caliper trasero derecho',N),
-  _p('Pastillas de freno traseras',N),
-  _p('Campana de freno trasera izquierda',N),_p('Campana de freno trasera derecha',N)
+  _p('Amortiguador trasero izquierdo',N,1),_p('Amortiguador trasero derecho',N,1),
+  _p('Espiral trasero izquierdo',N,0.5),_p('Espiral trasero derecho',N,0.5),
+  _p('Eje trasero',S,4,0,6),
+  _p('Punta de eje trasero izquierdo',N,0.5),_p('Punta de eje trasero derecho',N,0.5),
+  _p('Maza de rueda trasera izquierda',N,1),_p('Maza de rueda trasera derecha',N,1),
+  _p('Rodamiento trasero izquierdo',N,0.5),_p('Rodamiento trasero derecho',N,0.5),
+  _p('Disco de freno trasero izquierdo',N,1),_p('Disco de freno trasero derecho',N,1),
+  _p('Caliper trasero izquierdo',N,0.5),_p('Caliper trasero derecho',N,0.5),
+  _p('Pastillas de freno traseras',N,0.5),
+  _p('Campana de freno trasera izquierda',N,0.5),_p('Campana de freno trasera derecha',N,0.5)
 ];
 var _B1_Z6=[
-  _p('Block de motor',N),_p('Cárter de aceite',N),_p('Tapa de cilindros',N),_p('Tapa de válvulas',N),
-  _p('Soporte / Pata de motor izquierda',N),_p('Soporte / Pata de motor derecha',N),
-  _p('Soporte / Pata de motor trasera',N),
-  _p('Filtro de aire (Elemento)',N),_p('Carcaza de filtro de aire',N),_p('Toma de aire (Entrada)',N),
-  _p('Radiador de agua de motor',N),_p('Condensador de aire acondicionado',N),_p('Intercooler',N),
-  _p('Electroventilador completo (Carenado y aspas)',N),_p('Depósito de expansión de refrigerante',N),
-  _p('Batería',N),_p('Bandeja de sujeción de batería',N),_p('Computadora de motor (ECU)',N),
-  _p('Fusiblera del vano motor',N),_p('Módulo de control ABS / ESP',N),_p('Servoasistencia (Servofreno)',N),
-  _p('Bomba de freno',N),_p('Alternador',N),_p('Compresor de aire acondicionado',N),
-  _p('Agua desmineralizada',N),_p('Líquido refrigerante',N),_p('Aceite de motor',N),
-  _p('Aceite de caja',N),_p('Líquido de frenos',N)
+  _p('Block de motor',N,8),_p('Cárter de aceite',N,1),_p('Tapa de cilindros',N,3),_p('Tapa de válvulas',N,1),
+  _p('Soporte / Pata de motor izquierda',N,1),_p('Soporte / Pata de motor derecha',N,1),
+  _p('Soporte / Pata de motor trasera',N,1),
+  _p('Filtro de aire (Elemento)',N,0),_p('Carcaza de filtro de aire',N,0.5),_p('Toma de aire (Entrada)',N,0),
+  _p('Radiador de agua de motor',N,1),_p('Condensador de aire acondicionado',N,1),_p('Intercooler',N,0.5),
+  _p('Electroventilador completo (Carenado y aspas)',N,0.5),_p('Depósito de expansión de refrigerante',N,0.5),
+  _p('Batería',N,0),_p('Bandeja de sujeción de batería',N,0.5),_p('Computadora de motor (ECU)',N,0.5),
+  _p('Fusiblera del vano motor',N,1),_p('Módulo de control ABS / ESP',N,1),
+  _p('Bomba de freno / Servoasistencia (Servofreno)',N,1),
+  _p('Alternador',N,1),_p('Compresor de aire acondicionado',N,1),
+  _p('Agua desmineralizada',N,0),_p('Líquido refrigerante',N,0),_p('Aceite de motor',N,0),
+  _p('Aceite de caja',N,0),_p('Líquido de frenos',N,0)
 ];
 var _B1_Z7=[
-  _p('Techo',S,12,3),_p('Refuerzo transversal de techo',N),
-  _p('Tapizado de techo',N),_p('Cristal de techo',N),_p('Mecanismo de apertura de cristal de techo',N),
-  _p('Antena',N),_p('Base de antena',N),
-  _p('Moldura de techo derecha',N),_p('Moldura de techo izquierda',N)
+  _p('Techo',S,8,3,12),
+  _p('Refuerzo transversal de techo',S,1,0.5,1),
+  _p('Tapizado de techo',N,3),_p('Cristal de techo',N,4),
+  _p('Mecanismo de apertura de cristal de techo',S,2,0,4),
+  _p('Antena',N,0),_p('Base de antena',N,1.5),
+  _p('Moldura de techo derecha',N,0),_p('Moldura de techo izquierda',N,0)
 ];
 var _B1_Z8=[
-  _p('Parabrisas delantero',N),_p('Luneta trasera',N),
-  _p('Cristal de puerta delantera izquierda',N),_p('Cristal de puerta delantera derecha',N),
-  _p('Cristal de puerta trasera izquierda',N),_p('Cristal de puerta trasera derecha',N),
-  _p('Cristal fijo de custodia lateral izquierdo',N),_p('Cristal fijo de custodia lateral derecho',N),
-  _p('Mecanismo levantacristal delantero izquierdo',N),_p('Mecanismo levantacristal delantero derecho',N),
-  _p('Mecanismo levantacristal trasero izquierdo',N),_p('Mecanismo levantacristal trasero derecho',N),
-  _p('Moldura lateral de parabrisas derecha',N),_p('Moldura lateral de parabrisas izquierda',N),
-  _p('Rejilla bajo parabrisas',N)
+  _p('Parabrisas delantero',N,2),_p('Luneta trasera',N,2),
+  _p('Cristal de puerta delantera izquierda',N,0.5),_p('Cristal de puerta delantera derecha',N,0.5),
+  _p('Cristal de puerta trasera izquierda',N,0.5),_p('Cristal de puerta trasera derecha',N,0.5),
+  _p('Cristal fijo de custodia lateral izquierdo',N,1),_p('Cristal fijo de custodia lateral derecho',N,1),
+  _p('Mecanismo levantacristal delantero izquierdo',N,1),_p('Mecanismo levantacristal delantero derecho',N,1),
+  _p('Mecanismo levantacristal trasero izquierdo',N,1),_p('Mecanismo levantacristal trasero derecho',N,1),
+  _p('Moldura lateral de parabrisas derecha',N,0),_p('Moldura lateral de parabrisas izquierda',N,0),
+  _p('Rejilla bajo parabrisas',N,0)
 ];
 var _BASE1={'Frontal':_B1_Z1,'Lateral Izquierda':_B1_Z2,'Lateral Derecha':_B1_Z3,'Trasera':_B1_Z4,'Tren Delantero y Tracción':_B1_Z5,'Tren Trasero':_Z_TREN_TRA_SED,'Mecánica / Vano Motor':_B1_Z6,'Techo':_B1_Z7,'Cristales':_B1_Z8,'Seguridad':_Z9_SEG};
 
