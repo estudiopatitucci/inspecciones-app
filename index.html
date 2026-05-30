@@ -1913,6 +1913,7 @@ function abrirModal(id){
   var urgStyle=i.Urgente?'background:rgba(229,83,83,.15);color:var(--red);border:1px solid rgba(229,83,83,.3)':'background:var(--bg3);color:var(--text2);border:1px solid var(--border)';
   html+='<button class="btn-sm" style="'+urgStyle+'" onclick="toggleUrgente(\''+esc(i.ID)+'\')">'+(i.Urgente?'🔴 Quitar urgencia':'⚪ Marcar urgente')+'</button>';
   html+='<button class="btn-secondary btn-sm" onclick="generarPDFCompleto(\''+esc(i.ID)+'\')">📄 Informe PDF</button>';
+  if(rel&&rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length)html+='<button class="btn-sm" style="background:rgba(220,38,38,.12);color:#dc2626;border:1px solid rgba(220,38,38,.3)" onclick="exportarParaOrion(\''+esc(i.ID)+'\')">🔴 Cargar en ORIÓN</button>';
   if(i.Estado==='Pendientes de carga'||i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)" onclick="enviarATaller(\''+esc(i.ID)+'\')">&#x1F517; Enviar a taller</button>';
   html+='<button class="btn-danger btn-sm" onclick="eliminarInsp(\''+esc(i.ID)+'\')">Eliminar</button>';
   html+='<button class="btn-secondary btn-sm" onclick="cerrarModal()" style="margin-left:auto">✕ Cerrar</button>';
@@ -3422,6 +3423,61 @@ async function enviarRel(){
     toast('Relevamiento enviado correctamente.','ok');
     setTimeout(function(){cerrarRel();},1500);
   }catch(e){ocultarProgresoSubida();msg.className='msg err';msg.textContent='Error al enviar. Intentá de nuevo.';}
+}
+
+// ─── Exportar para ORIÓN ──────────────────────────────────────────────────────
+function exportarParaOrion(id){
+  var i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
+  var rel=i.Relevamiento;if(typeof rel==='string'){try{rel=JSON.parse(rel);}catch(e){rel=null;}}
+  if(!rel||!rel.calculador||!rel.calculador.piezas)return alert('No hay calculador con piezas para este relevamiento.');
+  var calc=rel.calculador;
+  // Número limpio para ORIÓN (solo parte central)
+  var sinRaw=String(i.Siniestro||'').trim();
+  var sinOrion=sinRaw.replace(/^\d+-(\d+)-.*$/,'$1')||sinRaw;
+  // Mapeo de tarea → código ORIÓN
+  var tareaMap={'Sustituir':'S','Reparar':'R','Pintar':'P','Difuminar':'P','Reparar + Pintar':'RP','Sustituir + Pintar':'SP'};
+  var piezasOrion=calc.piezas.map(function(p,idx){
+    var op=tareaMap[p.tarea]||p.tarea||'S';
+    return {n:idx+1,pieza:p.pieza,zona:p.zona,operacion:op,tiempo:p.hsTrabajo||0,superficie:p.panos||0,dano:p.nivelDano||''};
+  });
+  var exportData={siniestro:sinOrion,siniestroCompleto:sinRaw,patente:i.Patente||'',vehiculo:(i.Modelo||'')+(i.Anio?' '+i.Anio:''),piezas:piezasOrion,totalHs:calc.total||0,totalPanos:calc.totalPanos||0};
+  // Guardar en elemento oculto para el agente
+  var el=document.getElementById('orion-export-data');
+  if(!el){el=document.createElement('div');el.id='orion-export-data';el.style.display='none';document.body.appendChild(el);}
+  el.setAttribute('data-json',JSON.stringify(exportData));
+  // Mostrar panel visual
+  var lineas=piezasOrion.map(function(p){
+    return (p.n)+'. '+p.pieza+' | Op: '+p.operacion+' | Tiempo: '+p.tiempo+'hs | Sup: '+p.superficie+(p.dano?' | Daño: '+p.dano:'');
+  }).join('\n');
+  var txt='DATOS PARA ORIÓN\n'
+    +'Siniestro N°: '+sinOrion+'\n'
+    +'Patente: '+exportData.patente+'\n'
+    +'Vehículo: '+exportData.vehiculo+'\n'
+    +'─────────────────────────────\n'
+    +'PIEZAS ('+piezasOrion.length+'):\n'
+    +lineas+'\n'
+    +'─────────────────────────────\n'
+    +'Total: '+exportData.totalHs+' hs | '+exportData.totalPanos+' paños';
+  // Mostrar modal de exportación
+  var modal=document.getElementById('orion-modal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='orion-modal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center';
+    modal.innerHTML='<div style="background:var(--bg2,#fff);border-radius:14px;padding:24px;max-width:560px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">'
+      +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">'
+      +'<span style="font-size:20px">🔴</span>'
+      +'<h3 style="margin:0;font-size:16px;font-weight:700">Exportar a ORIÓN</h3>'
+      +'<button onclick="document.getElementById(\'orion-modal\').style.display=\'none\'" style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2,#888)">✕</button>'
+      +'</div>'
+      +'<pre id="orion-export-txt" style="background:var(--bg3,#f5f5f5);border-radius:8px;padding:14px;font-size:12px;font-family:monospace;line-height:1.7;white-space:pre-wrap;margin-bottom:16px"></pre>'
+      +'<button onclick="navigator.clipboard.writeText(document.getElementById(\'orion-export-txt\').textContent)" style="background:var(--accent,#4f7cff);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer;margin-right:8px">📋 Copiar</button>'
+      +'<button onclick="document.getElementById(\'orion-modal\').style.display=\'none\'" style="background:var(--bg3,#f0f0f0);border:none;border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer">Cerrar</button>'
+      +'</div>';
+    document.body.appendChild(modal);
+  }
+  document.getElementById('orion-export-txt').textContent=txt;
+  modal.style.display='flex';
 }
 
 // ─── PDFs ─────────────────────────────────────────────────────────────────────
