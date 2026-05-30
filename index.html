@@ -1209,7 +1209,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
             <p style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:12px">Costo de materiales</p>
             <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px">
-              <div class="field" style="flex:1;min-width:160px;position:relative">
+              <div class="field" style="flex:1;min-width:140px;position:relative">
                 <label style="font-size:11px">Costo día de chapa*
                   <span title="El día de chapa consta de 8 hs" style="display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--accent);color:#fff;font-size:10px;font-weight:700;cursor:default;margin-left:4px;vertical-align:middle">i</span>
                 </label>
@@ -1220,7 +1220,16 @@ tr:hover td{background:rgba(255,255,255,.02)}
                     style="padding-left:22px"/>
                 </div>
               </div>
-              <div class="field" style="flex:1;min-width:160px">
+              <div class="field" style="flex:1;min-width:140px">
+                <label style="font-size:11px">Costo hora mecánica*</label>
+                <div style="position:relative">
+                  <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text3);pointer-events:none">$</span>
+                  <input type="number" id="rel-costo-mecanica" min="0" step="0.01" placeholder="0,00"
+                    oninput="relSetCosto('mecanica',this.value)"
+                    style="padding-left:22px"/>
+                </div>
+              </div>
+              <div class="field" style="flex:1;min-width:140px">
                 <label style="font-size:11px">Costo paño de pintura*</label>
                 <div style="position:relative">
                   <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--text3);pointer-events:none">$</span>
@@ -1233,8 +1242,12 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <!-- Desglose del costo -->
             <div id="rel-costo-desglose" style="display:none;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px">
               <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-                <span style="color:var(--text2)">Mano de obra (<span id="rel-c-dias">0</span> días de chapa)</span>
+                <span style="color:var(--text2)">Chapa (<span id="rel-c-dias">0</span> días)</span>
                 <span id="rel-c-chapa-val" style="font-family:'DM Mono',monospace;font-weight:500">$0</span>
+              </div>
+              <div id="rel-c-mec-row" style="display:none;justify-content:space-between;margin-bottom:6px">
+                <span style="color:var(--text2)">Mecánica (<span id="rel-c-hs-mec">0</span> hs)</span>
+                <span id="rel-c-mec-val" style="font-family:'DM Mono',monospace;font-weight:500">$0</span>
               </div>
               <div style="display:flex;justify-content:space-between;margin-bottom:6px">
                 <span style="color:var(--text2)">Pintura (<span id="rel-c-panos">0</span> paños)</span>
@@ -2944,7 +2957,7 @@ async function guardarBorradorCompleto(){
     telTaller:s('rel-tel')?s('rel-tel').value:'',
     mailTaller:s('rel-mail')?s('rel-mail').value:'',
     cuit:s('rel-cuit')?s('rel-cuit').value:'',
-    costoDiaChapa:relCostoDiaChapa,costoPanoPintura:relCostoPanoPintura,
+    costoDiaChapa:relCostoDiaChapa,costoHoraMecanica:relCostoHoraMecanica,costoPanoPintura:relCostoPanoPintura,
     calculador:{tipo:relCalcState.tipo,
       piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),
       total:calcTotal,
@@ -2973,7 +2986,7 @@ function guardarBorrador(){
   var bd={km:s('rel-km').value,danos:s('rel-danos').value,
     calculador:{tipo:relCalcState.tipo,piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo};}),total:calcTotal,operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};})},
     taller:s('rel-taller').value,telTaller:s('rel-tel').value,mailTaller:s('rel-mail').value,
-    cuit:s('rel-cuit').value,costoDiaChapa:relCostoDiaChapa,costoPanoPintura:relCostoPanoPintura,ts:Date.now()};
+    cuit:s('rel-cuit').value,costoDiaChapa:relCostoDiaChapa,costoHoraMecanica:relCostoHoraMecanica,costoPanoPintura:relCostoPanoPintura,ts:Date.now()};
   try{localStorage.setItem('bdr_'+relId,JSON.stringify(bd));}catch(e){}
 }
 ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit'].forEach(function(id){
@@ -2992,8 +3005,10 @@ function abrirRel(id){
   relOpState = [];
   relOpIdx = 0;
   relCostoDiaChapa = 0;
+  relCostoHoraMecanica = 0;
   relCostoPanoPintura = 0;
   if(s('rel-costo-chapa')) s('rel-costo-chapa').value='';
+  if(s('rel-costo-mecanica')) s('rel-costo-mecanica').value='';
   if(s('rel-costo-pano')) s('rel-costo-pano').value='';
   if(rel&&rel.calculador){
     relCalcState = {tipo:rel.calculador.tipo||'', piezas:(rel.calculador.piezas||[]).map(function(p,i){return Object.assign({},p,{_id:i});})};
@@ -3052,6 +3067,7 @@ function abrirRel(id){
     if(bdr.mailTaller)s('rel-mail').value=bdr.mailTaller;
     if(bdr.cuit)s('rel-cuit').value=bdr.cuit;
     if(bdr.costoDiaChapa){relCostoDiaChapa=bdr.costoDiaChapa;if(s('rel-costo-chapa'))s('rel-costo-chapa').value=bdr.costoDiaChapa;}
+    if(bdr.costoHoraMecanica){relCostoHoraMecanica=bdr.costoHoraMecanica;if(s('rel-costo-mecanica'))s('rel-costo-mecanica').value=bdr.costoHoraMecanica;}
     if(bdr.costoPanoPintura){relCostoPanoPintura=bdr.costoPanoPintura;if(s('rel-costo-pano'))s('rel-costo-pano').value=bdr.costoPanoPintura;}
     if(bdr.calculador){
       relCalcState={tipo:bdr.calculador.tipo||'',piezas:(bdr.calculador.piezas||[]).map(function(p,i){return Object.assign({},p,{_id:i});})};
@@ -3371,6 +3387,8 @@ function validarCamposRel(){
   if(!cuit) return 'El CUIT es obligatorio.';
   if(cuit.length!==11) return 'El CUIT debe tener exactamente 11 dígitos numéricos.';
   if(chapa<=0) return 'El costo día de chapa no puede ser $0. Completá el valor antes de enviar.';
+  var hayHsMec = relCalcState.piezas.some(function(p){ return ZONAS_MECANICA_COSTO.indexOf(p.zona)!==-1 && (p.hsTrabajo||0)>0; });
+  if(hayHsMec && relCostoHoraMecanica<=0) return 'Hay piezas mecánicas con horas cargadas. Completá el costo de hora mecánica antes de enviar.';
   if(pano<=0) return 'El costo paño de pintura no puede ser $0. Completá el valor antes de enviar.';
   return null;
 }
@@ -3397,7 +3415,7 @@ async function enviarRel(){
   var _costoChapa=_diasChapa*relCostoDiaChapa;
   var _costoPintura=calcTotalPanos*relCostoPanoPintura;
   var _costoTotal=_costoChapa+_costoPintura+_totalOpCosto;
-  var calcData={tipo:relCalcState.tipo,piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};}),total:calcTotalHs+calcTotalOpHs,totalPanos:calcTotalPanos,costoDiaChapa:relCostoDiaChapa,costoPanoPintura:relCostoPanoPintura,costoTotal:_costoTotal};
+  var calcData={tipo:relCalcState.tipo,piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};}),total:calcTotalHs+calcTotalOpHs,totalPanos:calcTotalPanos,costoDiaChapa:relCostoDiaChapa,costoHoraMecanica:relCostoHoraMecanica,costoPanoPintura:relCostoPanoPintura,costoTotal:_costoTotal};
   var _fl=fotosPendientes.filter(function(f){return f.driveLink;}).map(function(f){return f.driveLink;});
   var tareasText = s('rel-tareas') ? s('rel-tareas').value.trim() : '';
   var rel={km,danos,calculador:calcData,taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),fotosLinks:_fl,cantFotos:_fl.length,fechaEnvio:new Date().toISOString(),tareasARealizar:tareasText};
@@ -3521,15 +3539,18 @@ function generarPDFCompleto(id){
         +'<td style="padding:4px 8px;text-align:center">'+panosLabel+'</td>'
         +'</tr>';
     }).join('');
-    var totalHs=calc.piezas.reduce(function(a,p){return a+(p.hsTrabajo||p.horas||0);},0);
+    var ZMEC=['Mecánica / Vano Motor','Mecánica','Tren Delantero y Tracción','Tren Delantero y Tracción 4x4','Tren Delantero y Suspensión','Tren Trasero'];
+    var totalHsChapaPDF=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a:a+(p.hsTrabajo||p.horas||0);},0);
+    var totalHsMecPDF=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a+(p.hsTrabajo||p.horas||0):a;},0);
     var totalPanos=calc.piezas.reduce(function(a,p){return a+(p.tarea==='Pintar'?(p.panos||1):p.tarea==='Difuminar'?0.5:0);},0);
-    var diasTotal=totalHs>0?Math.round(totalHs/8*10)/10:0;
+    var diasTotal=totalHsChapaPDF>0?Math.round(totalHsChapaPDF/8*10)/10:0;
     // Costos
-    var costoDia=calc.costoDiaChapa||0,costoPano=calc.costoPanoPintura||0;
+    var costoDia=calc.costoDiaChapa||0,costoHMec=calc.costoHoraMecanica||0,costoPano=calc.costoPanoPintura||0;
     var costoChapa=diasTotal*costoDia;
+    var costoMecPDF=totalHsMecPDF*costoHMec;
     var costoPintura=totalPanos*costoPano;
     var totalOp=(calc.operaciones||[]).reduce(function(a,o){return a+(o.costo||0);},0);
-    var costoTotal=costoChapa+costoPintura+totalOp;
+    var costoTotal=costoChapa+costoMecPDF+costoPintura+totalOp;
     // Operaciones especiales
     var filasOp='';
     if(calc.operaciones&&calc.operaciones.length){
@@ -3560,6 +3581,7 @@ function generarPDFCompleto(id){
       +'<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:10px">'
       +'<tbody>'
       +(costoDia?'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:5px 8px">Chapa</td><td style="padding:5px 8px;color:#555">'+diasTotal+' días × $'+fmt(costoDia)+'</td><td style="padding:5px 8px;text-align:right;font-weight:600">$'+fmt(costoChapa)+'</td></tr>':'')
+      +(costoHMec&&totalHsMecPDF?'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:5px 8px">Mecánica</td><td style="padding:5px 8px;color:#555">'+totalHsMecPDF+' hs × $'+fmt(costoHMec)+'</td><td style="padding:5px 8px;text-align:right;font-weight:600">$'+fmt(costoMecPDF)+'</td></tr>':'')
       +(costoPano?'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:5px 8px">Pintura</td><td style="padding:5px 8px;color:#555">'+totalPanos+' paños × $'+fmt(costoPano)+'</td><td style="padding:5px 8px;text-align:right;font-weight:600">$'+fmt(costoPintura)+'</td></tr>':'')
       +(totalOp?'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:5px 8px">Operaciones</td><td style="padding:5px 8px;color:#555">—</td><td style="padding:5px 8px;text-align:right;font-weight:600">$'+fmt(totalOp)+'</td></tr>':'')
       +'</tbody>'
@@ -4169,22 +4191,33 @@ var relOpState = [];
 var relOpIdx = 0;
 var relCostoDiaChapa = 0;
 var relCostoPanoPintura = 0;
+var relCostoHoraMecanica = 0;
+
+// Zonas cuyas horas se cobran como mecánica (por hora), no como chapa (por día)
+var ZONAS_MECANICA_COSTO = ['Mecánica / Vano Motor','Mecánica','Tren Delantero y Tracción','Tren Delantero y Tracción 4x4','Tren Delantero y Suspensión','Tren Trasero'];
 
 function relSetCosto(tipo, valor){
   if(tipo==='chapa') relCostoDiaChapa = parseFloat(valor)||0;
+  else if(tipo==='mecanica') relCostoHoraMecanica = parseFloat(valor)||0;
   else relCostoPanoPintura = parseFloat(valor)||0;
   relActualizarCosto();
   relGenerarTareas();
 }
 
 function relActualizarCosto(){
-  var totalHs = relCalcState.piezas.reduce(function(acc,p){return acc+(p.hsTrabajo||0);},0);
+  // Separar horas de chapa vs mecánica
+  var totalHsChapa = relCalcState.piezas.reduce(function(acc,p){
+    return ZONAS_MECANICA_COSTO.indexOf(p.zona)!==-1 ? acc : acc+(p.hsTrabajo||0);
+  },0);
+  var totalHsMec = relCalcState.piezas.reduce(function(acc,p){
+    return ZONAS_MECANICA_COSTO.indexOf(p.zona)!==-1 ? acc+(p.hsTrabajo||0) : acc;
+  },0);
   var totalOpHs = relOpState.reduce(function(acc,o){
     if(o.operacion==='Banco de estiraje') return acc+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
     if(o.operacion==='Desmontaje y montaje de accesorios') return acc+(o.horas||0);
     return acc;
   },0);
-  var granTotalHs = totalHs + totalOpHs;
+  var totalHsChapaConOp = totalHsChapa + totalOpHs;
   var totalPanos = relCalcState.piezas.reduce(function(acc,p){
     if(p.tarea==='Pintar')    return acc+(p.panos||0);
     if(p.tarea==='Difuminar') return acc+0.5;
@@ -4192,26 +4225,29 @@ function relActualizarCosto(){
   },0);
   var totalCostoOps = relOpState.reduce(function(acc,o){return acc+(o.costo||0);},0);
 
-  var dias = Math.round(granTotalHs / 8);
+  var dias = Math.round(totalHsChapaConOp / 8);
   var costoChapa = dias * relCostoDiaChapa;
+  var costoMec = totalHsMec * relCostoHoraMecanica;
   var costoPintura = totalPanos * relCostoPanoPintura;
-  var total = costoChapa + costoPintura + totalCostoOps;
+  var total = costoChapa + costoMec + costoPintura + totalCostoOps;
 
   var desglose = s('rel-costo-desglose');
   if(!desglose) return;
 
-  var mostrar = relCostoDiaChapa > 0 || relCostoPanoPintura > 0;
+  var mostrar = relCostoDiaChapa > 0 || relCostoPanoPintura > 0 || relCostoHoraMecanica > 0;
   desglose.style.display = mostrar ? 'block' : 'none';
   if(!mostrar) return;
 
   var fmt = function(n){ return '$'+n.toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0}); };
 
-  var diasStr = dias.toString();
-  if(s('rel-c-dias')) s('rel-c-dias').textContent = diasStr;
+  if(s('rel-c-dias')) s('rel-c-dias').textContent = dias.toString();
   if(s('rel-c-chapa-val')) s('rel-c-chapa-val').textContent = fmt(costoChapa);
+  var mecRow = s('rel-c-mec-row');
+  if(mecRow){ mecRow.style.display = totalHsMec > 0 ? 'flex' : 'none'; }
+  if(s('rel-c-hs-mec')) s('rel-c-hs-mec').textContent = totalHsMec;
+  if(s('rel-c-mec-val')) s('rel-c-mec-val').textContent = fmt(costoMec);
   if(s('rel-c-panos')) s('rel-c-panos').textContent = totalPanos;
   if(s('rel-c-pano-val')) s('rel-c-pano-val').textContent = fmt(costoPintura);
-
   var opsRow = s('rel-c-ops-row');
   if(opsRow) opsRow.style.display = totalCostoOps > 0 ? 'flex' : 'none';
   if(s('rel-c-ops-val')) s('rel-c-ops-val').textContent = fmt(totalCostoOps);
@@ -4224,19 +4260,24 @@ function relGenerarTareas(){
   var piezas     = relCalcState.piezas || [];
   var ops        = relOpState || [];
   var costoChapa = relCostoDiaChapa || 0;
+  var costoMec   = relCostoHoraMecanica || 0;
   var costoPano  = relCostoPanoPintura || 0;
 
   if(!piezas.length && !ops.length) { el.value=''; return; }
 
-  // ── Totales ──
-  var totalHs = piezas.reduce(function(a,p){return a+(p.hsTrabajo||0);},0);
+  // ── Totales separados chapa / mecánica ──
+  var totalHsChapa = piezas.reduce(function(a,p){
+    return ZONAS_MECANICA_COSTO.indexOf(p.zona)!==-1 ? a : a+(p.hsTrabajo||0);
+  },0);
+  var totalHsMec = piezas.reduce(function(a,p){
+    return ZONAS_MECANICA_COSTO.indexOf(p.zona)!==-1 ? a+(p.hsTrabajo||0) : a;
+  },0);
   var totalOpHs = ops.reduce(function(a,o){
     if(o.operacion==='Banco de estiraje') return a+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
     if(o.operacion==='Desmontaje y montaje de accesorios') return a+(o.horas||0);
     return a;
   },0);
-  var granTotalHs = totalHs + totalOpHs;
-  var dias = Math.round(granTotalHs / 8);
+  var dias = Math.round((totalHsChapa + totalOpHs) / 8);
   var totalPanos = piezas.reduce(function(a,p){
     if(p.tarea==='Pintar')    return a+(p.panos||0);
     if(p.tarea==='Difuminar') return a+0.5;
@@ -4245,10 +4286,11 @@ function relGenerarTareas(){
   var totalCostoOps = ops.reduce(function(a,o){return a+(o.costo||0);},0); // Varios
 
   var costoManoObra  = dias * costoChapa;
+  var costoMecanica  = totalHsMec * costoMec;
   var costoPintura   = totalPanos * costoPano;
   var materialOrion  = 0; // siempre 0 por ahora
   var varios         = totalCostoOps;
-  var montoNeto      = costoManoObra + costoPintura + materialOrion;
+  var montoNeto      = costoManoObra + costoMecanica + costoPintura + materialOrion;
   var montoTotal     = montoNeto + varios;
 
   // ── Formato de moneda ──
@@ -4308,13 +4350,14 @@ function relGenerarTareas(){
   var lineas = [
     'Estimación al '+fechaStr+':',
     dias+' día'+(dias!==1?'s':'')+' x '+fmt(costoChapa)+' = '+fmt(costoManoObra),
+    (totalHsMec>0?(totalHsMec+' hs mecánica x '+fmt(costoMec)+' = '+fmt(costoMecanica)):''),
     totalPanos+' paño'+(totalPanos!==1?'s':'')+' x '+fmt(costoPano)+' = '+fmt(costoPintura),
     'Materiales de pintura ORIÓN: '+fmt(materialOrion),
     'Varios: '+fmt(varios),
     'Monto mano de obra Neto Mat. de pintura Orión: '+fmt(montoNeto),
     'Monto mano de obra Total: '+fmt(montoTotal),
     'Operaciones a realizar: '+operacionesList.join('; ')+(operacionesList.length?';':'')
-  ];
+  ].filter(function(l){return l!='';});
 
   el.value = lineas.join('\n');
 }
