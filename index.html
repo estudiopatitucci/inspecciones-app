@@ -4435,7 +4435,15 @@ function relOpRemove(uid){
 function relOpUpdate(uid, campo, valor){
   var o = relOpState.find(function(x){return x._id===uid;});
   if(!o) return;
-  if(campo==='operacion'){o.operacion=valor;o.puestaMedicion=0;o.tiempoEstiraje=0;o.horas=0;o.costo=0;o.nombre='';}
+  if(campo==='operacion'){
+    o.operacion=valor;o.puestaMedicion=0;o.tiempoEstiraje=0;o.horas=0;o.nombre='';
+    // Costos por defecto
+    if(valor==='Alineación y balanceo')      o.costo=25000;
+    else if(valor==='Armado de rueda')        o.costo=7000;
+    else if(valor==='Escaneo / reseteo de módulos') o.costo=180000;
+    else if(valor==='Banco de estiraje')      {o.costo=0; o.puestaMedicion=2.5;}
+    else                                       o.costo=0;
+  }
   else if(campo==='puestaMedicion'){o.puestaMedicion=parseFloat(valor)||0;}
   else if(campo==='tiempoEstiraje'){o.tiempoEstiraje=parseFloat(valor)||0;}
   else if(campo==='horas'){o.horas=parseFloat(valor)||0;}
@@ -4479,18 +4487,17 @@ function relOpRender(){
 
     var extraFields = '';
     if(o.operacion==='Banco de estiraje'){
-      var pmOpts=[0,4,6,8].map(function(h){
+      var pmOpts=[0,0.5,1,1.5,2,2.5,3,3.5,4].map(function(h){
         return '<option value="'+h+'"'+(o.puestaMedicion===h?' selected':'')+'>'+h+' hs</option>';
       }).join('');
-      var teRange=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16];
-      var teOpts=teRange.map(function(h){
+      var teOpts=[0,0.5,1,1.5,2,2.5,3,3.5,4,4.5,5,5.5,6,6.5,7,7.5,8].map(function(h){
         return '<option value="'+h+'"'+(o.tiempoEstiraje===h?' selected':'')+'>'+h+' hs</option>';
       }).join('');
       extraFields='<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-        +'<select onchange="relOpUpdate('+uid+',\'puestaMedicion\',this.value)" style="font-size:11px;padding:5px 6px;min-width:130px">'
-        +'<option value="">Puesta y medición*</option>'+pmOpts+'</select>'
+        +'<select onchange="relOpUpdate('+uid+',\'puestaMedicion\',this.value)" style="font-size:11px;padding:5px 6px;min-width:175px">'
+        +'<option value="">Medición y puesta en bancada</option>'+pmOpts+'</select>'
         +'<select onchange="relOpUpdate('+uid+',\'tiempoEstiraje\',this.value)" style="font-size:11px;padding:5px 6px;min-width:120px">'
-        +'<option value="">T. de estiraje*</option>'+teOpts+'</select>'
+        +'<option value="">Estiraje</option>'+teOpts+'</select>'
         +'</div>';
     } else if(o.operacion==='Desmontaje y montaje de accesorios'){
       var hsOpts=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16].map(function(h){
@@ -4498,7 +4505,7 @@ function relOpRender(){
       }).join('');
       extraFields='<select onchange="relOpUpdate('+uid+',\'horas\',this.value)" style="font-size:11px;padding:5px 6px;min-width:100px">'
         +'<option value="0">— Horas —</option>'+hsOpts+'</select>';
-    } else if(o.operacion==='Carga de gas aire acondicionado'||o.operacion==='Mecánica y/o electricidad'||o.operacion==='Pegado parabrisas/luneta'){
+    } else if(o.operacion==='Alineación y balanceo'||o.operacion==='Armado de rueda'||o.operacion==='Escaneo / reseteo de módulos'||o.operacion==='Carga de gas aire acondicionado'||o.operacion==='Mecánica y/o electricidad'||o.operacion==='Pegado parabrisas/luneta'){
       extraFields='<div style="position:relative;display:inline-flex;align-items:center">'
         +'<span style="position:absolute;left:8px;font-size:13px;color:var(--text3);pointer-events:none">$</span>'
         +'<input type="number" min="0" step="1" value="'+(o.costo||'')+'" placeholder="0" '
@@ -5501,7 +5508,7 @@ var _B1_Z5=[
   _p('Pastillas de freno delanteras',N,0.5,0,0,'Centro / Comunes'),
   _p('Líquido hidráulico de dirección',N,0,0,0,'Centro / Comunes'),
   // ── Lado izquierdo ────────────────────────────────────
-  _p('Cubierta delantera izquierda',N,0,0,0,'Lado izquierdo'),
+  _p('Neumático delantero izquierdo',N,0,0,0,'Lado izquierdo'),
   _p('Llanta delantera izquierda',S,0,0,1,'Lado izquierdo'),
   _p('Amortiguador delantero izquierdo',N,1,0,0,'Lado izquierdo'),
   _p('Espiral delantero izquierdo',N,1,0,0,'Lado izquierdo'),
@@ -5519,7 +5526,7 @@ var _B1_Z5=[
   _p('Caliper delantero izquierdo',N,0.5,0,0,'Lado izquierdo'),
   _p('Campana de freno delantera izquierda',N,0.5,0,0,'Lado izquierdo'),
   // ── Lado derecho ──────────────────────────────────────
-  _p('Cubierta delantera derecha',N,0,0,0,'Lado derecho'),
+  _p('Neumático delantero derecho',N,0,0,0,'Lado derecho'),
   _p('Llanta delantera derecha',S,0,0,1,'Lado derecho'),
   _p('Amortiguador delantero derecho',N,1,0,0,'Lado derecho'),
   _p('Espiral delantero derecho',N,1,0,0,'Lado derecho'),
@@ -5542,7 +5549,7 @@ var _Z_TREN_TRA_SED=[
   _p('Eje trasero',S,4,0,6,'Centro / Comunes'),
   _p('Pastillas de freno traseras',N,0.5,0,0,'Centro / Comunes'),
   // ── Lado izquierdo ────────────────────────────────────
-  _p('Cubierta trasera izquierda',N,0,0,0,'Lado izquierdo'),
+  _p('Neumático trasero izquierdo',N,0,0,0,'Lado izquierdo'),
   _p('Llanta trasera izquierda',S,0,0,1,'Lado izquierdo'),
   _p('Amortiguador trasero izquierdo',N,1,0,0,'Lado izquierdo'),
   _p('Espiral trasero izquierdo',N,0.5,0,0,'Lado izquierdo'),
@@ -5553,7 +5560,7 @@ var _Z_TREN_TRA_SED=[
   _p('Caliper trasero izquierdo',N,0.5,0,0,'Lado izquierdo'),
   _p('Campana de freno trasera izquierda',N,0.5,0,0,'Lado izquierdo'),
   // ── Lado derecho ──────────────────────────────────────
-  _p('Cubierta trasera derecha',N,0,0,0,'Lado derecho'),
+  _p('Neumático trasero derecho',N,0,0,0,'Lado derecho'),
   _p('Llanta trasera derecha',S,0,0,1,'Lado derecho'),
   _p('Amortiguador trasero derecho',N,1,0,0,'Lado derecho'),
   _p('Espiral trasero derecho',N,0.5,0,0,'Lado derecho'),
