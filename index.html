@@ -994,6 +994,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <div style="border-top:1px solid var(--border);padding-top:16px">
             <p class="section-title">Cambiar contraseña</p>
             <div class="form-grid-2" style="margin-bottom:10px">
+              <div class="field"><label>Actual</label><input type="password" id="aperfil-pass0" placeholder="Contraseña actual"/></div>
+              <div class="field"></div>
               <div class="field"><label>Nueva</label><input type="password" id="aperfil-pass1"/></div>
               <div class="field"><label>Confirmar</label><input type="password" id="aperfil-pass2"/></div>
             </div>
@@ -1079,6 +1081,8 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <div style="border-top:1px solid var(--border);padding-top:16px">
             <p class="section-title">Cambiar contraseña</p>
             <div class="form-grid-2" style="margin-bottom:10px">
+              <div class="field"><label>Actual</label><input type="password" id="nueva-pass0" placeholder="Contraseña actual"/></div>
+              <div class="field"></div>
               <div class="field"><label>Nueva</label><input type="password" id="nueva-pass1"/></div>
               <div class="field"><label>Confirmar</label><input type="password" id="nueva-pass2"/></div>
             </div>
@@ -1412,13 +1416,8 @@ const SECRET_TOKEN='ep_9k2mX7vQn4pRjL8wZdA3sYtB6uCfHg0E';
 const INSP_MAILS={'Ignacio':'Patitucci.mp@gmail.com','Matías':'Patitucci.mp@gmail.com','Valentino':'valentinopatitucci5@gmail.com','Sebastián':'Patitucci.mp@gmail.com','Mariano':'Patitucci.mp@gmail.com','Bruno':'bruno@estudiopatitucci.com','Majo':'sanchezmajo2022@gmail.com'};
 // Inspectores con permiso para cambiar el estado de sus propios relevamientos
 const INSP_PUEDE_CAMBIAR_ESTADO = ['Mariano','Valentino','Bruno'];
-// Contraseñas: defaults + lo que esté guardado en localStorage
-var _passDefaults={'Administrador':'123456','Ignacio':'123456','Matías':'123456','Valentino':'123456','Sebastián':'123456','Mariano':'123456','Bruno':'123456'};
-var passwords=(function(){
-  var obj=Object.assign({},_passDefaults);
-  try{var s=localStorage.getItem('ep_pw');if(s){var p=JSON.parse(s);Object.keys(p).forEach(function(k){obj[k]=p[k];});}}catch(e){}
-  return obj;
-})();
+// Contraseñas gestionadas 100% en el backend (GAS + Google Sheets "Usuarios")
+// Ya no se usan defaults locales ni localStorage para claves.
 let usuarioActual=null,inspActual=null,inspecciones=[],relId=null,editId=null,fotosPendientes=[],notifVistas={},ciaActual='rivadavia',fotosSubiendo=0;
 let autoRefreshTimer=null;
 const PLAZO_HRS=48;
@@ -1484,10 +1483,16 @@ async function doLogin(){
   if(!nombre){err.textContent='Seleccioná tu nombre.';return;}
   if(!pass){err.textContent='Ingresá tu contraseña.';return;}
   err.textContent='';
-  // Validación local de contraseña
-  if(pass!==passwords[nombre]){err.textContent='Contraseña incorrecta.';return;}
+  // Validar contraseña contra el backend
   const btn=s('screen-login').querySelector('button.btn-primary');
-  btn.textContent='Cargando...';btn.disabled=true;
+  btn.textContent='Verificando...';btn.disabled=true;
+  try {
+    const res=await apiCall({action:'login',nombre,clave:pass});
+    if(!res||!res.ok){err.textContent=res&&res.msg?res.msg:'Contraseña incorrecta.';btn.textContent='Ingresar';btn.disabled=false;return;}
+  } catch(e) {
+    err.textContent='Error de conexión. Intentá de nuevo.';btn.textContent='Ingresar';btn.disabled=false;return;
+  }
+  btn.textContent='Cargando...';
   hide('screen-login');
   const ls=s('screen-loading');ls.style.display='flex';
   s('loading-msg').textContent='Cargando inspecciones...';
@@ -1526,26 +1531,34 @@ function logout(){
   window.scrollTo(0,0);
 }
 
-function cambiarPassAdmin(){
-  const p1=s('aperfil-pass1').value,p2=s('aperfil-pass2').value,msg=s('aperfil-msg');
+async function cambiarPassAdmin(){
+  const p0=s('aperfil-pass0')?s('aperfil-pass0').value:'',p1=s('aperfil-pass1').value,p2=s('aperfil-pass2').value,msg=s('aperfil-msg');
+  if(!p0){msg.className='msg err';msg.textContent='Ingresá tu contraseña actual.';return;}
   if(p1.length<4){msg.className='msg err';msg.textContent='Mínimo 4 caracteres.';return;}
   if(p1!==p2){msg.className='msg err';msg.textContent='No coinciden.';return;}
-  passwords['Administrador']=p1;
-  try{localStorage.setItem('ep_pw',JSON.stringify(passwords));}catch(e){}
-  msg.className='msg ok';msg.textContent='✓ Actualizada.';
-  toast('Contraseña actualizada. Se mantendrá en este dispositivo.','ok');
-  setTimeout(()=>{msg.textContent='';s('aperfil-pass1').value='';s('aperfil-pass2').value='';},2000);
+  msg.className='msg';msg.textContent='Guardando...';
+  try {
+    const res=await apiCall({action:'cambiarClave',nombre:'Administrador',claveActual:p0,claveNueva:p1});
+    if(!res||!res.ok){msg.className='msg err';msg.textContent=res&&res.msg?res.msg:'Error al actualizar.';return;}
+    msg.className='msg ok';msg.textContent='✓ Contraseña actualizada.';
+    toast('Contraseña actualizada en el servidor.','ok');
+    setTimeout(()=>{msg.textContent='';s('aperfil-pass0').value='';s('aperfil-pass1').value='';s('aperfil-pass2').value='';},2000);
+  } catch(e){msg.className='msg err';msg.textContent='Error de conexión.';}
 }
 
-function cambiarPass(){
-  const p1=s('nueva-pass1').value,p2=s('nueva-pass2').value,msg=s('msg-pass');
+async function cambiarPass(){
+  const p0=s('nueva-pass0')?s('nueva-pass0').value:'',p1=s('nueva-pass1').value,p2=s('nueva-pass2').value,msg=s('msg-pass');
+  if(!p0){msg.className='msg err';msg.textContent='Ingresá tu contraseña actual.';return;}
   if(p1.length<4){msg.className='msg err';msg.textContent='Mínimo 4 caracteres.';return;}
   if(p1!==p2){msg.className='msg err';msg.textContent='No coinciden.';return;}
-  passwords[usuarioActual]=p1;
-  try{localStorage.setItem('ep_pw',JSON.stringify(passwords));}catch(e){}
-  msg.className='msg ok';msg.textContent='✓ Actualizada.';
-  toast('Contraseña actualizada. Se mantendrá en este dispositivo.','ok');
-  setTimeout(()=>{msg.textContent='';s('nueva-pass1').value='';s('nueva-pass2').value='';},2000);
+  msg.className='msg';msg.textContent='Guardando...';
+  try {
+    const res=await apiCall({action:'cambiarClave',nombre:usuarioActual,claveActual:p0,claveNueva:p1});
+    if(!res||!res.ok){msg.className='msg err';msg.textContent=res&&res.msg?res.msg:'Error al actualizar.';return;}
+    msg.className='msg ok';msg.textContent='✓ Contraseña actualizada.';
+    toast('Contraseña actualizada en el servidor.','ok');
+    setTimeout(()=>{msg.textContent='';s('nueva-pass0').value='';s('nueva-pass1').value='';s('nueva-pass2').value='';},2000);
+  } catch(e){msg.className='msg err';msg.textContent='Error de conexión.';}
 }
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
