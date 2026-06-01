@@ -1878,6 +1878,14 @@ function abrirModal(id){
     html+='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.danos||'-')+'</div></div>';
     if(rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length){
       html+=renderResumenCalcAdmin(rel.calculador);
+    // ── Tareas a realizar ──
+    var tareasAdmin = rel.tareasARealizar || '';
+    if(tareasAdmin){
+      html+='<div style="margin-top:12px">';
+      html+='<span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">📋 Tareas a realizar</span>';
+      html+='<pre style="background:var(--bg3);border-radius:8px;padding:10px;font-size:12px;font-family:DM Mono,monospace;color:var(--text);line-height:1.6;white-space:pre-wrap;margin:0">'+esc(tareasAdmin)+'</pre>';
+      html+='</div>';
+    }
     } else if(rel.notas){
       html+='<div style="margin-bottom:10px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Mano de obra</span>';
       html+='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.notas)+'</div></div>';
@@ -1889,17 +1897,21 @@ function abrirModal(id){
   }
   html+='<div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px">';
   html+='<p class="section-title">Cambiar estado</p>';
-  html+='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
-  html+='<select id="sel-estado-modal" style="width:220px">';
-  html+='<option '+(i.Estado==='Pendientes de carga'?'selected':'')+'>Pendientes de carga</option>';
-  html+='<option '+(i.Estado==='Pendiente de verificar'?'selected':'')+'>Pendiente de verificar</option>';
-  html+='<option '+(i.Estado==='Pendientes de resolver'?'selected':'')+'>Pendientes de resolver</option>';
-  html+='<option '+(i.Estado==='Cerradas'?'selected':'')+'>Cerradas</option>';
-  html+='</select>';
-  html+='<button class="btn-primary btn-sm" onclick="guardarEstadoModal(\''+esc(i.ID)+'\')">Guardar</button>';
-  html+='<span id="msg-estado-modal" class="msg" style="display:inline-block"></span>';
-  html+='</div></div>';
-  html+='<div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px">';
+  if(['Administrador','Mariano','Bruno','Valentino'].indexOf(usuarioActual) !== -1){
+    html+='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
+    html+='<select id="sel-estado-modal" style="width:220px">';
+    html+='<option '+(i.Estado===='Pendientes de carga'?'selected':'')+'>Pendientes de carga</option>';
+    html+='<option '+(i.Estado===='Pendiente de verificar'?'selected':'')+'>Pendiente de verificar</option>';
+    html+='<option '+(i.Estado===='Pendientes de resolver'?'selected':'')+'>Pendientes de resolver</option>';
+    html+='<option '+(i.Estado===='Cerradas'?'selected':'')+'>Cerradas</option>';
+    html+='</select>';
+    html+='<button class="btn-primary btn-sm" onclick="guardarEstadoModal(\''+esc(i.ID)+'\')">Guardar</button>';
+    html+='<span id="msg-estado-modal" class="msg" style="display:inline-block"></span>';
+    html+='</div>';
+  } else {
+    html+='<p style="font-size:13px;color:var(--text2)">Estado actual: <strong style="color:var(--text)">'+esc(i.Estado||'-')+'</strong></p>';
+  }
+  html+='</div>';
   html+='<p class="section-title">Devolución al inspector</p>';
   var devs=i.Devoluciones||[];
   devs.forEach(function(d){html+='<div class="dev-burbuja">'+esc(d.texto)+' <span style="font-size:11px;opacity:.6">· '+d.fecha+'</span></div>';});
@@ -1907,16 +1919,6 @@ function abrirModal(id){
   html+='<input type="text" id="dev-input" placeholder="Escribí una devolución..." style="flex:1"/>';
   html+='<button class="btn-secondary btn-sm" onclick="guardarDevolucion(\''+esc(i.ID)+'\')">Enviar</button>';
   html+='</div><span id="dev-aviso" class="msg" style="display:inline-block;margin-top:4px"></span></div>';
-  // ─── Reasignar inspector
-  html+='<div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px">';
-  html+='<p class="section-title">Reasignar inspector</p>';
-  html+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
-  html+='<select id="reasig-sel-'+esc(i.ID)+'" style="width:140px"><option value="">Seleccionar...</option>'
-    +['Ignacio','Matías','Valentino','Sebastián','Mariano','Bruno','Majo','Ivan'].map(function(n){return'<option'+(i.Inspector===n?' selected':'')+'>'+esc(n)+'</option>';}).join('')
-    +'</select>';
-  html+='<button class="btn-secondary btn-sm" onclick="confirmarReasignar(\''+esc(i.ID)+'\')">Reasignar</button>';
-  html+='<span style="font-size:12px;color:var(--text2)">Actual: <strong style="color:var(--text)">'+esc(i.Inspector||'-')+'</strong></span>';
-  html+='</div></div>';
   // ─── Historial
   var hist=i.Historial||[];
   html+='<div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px">';
@@ -1936,13 +1938,10 @@ function abrirModal(id){
   html+='</div>';
   // ─── Botones
   html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
-  html+='<button class="btn-secondary btn-sm" onclick="abrirEditar(\''+esc(i.ID)+'\')">✏ Editar</button>';
-  var urgStyle=i.Urgente?'background:rgba(229,83,83,.15);color:var(--red);border:1px solid rgba(229,83,83,.3)':'background:var(--bg3);color:var(--text2);border:1px solid var(--border)';
-  html+='<button class="btn-sm" style="'+urgStyle+'" onclick="toggleUrgente(\''+esc(i.ID)+'\')">'+(i.Urgente?'🔴 Quitar urgencia':'⚪ Marcar urgente')+'</button>';
   html+='<button class="btn-secondary btn-sm" onclick="generarPDFCompleto(\''+esc(i.ID)+'\')">📄 Informe PDF</button>';
   if(rel&&rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length)html+='<button class="btn-sm" style="background:rgba(220,38,38,.12);color:#dc2626;border:1px solid rgba(220,38,38,.3)" onclick="exportarParaOrion(\''+esc(i.ID)+'\')">🔴 Cargar en ORIÓN</button>';
   if(i.Estado==='Pendientes de carga'||i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)" onclick="enviarATaller(\''+esc(i.ID)+'\')">&#x1F517; Enviar a taller</button>';
-  html+='<button class="btn-danger btn-sm" onclick="eliminarInsp(\''+esc(i.ID)+'\')">Eliminar</button>';
+  if(usuarioActual === 'Administrador') html+='<button class="btn-danger btn-sm" onclick="eliminarInsp(\''+esc(i.ID)+'\')">Eliminar</button>';
   html+='<button class="btn-secondary btn-sm" onclick="cerrarModal()" style="margin-left:auto">✕ Cerrar</button>';
   html+='</div>';
   s('modal-cuerpo').innerHTML=html;
@@ -2855,6 +2854,14 @@ function verDetalleInsp(id){
     html+='<div style="background:var(--bg3);border-radius:6px;padding:8px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.danos||'-')+'</div></div>';
     if(rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length){
       html+=renderResumenCalcAdmin(rel.calculador);
+    // ── Tareas a realizar ──
+    var tareasAdmin = rel.tareasARealizar || '';
+    if(tareasAdmin){
+      html+='<div style="margin-top:12px">';
+      html+='<span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">📋 Tareas a realizar</span>';
+      html+='<pre style="background:var(--bg3);border-radius:8px;padding:10px;font-size:12px;font-family:DM Mono,monospace;color:var(--text);line-height:1.6;white-space:pre-wrap;margin:0">'+esc(tareasAdmin)+'</pre>';
+      html+='</div>';
+    }
     } else if(rel.notas){
       html+='<div style="margin-bottom:10px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Mano de obra</span>';
       html+='<div style="background:var(--bg3);border-radius:6px;padding:8px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.notas)+'</div></div>';
