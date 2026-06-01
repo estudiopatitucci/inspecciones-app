@@ -1900,10 +1900,10 @@ function abrirModal(id){
   if(['Administrador','Mariano','Bruno','Valentino'].indexOf(usuarioActual) !== -1){
     html+='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
     html+='<select id="sel-estado-modal" style="width:220px">';
-    html+='<option '+(i.Estado===='Pendientes de carga'?'selected':'')+'>Pendientes de carga</option>';
-    html+='<option '+(i.Estado===='Pendiente de verificar'?'selected':'')+'>Pendiente de verificar</option>';
-    html+='<option '+(i.Estado===='Pendientes de resolver'?'selected':'')+'>Pendientes de resolver</option>';
-    html+='<option '+(i.Estado===='Cerradas'?'selected':'')+'>Cerradas</option>';
+    html+='<option '+(i.Estado==='Pendientes de carga'?'selected':'')+'>Pendientes de carga</option>';
+    html+='<option '+(i.Estado==='Pendiente de verificar'?'selected':'')+'>Pendiente de verificar</option>';
+    html+='<option '+(i.Estado==='Pendientes de resolver'?'selected':'')+'>Pendientes de resolver</option>';
+    html+='<option '+(i.Estado==='Cerradas'?'selected':'')+'>Cerradas</option>';
     html+='</select>';
     html+='<button class="btn-primary btn-sm" onclick="guardarEstadoModal(\''+esc(i.ID)+'\')">Guardar</button>';
     html+='<span id="msg-estado-modal" class="msg" style="display:inline-block"></span>';
