@@ -1316,6 +1316,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <button class="btn-primary" onclick="enviarRel()" style="padding:10px 24px;font-size:14px">Enviar relevamiento</button>
           <button id="btn-guardar-inspector" class="btn-secondary" onclick="guardarBorradorCompleto()" style="padding:10px 18px;font-size:14px">💾 Guardar sin enviar</button>
         </div>
+          <button class="btn-secondary" onclick="limpiarRelevamiento()" style="padding:10px 18px;font-size:13px;color:var(--red);border-color:rgba(229,83,83,.4)">🗑 Limpiar</button>
         <div id="msg-rel" class="msg"></div>
         <div id="upload-progress-wrap" style="display:none;margin-top:10px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
@@ -1817,7 +1818,7 @@ function renderResumenCalcAdmin(calc){
     return a;
   },0);
   var gran = totHs + totOpHs;
-  var dias = gran>0 ? Math.round(gran/8) : 0;
+  var dias = gran>0 ? Math.ceil(gran/8*2)/2 : 0;
   var costoChapa = calc.costoChapa||0, costoPano = calc.costoPano||0;
   var totalCosto = (dias*costoChapa)+(totPanos*costoPano);
 
@@ -2982,6 +2983,38 @@ function renderFotosGuardadas(fotosArr){
   if(errDiv){errDiv.style.color='var(--green)';errDiv.textContent='✓ '+sub+' foto'+(sub>1?'s':'')+' restauradas del borrador.';}
 }
 
+function limpiarRelevamiento(){
+  if(!confirm('⚠️ Estás por borrar todos los datos cargados en el relevamiento.
+
+¿Confirmás que querés limpiar todo?')) return;
+  // Resetear calculador
+  relCalcState = {tipo:'', piezas:[]};
+  relCalcIdx = 0;
+  relOpState = [];
+  relOpIdx = 0;
+  relCostoDiaChapa = 0;
+  relCostoHoraMecánica = 0;
+  relCostoPanoPintura = 0;
+  if(s('rel-costo-chapa')) s('rel-costo-chapa').value='';
+  if(s('rel-costo-mecanica')) s('rel-costo-mecanica').value='';
+  if(s('rel-costo-pano')) s('rel-costo-pano').value='';
+  if(s('rel-calc-tipo')) s('rel-calc-tipo').value='';
+  relOpRender();
+  relCalcRender();
+  // Resetear campos del formulario
+  ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit'].forEach(function(x){if(s(x))s(x).value='';});
+  // Resetear fotos y mensajes
+  s('rel-fotos').value='';
+  s('rel-preview').innerHTML='';
+  if(s('rel-errores')) s('rel-errores').textContent='';
+  if(s('msg-rel')) s('msg-rel').textContent='';
+  // Resetear tareas
+  if(s('rel-tareas')) s('rel-tareas').value='';
+  // Limpiar fotos pendientes
+  fotosPendientes=[];fotosSubiendo=0;
+  toast('Relevamiento limpiado.','ok');
+}
+
 async function guardarBorradorCompleto(){
   var key=tallerTokenActual||relId;
   if(!key){toast('No hay inspección activa.','err');return;}
@@ -3449,7 +3482,7 @@ async function enviarRel(){
   },0);
   var calcTotalPanos=relCalcState.piezas.reduce(function(acc,p){if(p.tarea==='Pintar')return acc+(p.panos||0);if(p.tarea==='Difuminar')return acc+0.5;return acc;},0);
   var _totalOpCosto=relOpState.reduce(function(acc,o){return acc+(o.costo||0);},0);
-  var _diasChapa=Math.round((calcTotalHs+calcTotalOpHs)/8);
+  var _diasChapa=Math.ceil((calcTotalHs+calcTotalOpHs)/8*2)/2;
   var _costoChapa=_diasChapa*relCostoDiaChapa;
   var _costoPintura=calcTotalPanos*relCostoPanoPintura;
   var _costoTotal=_costoChapa+_costoPintura+_totalOpCosto;
@@ -3581,7 +3614,7 @@ function generarPDFCompleto(id){
     var totalHsChapaPDF=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a:a+(p.hsTrabajo||p.horas||0);},0);
     var totalHsMecPDF=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a+(p.hsTrabajo||p.horas||0):a;},0);
     var totalPanos=calc.piezas.reduce(function(a,p){return a+(p.tarea==='Pintar'?(p.panos||1):p.tarea==='Difuminar'?0.5:0);},0);
-    var diasTotal=totalHsChapaPDF>0?Math.round(totalHsChapaPDF/8*10)/10:0;
+    var diasTotal=totalHsChapaPDF>0?Math.ceil(totalHsChapaPDF/8*2)/2:0;
     // Costos
     var costoDia=calc.costoDiaChapa||0,costoHMec=calc.costoHoraMecánica||0,costoPano=calc.costoPanoPintura||0;
     var costoChapa=diasTotal*costoDia;
@@ -4263,7 +4296,7 @@ function relActualizarCosto(){
   },0);
   var totalCostoOps = relOpState.reduce(function(acc,o){return acc+(o.costo||0);},0);
 
-  var dias = Math.round(totalHsChapaConOp / 8);
+  var dias = Math.ceil(totalHsChapaConOp / 8 * 2) / 2;
   var costoChapa = dias * relCostoDiaChapa;
   var costoMec = totalHsMec * relCostoHoraMecánica;
   var costoPintura = totalPanos * relCostoPanoPintura;
@@ -4315,7 +4348,7 @@ function relGenerarTareas(){
     if(o.operacion==='Desmontaje y montaje de accesorios') return a+(o.horas||0);
     return a;
   },0);
-  var dias = Math.round((totalHsChapa + totalOpHs) / 8);
+  var dias = Math.ceil((totalHsChapa + totalOpHs) / 8 * 2) / 2;
   var totalPanos = piezas.reduce(function(a,p){
     if(p.tarea==='Pintar')    return a+(p.panos||0);
     if(p.tarea==='Difuminar') return a+0.5;
@@ -5338,7 +5371,7 @@ function gridUpdateTotal(){
     return a;
   },0);
   var gran=total+totalOpHs;
-  var dias=gran>0?Math.round(gran/8*10)/10:0;
+  var dias=gran>0?Math.ceil(gran/8*2)/2:0;
   var dLabel=dias===1?'1 día':dias+' días';
   el.innerHTML=gran+' <span style="font-size:14px;font-weight:400">hs</span>'
     +(gran>0?'&nbsp;<span style="font-size:13px;font-weight:400;color:var(--text2)">('+dLabel+')</span>':'')
