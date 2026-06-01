@@ -1879,14 +1879,14 @@ function abrirModal(id){
     html+='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.danos||'-')+'</div></div>';
     if(rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length){
       html+=renderResumenCalcAdmin(rel.calculador);
-    // ── Tareas a realizar ──
-    var tareasAdmin = rel.tareasARealizar || '';
-    if(tareasAdmin){
-      html+='<div style="margin-top:12px">';
-      html+='<span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">📋 Tareas a realizar</span>';
-      html+='<pre style="background:var(--bg3);border-radius:8px;padding:10px;font-size:12px;font-family:DM Mono,monospace;color:var(--text);line-height:1.6;white-space:pre-wrap;margin:0">'+esc(tareasAdmin)+'</pre>';
-      html+='</div>';
-    }
+      // ── Tareas a realizar ──
+      var tareasAdmin = rel.tareasARealizar || '';
+      if(tareasAdmin){
+        html+='<div style="margin-top:12px">';
+        html+='<span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">📋 Tareas a realizar</span>';
+        html+='<pre style="background:var(--bg3);border-radius:8px;padding:10px;font-size:12px;font-family:DM Mono,monospace;color:var(--text);line-height:1.6;white-space:pre-wrap;margin:0">'+esc(tareasAdmin)+'</pre>';
+        html+='</div>';
+      }
     } else if(rel.notas){
       html+='<div style="margin-bottom:10px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Mano de obra</span>';
       html+='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.notas)+'</div></div>';
@@ -2984,9 +2984,7 @@ function renderFotosGuardadas(fotosArr){
 }
 
 function limpiarRelevamiento(){
-  if(!confirm('⚠️ Estás por borrar todos los datos cargados en el relevamiento.
-
-¿Confirmás que querés limpiar todo?')) return;
+  if(!confirm('⚠️ Estás por borrar todos los datos cargados.\n\n¿Confirmás que querés limpiar todo?')) return;
   // Resetear calculador
   relCalcState = {tipo:'', piezas:[]};
   relCalcIdx = 0;
