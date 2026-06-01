@@ -614,7 +614,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <option value="">Seleccionar...</option>
         <option>Administrador</option>
         <option>Ignacio</option><option>Matías</option><option>Valentino</option>
-        <option>Sebastián</option><option>Mariano</option><option>Bruno</option>
+        <option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Ivan</option>
       </select>
       <label>Contraseña</label>
       <input type="password" id="login-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
@@ -831,6 +831,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
               <button class="insp-btn" onclick="selInsp('Mariano')">Mariano</button>
               <button class="insp-btn" onclick="selInsp('Bruno')">Bruno</button>
               <button class="insp-btn" onclick="selInsp('Majo')">Majo</button>
+              <button class="insp-btn" onclick="selInsp('Ivan')">Ivan</button>
               <button class="insp-btn" id="btn-sel-taller" onclick="selTaller()" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)">🔧 Taller</button>
             </div>
             <div id="bloque-taller" style="display:none;margin-top:12px">
@@ -865,7 +866,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <input type="text" id="buscar-pend" oninput="renderTablaAdmin('pendientes')" placeholder="Buscar..." style="width:160px"/>
             <select id="fil-insp-pend" onchange="renderTablaAdmin('pendientes')" style="width:110px">
               <option value="">Todos</option>
-              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option>
+              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Ivan</option><option>Ivan</option>
             </select>
             <select id="fil-cia-pend" onchange="renderTablaAdmin('pendientes')" style="width:150px">
               <option value="">Todas las compañías</option>
@@ -894,7 +895,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <input type="text" id="buscar-rev" oninput="renderTablaAdmin('revision')" placeholder="Buscar..." style="width:160px"/>
             <select id="fil-insp-rev" onchange="renderTablaAdmin('revision')" style="width:110px">
               <option value="">Todos</option>
-              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option>
+              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Ivan</option><option>Ivan</option>
             </select>
             <select id="fil-cia-rev" onchange="renderTablaAdmin('revision')" style="width:150px">
               <option value="">Todas las compañías</option>
@@ -916,7 +917,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <input type="text" id="buscar-resolver" oninput="renderTablaAdmin('resolver')" placeholder="Buscar..." style="width:160px"/>
             <select id="fil-insp-resolver" onchange="renderTablaAdmin('resolver')" style="width:110px">
               <option value="">Todos</option>
-              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option>
+              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Ivan</option><option>Ivan</option>
             </select>
             <select id="fil-cia-resolver" onchange="renderTablaAdmin('resolver')" style="width:150px">
               <option value="">Todas las compañías</option>
@@ -970,7 +971,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
           <input type="text" id="buscar-arch" oninput="renderArchivo()" placeholder="Buscar..." style="width:160px"/>
           <select id="fil-insp-arch" onchange="renderArchivo()" style="width:110px">
             <option value="">Todos</option>
-            <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option>
+            <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Ivan</option><option>Ivan</option>
           </select>
           <select id="fil-cia-arch" onchange="renderArchivo()" style="width:150px">
             <option value="">Todas las compañías</option>
@@ -1413,7 +1414,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const API='https://script.google.com/macros/s/AKfycbySXXZa9C6OgR-vojaFfvxOfF2HwuvDr49ncq04opIV5q54vMGf3nBTYLQ4TAix9m9X/exec';
 const SECRET_TOKEN='ep_9k2mX7vQn4pRjL8wZdA3sYtB6uCfHg0E';
-const INSP_MAILS={'Ignacio':'Patitucci.mp@gmail.com','Matías':'Patitucci.mp@gmail.com','Valentino':'valentinopatitucci5@gmail.com','Sebastián':'Patitucci.mp@gmail.com','Mariano':'Patitucci.mp@gmail.com','Bruno':'bruno@estudiopatitucci.com','Majo':'sanchezmajo2022@gmail.com'};
+const INSP_MAILS={'Ignacio':'medinainspecciones@gmail.com','Matías':'mns661590@gmail.com','Valentino':'valentinopatitucci5@gmail.com','Sebastián':'Patitucci.mp@gmail.com','Mariano':'Patitucci.mp@gmail.com','Bruno':'bruno@estudiopatitucci.com','Majo':'sanchezmajo2022@gmail.com','Ivan':'Ivanveron202@gmail.com'};
 // Inspectores con permiso para cambiar el estado de sus propios relevamientos
 const INSP_PUEDE_CAMBIAR_ESTADO = ['Mariano','Valentino','Bruno'];
 // Contraseñas gestionadas 100% en el backend (GAS + Google Sheets "Usuarios")
@@ -1919,7 +1920,7 @@ function abrirModal(id){
   html+='<p class="section-title">Reasignar inspector</p>';
   html+='<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
   html+='<select id="reasig-sel-'+esc(i.ID)+'" style="width:140px"><option value="">Seleccionar...</option>'
-    +['Ignacio','Matías','Valentino','Sebastián','Mariano','Bruno'].map(function(n){return'<option'+(i.Inspector===n?' selected':'')+'>'+esc(n)+'</option>';}).join('')
+    +['Ignacio','Matías','Valentino','Sebastián','Mariano','Bruno','Majo','Ivan'].map(function(n){return'<option'+(i.Inspector===n?' selected':'')+'>'+esc(n)+'</option>';}).join('')
     +'</select>';
   html+='<button class="btn-secondary btn-sm" onclick="confirmarReasignar(\''+esc(i.ID)+'\')">Reasignar</button>';
   html+='<span style="font-size:12px;color:var(--text2)">Actual: <strong style="color:var(--text)">'+esc(i.Inspector||'-')+'</strong></span>';
@@ -6003,4 +6004,5 @@ var _TIPOS_MAP={
 
 window.CALC_DATA_GRID=_TIPOS_MAP;
 })();
+</scri
 </script>
