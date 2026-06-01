@@ -1494,7 +1494,6 @@ async function doLogin(){
   s('loading-msg').textContent='Cargando inspecciones...';
   if(nombre==='Administrador'){
     usuarioActual='Administrador';
-    try{localStorage.setItem('ep_session',nombre);}catch(e){}
     const sa=s('screen-admin');sa.style.display='flex';sa.style.flexDirection='column';
     s('admin-user-label').textContent='Administrador';
     await cargarInspecciones();
@@ -1504,7 +1503,6 @@ async function doLogin(){
     iniciarAutoRefresh();
   } else {
     usuarioActual=nombre;
-    try{localStorage.setItem('ep_session',nombre);}catch(e){}
     const si=s('screen-inspector');si.style.display='flex';si.style.flexDirection='column';
     s('insp-user-label').textContent=nombre;
     s('perfil-nombre').textContent=nombre;
@@ -1517,7 +1515,6 @@ async function doLogin(){
 }
 
 function logout(){
-  try{localStorage.removeItem('ep_session');}catch(e){}
   usuarioActual=null;inspActual=null;relId=null;fotosPendientes=[];fotosSubiendo=0;
   if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
   ['screen-admin','screen-inspector'].forEach(x=>{s(x).style.display='none';});
@@ -2018,10 +2015,17 @@ function renderFotos(r, ocultarCarpeta){
 function cerrarModal(){s('modal').classList.remove('open');}
 
 async function cambiarEstado(id,estado){
-  const i=inspecciones.find(function(x){return x.ID==id;});if(i)i.Estado=estado;
-  await apiCall({action:'actualizar',id:id,estado:estado});
-  actualizarBadgesAdmin();
-  renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+  const i=inspecciones.find(function(x){return x.ID==id;});
+  var estadoAnterior=i?i.Estado:null;
+  try{
+    await apiCall({action:'actualizar',id:id,estado:estado});
+    if(i)i.Estado=estado;
+    actualizarBadgesAdmin();
+    renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+  }catch(e){
+    if(i&&estadoAnterior!==null)i.Estado=estadoAnterior;
+    toast('Error al cambiar estado. Reintentá.','err');
+  }
 }
 
 async function guardarEstadoModal(id){
@@ -2049,21 +2053,31 @@ async function guardarDevolucion(id){
   const i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
   if(!i.Devoluciones)i.Devoluciones=[];
   i.Devoluciones.push({texto:txt,fecha:new Date().toLocaleString('es-AR')});
-  // Auto-cambiar estado a "Pendientes de resolver"
+  var estadoAnterior=i.Estado;
   i.Estado='Pendientes de resolver';
-  await apiCall({action:'actualizar',id:id,devoluciones:i.Devoluciones,estado:'Pendientes de resolver'});
-  actualizarBadgesAdmin();
-  renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
-  const av=s('dev-aviso');av.className='msg ok';av.textContent='✓ Enviada. Estado → Pendientes de resolver.';
-  setTimeout(function(){abrirModal(id);},1000);
+  try{
+    await apiCall({action:'actualizar',id:id,devoluciones:i.Devoluciones,estado:'Pendientes de resolver'});
+    actualizarBadgesAdmin();
+    renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+    const av=s('dev-aviso');av.className='msg ok';av.textContent='✓ Enviada. Estado → Pendientes de resolver.';
+    setTimeout(function(){abrirModal(id);},1000);
+  }catch(e){
+    i.Devoluciones.pop();
+    i.Estado=estadoAnterior;
+    const av=s('dev-aviso');av.className='msg err';av.textContent='Error al enviar devolución. Reintentá.';
+  }
 }
 
 async function eliminarInsp(id){
   if(!confirm('¿Eliminar esta inspección?'))return;
-  await apiCall({action:'eliminar',id:id});
-  inspecciones=inspecciones.filter(function(x){return x.ID!=id;});
-  actualizarBadgesAdmin();cerrarModal();
-  renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('cerradas');
+  try{
+    await apiCall({action:'eliminar',id:id,usuario:usuarioActual});
+    inspecciones=inspecciones.filter(function(x){return x.ID!=id;});
+    actualizarBadgesAdmin();cerrarModal();
+    renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('cerradas');
+  }catch(e){
+    toast('Error al eliminar. Reintentá.','err');
+  }
 }
 
 function exportarExcel(){
@@ -2186,7 +2200,7 @@ async function archivarAhora(){
   if(!confirm('¿Archivar todas las inspecciones cerradas con más de 6 meses? Esta acción no se puede deshacer.'))return;
   btn.disabled=true;btn.textContent='Archivando...';
   try{
-    var res=await apiCall({action:'archivar'});
+    var res=await apiCall({action:'archivar',usuario:usuarioActual});
     if(res.ok){
       var cant=res.archivadas||0;
       toast(cant>0?cant+' inspecciones archivadas correctamente.':'No había inspecciones para archivar.','ok');
@@ -3813,7 +3827,6 @@ document.addEventListener('DOMContentLoaded', function() {
   var tallerParam=(new URLSearchParams(window.location.search)).get('taller');
   if(tallerParam){iniciarVistaTaller(tallerParam);return;}
   // Siempre mostrar pantalla de login al abrir la página
-  try { localStorage.removeItem('ep_session'); } catch(e) {}
 });
 
 // ─── VISTA TALLER ──────────────────────────────────────────────────────────
@@ -5999,4 +6012,4 @@ var _TIPOS_MAP={
 
 window.CALC_DATA_GRID=_TIPOS_MAP;
 })();
-</script>
+</script>                                                                                                                                                                                                                         
