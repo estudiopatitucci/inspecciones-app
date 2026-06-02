@@ -610,7 +610,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
     <div class="login-logo"><h1>Estudio <span>Patitucci</span></h1><p>Sistema de gestión de inspecciones</p></div>
     <div class="card">
       <label>Usuario</label>
-      <input type="text" id="login-nombre" placeholder="Tu nombre" autocomplete="username" style="text-transform:capitalize"/>
+      <select id='login-nombre' style='width:100%;padding:10px;font-size:14px;border-radius:8px;background:var(--bg3);color:var(--text);border:1px solid var(--border);margin-bottom:12px'><option value=''>Seleccioná tu nombre...</option><option>Administrador</option><option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Ivan</option></select>
       <label>Contraseña</label>
       <input type="password" id="login-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
       <button class="btn-primary" onclick="doLogin()" style="width:100%;margin-top:20px;padding:12px;font-size:14px">Ingresar</button>
