@@ -6,7 +6,7 @@
 <title>Manual de Uso — App Estudio Patitucci</title>
 <meta property="og:title" content="Manual de Uso — App Estudio Patitucci">
 <meta property="og:description" content="Guía completa para inspectores y administración del sistema de gestión de inspecciones.">
-<meta property="og:image" content="https://estudiopatitucci.com.ar/og-banner.jpg">
+<meta property="og:image" content="https://estudiopatitucci.com.ar/og-manual.jpg">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f7; color: #1d1d1f; }
@@ -109,7 +109,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 <body>
 
 <div class="hero">
-  <div class="hero-badge">Manual de uso · v29/05/2026</div>
+  <div class="hero-badge">Manual de uso · v03/06/2026</div>
   <h1>App Estudio Patitucci</h1>
   <p>Sistema de gestión de inspecciones y presupuestos. Seleccioná tu rol para ir directo a lo que necesitás.</p>
   <div class="hero-roles">
@@ -274,12 +274,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <div class="step-body">
         <ul class="item-list">
           <li>Verificá que todos los campos obligatorios estén completos (nombre, teléfono, mail, CUIT, KM)</li>
-          <li>Verificá que los costos de chapa y paño estén cargados (no pueden ser $0)</li>
+          <li>Verificá que los costos de chapa, paño de pintura y hora mecánica (si cargaste piezas mecánicas) estén completos — ninguno puede ser $0</li>
+          <li>Si cargaste piezas en el calculador, al menos una debe tener horas asignadas</li>
           <li>Verificá que todas las fotos estén subidas (botón verde desaparece)</li>
           <li>Tocá <strong>Enviar relevamiento</strong></li>
           <li>La inspección pasa automáticamente a <span class="pill pill-yellow">Pendiente de verificar</span></li>
         </ul>
-        <div class="tip tip-ok"><span class="tip-icon">✅</span>También podés guardar un borrador con <strong>💾 Guardar sin enviar</strong> si necesitás completarlo más tarde. Se restaura automáticamente la próxima vez que abrís la inspección.</div>
+        <div class="tip tip-ok"><span class="tip-icon">✅</span>Podés guardar un borrador tocando <strong>💾 Guardar sin enviar</strong> si necesitás completarlo más tarde. La próxima vez que abrís la inspección te va a preguntar si querés restaurarlo.</div>
+        <div class="tip tip-warn"><span class="tip-icon">⚠️</span>Si tocás el botón rojo <strong>🗑 Limpiar</strong>, se borra todo el formulario. La app te pide confirmación antes de hacerlo, pero tené cuidado — esta acción no se puede deshacer.</div>
       </div>
     </div>
   </div>
@@ -514,6 +516,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <ul class="item-list">
           <li>Verificá que todos los campos obligatorios estén completos (nombre, tel, mail, CUIT, KM)</li>
           <li>El costo de día de chapa y el paño de pintura no pueden ser $0</li>
+          <li>Si cargaste piezas mecánicas, el costo de hora mecánica tampoco puede ser $0</li>
+          <li>Si cargaste piezas en el calculador, al menos una debe tener horas asignadas</li>
           <li>Tiene que haber al menos una foto subida</li>
           <li>Si hay fotos con ⏳ pendientes, hay que tocar <strong>📤 Subir fotos</strong> primero</li>
           <li>Si alguna foto tiene error (!), usá el botón ↺ para reintentarla</li>
@@ -539,7 +543,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <span class="step-chevron">⌄</span>
       </div>
       <div class="step-body">
-        <p style="font-size:13px;color:#3a3a3c;line-height:1.6">No. La app guarda un borrador automáticamente. La próxima vez que entrás a esa inspección, te va a preguntar si querés restaurar el borrador. Tocá <strong>Restaurar</strong> y continúa desde donde estabas, incluyendo las fotos ya subidas.</p>
+        <p style="font-size:13px;color:#3a3a3c;line-height:1.6">Depende. Si antes de cerrar tocaste <strong>💾 Guardar sin enviar</strong>, el borrador se guardó y podés recuperarlo. La próxima vez que abrís la inspección, la app te pregunta si querés restaurarlo — tocá <strong>Restaurar</strong> y continuá desde donde estabas. Si cerraste sin guardar, los datos no guardados se pierden.</p>
       </div>
     </div>
 
@@ -576,7 +580,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 </div>
 
 <div style="background:#1d1d1f;color:rgba(255,255,255,0.4);text-align:center;padding:20px;font-size:12px;">
-  Estudio Pericial Patitucci · estudiopatitucci.com.ar · Manual v29/05/2026
+  Estudio Pericial Patitucci · estudiopatitucci.com.ar · Manual v03/06/2026
 </div>
 
 <script>

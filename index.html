@@ -1709,6 +1709,7 @@ function dibujarTorta(datos){
 }
 
 // ─── TABLA ADMIN ──────────────────────────────────────────────────────────────
+function renderTablasAdmin(){renderTablasAdmin();}
 function renderTablaAdmin(tipo){
   const filtros={pendientes:function(i){return i.Estado==='Pendientes de carga';},revision:function(i){return i.Estado==='Pendiente de verificar';},resolver:function(i){return i.Estado==='Pendientes de resolver';},cerradas:function(i){return i.Estado==='Cerradas';}};
   const sufijoMap={pendientes:'pend',revision:'rev',resolver:'resolver',cerradas:'cerr'};
@@ -1728,8 +1729,12 @@ function renderTablaAdmin(tipo){
     if(fHasta&&i.FechaInsp&&i.FechaInsp>fHasta)return false;
     return true;
   });
-  // Urgentes primero
-  lista.sort(function(a,b){return (b.Urgente?1:0)-(a.Urgente?1:0);});
+  // Urgentes primero, luego más recientes arriba
+  lista.sort(function(a,b){
+    var u=(b.Urgente?1:0)-(a.Urgente?1:0);
+    if(u!==0)return u;
+    return (b.FechaInsp||'').localeCompare(a.FechaInsp||'');
+  });
   const contenedor=s(tablaId[tipo]);
   if(!lista.length){contenedor.innerHTML='<div class="loading">No hay inspecciones.</div>';return;}
   contenedor.innerHTML='<div class="tabla-wrap"><table>'
@@ -2021,7 +2026,7 @@ async function cambiarEstado(id,estado){
     await apiCall({action:'actualizar',id:id,estado:estado});
     if(i)i.Estado=estado;
     actualizarBadgesAdmin();
-    renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+    renderTablasAdmin();
   }catch(e){
     if(i&&estadoAnterior!==null)i.Estado=estadoAnterior;
     toast('Error al cambiar estado. Reintentá.','err');
@@ -2042,7 +2047,7 @@ async function guardarEstadoModal(id){
     }
     await apiCall({action:'actualizar',id:id,estado:estado,historial:i?i.Historial:[]});
     actualizarBadgesAdmin();
-    renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+    renderTablasAdmin();
     msg.className='msg ok';msg.textContent='✓ Estado actualizado.';
     toast('Estado actualizado correctamente.','ok');
   }catch(e){msg.className='msg err';msg.textContent='Error al guardar.';}
@@ -2058,7 +2063,7 @@ async function guardarDevolucion(id){
   try{
     await apiCall({action:'actualizar',id:id,devoluciones:i.Devoluciones,estado:'Pendientes de resolver'});
     actualizarBadgesAdmin();
-    renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+    renderTablasAdmin();
     const av=s('dev-aviso');av.className='msg ok';av.textContent='✓ Enviada. Estado → Pendientes de resolver.';
     setTimeout(function(){abrirModal(id);},1000);
   }catch(e){
@@ -2573,6 +2578,10 @@ function llenarFormulario(d){
 
 function limpiarForm(){
   ['f-sin','f-cia','f-tipo','f-finsp','f-fsin','f-pat','f-mod','f-anio','f-chasis','f-motor','f-km','f-aseg','f-tel','f-dir','f-localidad','f-danos','f-danos-den'].forEach(function(id){var el=s(id);if(el)el.value='';});
+  // Fecha de inspección: mañana por defecto
+  var manana=new Date(); manana.setDate(manana.getDate()+1);
+  var mm=String(manana.getMonth()+1).padStart(2,'0'), dd=String(manana.getDate()).padStart(2,'0');
+  if(s('f-finsp')) s('f-finsp').value=manana.getFullYear()+'-'+mm+'-'+dd;
   hide('bloque-mail');s('mail-prev').textContent='';
   document.querySelectorAll('#insp-btns .insp-btn').forEach(function(b){b.className='insp-btn';});
   inspActual=null;if(s('msg-guard'))s('msg-guard').textContent='';
@@ -2656,7 +2665,7 @@ async function enviarATaller(id){
       var insp=inspecciones.find(function(x){return x.ID==id;});
       if(insp)insp.Estado='Esperando taller';
       actualizarBadgesAdmin();
-      renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+      renderTablasAdmin();
     }else{alert('Error: '+(res.msg||'No se pudo generar el link.'));}
   }catch(e){alert('Error de conexión.');}
   if(btn){btn.disabled=false;btn.textContent='🔗 Enviar a taller';}
@@ -3458,6 +3467,7 @@ function validarCamposRel(){
   if(chapa<=0) return 'El costo día de chapa no puede ser $0. Completá el valor antes de enviar.';
   var hayHsMec = relCalcState.piezas.some(function(p){ return ZONAS_MECANICA_COSTO.indexOf(p.zona)!==-1 && (p.hsTrabajo||0)>0; });
   if(hayHsMec && relCostoHoraMecánica<=0) return 'Hay piezas mecánicas con horas cargadas. Completá el costo de hora mecánica antes de enviar.';
+  if(relCalcState.piezas.length>0 && !relCalcState.piezas.some(function(p){return (p.hsTrabajo||0)>0;})) return 'Hay piezas cargadas en el calculador pero ninguna tiene horas asignadas. Cargá las horas antes de enviar.';
   if(pano<=0) return 'El costo paño de pintura no puede ser $0. Completá el valor antes de enviar.';
   return null;
 }
@@ -3820,7 +3830,7 @@ async function guardarEdicion(){
       }
       me.className='msg ok';me.textContent='✓ Guardado correctamente.';
       actualizarBadgesAdmin();
-      renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+      renderTablasAdmin();
       var savedId=editId;
       setTimeout(function(){cerrarEditar();if(savedId)abrirModal(savedId);},1200);
     } else {
@@ -3836,7 +3846,7 @@ async function toggleUrgente(id){
   try{
     await apiCall({action:'actualizar',id:id,urgente:i.Urgente});
     actualizarBadgesAdmin();
-    renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+    renderTablasAdmin();
     abrirModal(id);
   }catch(e){i.Urgente=!i.Urgente;alert('Error al actualizar prioridad.');}
 }
@@ -3855,7 +3865,7 @@ async function confirmarReasignar(id){
   try{
     await apiCall({action:'actualizar',id:id,inspector:nuevoInsp,mail:INSP_MAILS[nuevoInsp]||'',historial:i.Historial,notificar:true});
     actualizarBadgesAdmin();
-    renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');
+    renderTablasAdmin();
     abrirModal(id);
   }catch(e){i.Inspector=anterior;alert('Error al reasignar.');}
 }
