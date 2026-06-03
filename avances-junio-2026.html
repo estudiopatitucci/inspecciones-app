@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avances App — Estudio Patitucci</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f4f0; color: #1a1a1a; }
+
+  .cover {
+    background: #111;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 64px 24px 56px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 60% 40%, #1a3a2a 0%, #111 70%);
+  }
+  .cover-logo {
+    width: 96px;
+    height: 96px;
+    border-radius: 22px;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  }
+  .cover h1 {
+    font-size: 28px;
+    font-weight: 500;
+    color: #fff;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+  }
+  .cover p {
+    font-size: 14px;
+    color: rgba(255,255,255,0.5);
+    position: relative;
+    z-index: 1;
+  }
+  .cover-badge {
+    display: inline-block;
+    background: #1D9E75;
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .main { max-width: 680px; margin: 0 auto; padding: 32px 20px 64px; }
+
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 32px; }
+  .stat { background: #fff; border-radius: 10px; padding: 16px; text-align: center; border: 0.5px solid #e0ddd5; }
+  .stat-n { font-size: 26px; font-weight: 500; color: #1a1a1a; line-height: 1; }
+  .stat-l { font-size: 11px; color: #888; margin-top: 5px; }
+
+  .filters { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+  .filter-btn {
+    font-size: 12px; padding: 6px 14px; border-radius: 20px;
+    border: 0.5px solid #ccc; background: #fff; color: #555; cursor: pointer;
+    transition: all .15s;
+  }
+  .filter-btn.active { background: #1D9E75; border-color: #1D9E75; color: #fff; }
+
+  .day-label {
+    font-size: 11px; font-weight: 500; color: #999; text-transform: uppercase;
+    letter-spacing: .07em; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .day-label::after { content: ''; flex: 1; height: 0.5px; background: #e0ddd5; }
+  .day-group { margin-bottom: 28px; }
+
+  .item {
+    background: #fff; border: 0.5px solid #e0ddd5; border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 8px;
+    display: flex; gap: 12px; align-items: flex-start;
+  }
+  .item-icon {
+    width: 34px; height: 34px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 16px;
+  }
+  .ic-s { background: #FCEBEB; }
+  .ic-c { background: #E6F1FB; }
+  .ic-i { background: #EAF3DE; }
+  .ic-u { background: #EEEDFE; }
+  .ic-m { background: #FAEEDA; }
+
+  .item-title { font-size: 14px; font-weight: 500; color: #1a1a1a; margin: 0 0 4px; }
+  .item-desc { font-size: 13px; color: #666; margin: 0; line-height: 1.55; }
+  .tag {
+    display: inline-block; font-size: 11px; padding: 2px 9px;
+    border-radius: 20px; margin-left: 8px; font-weight: 400; vertical-align: middle;
+  }
+  .tag-s { background: #FCEBEB; color: #A32D2D; }
+  .tag-c { background: #E6F1FB; color: #185FA5; }
+  .tag-i { background: #EAF3DE; color: #3B6D11; }
+  .tag-u { background: #EEEDFE; color: #534AB7; }
+  .tag-m { background: #FAEEDA; color: #854F0B; }
+
+  .item.hidden { display: none; }
+
+  .legend {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    margin-top: 32px; padding-top: 20px;
+    border-top: 0.5px solid #e0ddd5;
+  }
+  .leg-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #888; }
+  .leg-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  svg.icon { width: 18px; height: 18px; stroke-width: 1.7; fill: none; }
+  .ic-s svg { stroke: #A32D2D; }
+  .ic-c svg { stroke: #185FA5; }
+  .ic-i svg { stroke: #3B6D11; }
+  .ic-u svg { stroke: #534AB7; }
+  .ic-m svg { stroke: #854F0B; }
+
+  @media (max-width: 500px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .cover h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <img class="cover-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAX7UlEQVR4nO3dbYyeVZnA8WvawhQKFlqF2iAWhQXRZWVBXLMxWVmJkBhxE/hAjIaYGIMmEDRiNHwhMX4SQtAYNEETPkiiJuqGuAVRIyaSiNDlpaLZtS+ULTR0ECiltGWm+wEK0+m8PC/3fZ9zn/P7JSQkGp8z45xz/efcz8xMBAtav/7aQ6nXAMDodu68bSL1GnJV/SfGkAeoU+1xUN0Hb+ADMJ/agqD4D9bAB2AUpQdBkR+coQ9Ak0qMgaI+IIMfgDaVFAK9/0AMfQBS6HsM9HbxBj8AOehrCPRu0QY/ADnqWwj0ZrEGPwB90JcQyH6RBj8AfZR7CGS7OIMfgBLkGgLLUi9gPoY/AKXIdaZlVSW5fpIAoAk53QZkcwNg+ANQupxmXRYBkNMnBADalMvMS3oVkcsnAQBSSPlIINkNgOEPQO1SzsIkAWD4A8BrUs3EzgPA8AeAI6WYjZ09ezD4AWBpXb0voJMbAMMfAAbT1cxsPQAMfwAYThezs9UAMPwBYDRtz9DWAsDwB4DxtDlLWwkAwx8AmtHWTG08AAx/AGhWG7M1i78FAAB0q9EA8N0/ALSj6RnbWAAY/gDQriZnbSMBYPgDQDeamrljB4DhDwDdamL2ehMgAFRorADw3T8ApDHuDB45AAx/AEhrnFk8UgAY/gCQh1FnsvcAAECFhg4A3/0DQF5Gmc1DBYDhDwB5GnZGewQAABUaOAB89w8AeRtmVrsBAIAKDRQAvvsHgH4YdGa7AQCACi0ZAL77B4B+GWR2uwEAgAotGgC++weAflpqhrsBAIAKLRgAvvsHgH5bbJa7AQCACgkAAKjQvAHg+h8AyrDQTHcDAAAVOioAfPcPAGWZb7a7AQCACgkAAKjQEQHg+h8AyjR3xrsBAIAKCQAAqJAAAIAKvREAnv8DQNlmz/oVKRcCNGPt2vM7fb2pqU2dvh7QPAEAGet6sA9q0HUJBciXAIDEch3yTVjsYxMHkNZEhOf/0IWSB32ThAG0b+fO2ybcAEALDPvRzfe5EwXQPAEADTDw2zX38ysIYHwCAEZg4KclCGB8AgAGZOjna/b/N2IABiMAYAEGfj+5HYDBCACYxdAvj9sBmN+EHwGkdoZ+ncQAtXMDQJUMfdwMUDsBQDUMfRYiBqiRAKB4Bj/DOPz1IgQonQCgSIY+43IrQOkEAEUx+GmDWwFKJAAogsFPF4QAJREA9JahTyoeD1ACAUDvGPzkxK0AfSUA6A2Dn5wJAfpGAJA9g58+EQL0hQAgWwY/fSYEyJ0AIDsGPyURAuRKAJANg5+SCQFysyz1AiDC8KcevtbJhRsAknIYUiO3AeRAAJCEwQ9CgLQEAJ0y+OFoQoAUvAeAzhj+sDh7hC65AaB1DjUYnNsAuiIAaI3BD6MTArTNIwBaYfhDM+wl2uIGgEY5rKB5bgNogxsAGmP4Q7vsMZrkBoCxOZSgO24DaIobAMZi+EMa9h7jEgCMzAEEadmDjMMjAIbm0IF8eCTAqNwAMBTDH/JkbzIsAcDAHDCQN3uUYXgEwJIcKtAfHgkwKDcALMrwh36yd1mKAGBBDhDoN3uYxXgEwFEcGlAOjwRYiBsAjmD4Q5nsbeYSALzBAQFls8eZTQAQEQ4GqIW9zmECAAcCVMaeJ8KbAKvmEIB6eXMgbgAqZfgDEc6CmgmACtnwwGzOhDoJgMrY6MB8nA31EQAVscGBxTgj6iIAKmFjA4NwVtRDAFTAhgaG4cyogwAonI0MjMLZUT4BUDAbGBiHM6RsAqBQNi7QBGdJuQRAgWxYoEnOlDIJgMLYqEAbnC3lEQAFsUGBNjljyiIACmFjAl1w1pRDABTAhgS65MwpgwDoORsRSMHZ038CoMdsQCAlZ1C/CYCesvGAHDiL+ksA9JANB+TEmdRPAgAAKiQAekZpAzlyNvWPAOgRGwzImTOqXwRAT9hYQB84q/pDAPSADQX0iTOrHwRA5mwkoI+cXfkTAABQIQGQMQUN9JkzLG8CIFM2DlACZ1m+BECGbBigJM60PAkAAKiQAMiMUgZK5GzLjwDIiA0ClMwZlxcBkAkbA6iBsy4fAgAAKiQAMqCIgZo48/IgABKzEYAaOfvSEwAJ2QBAzZyBaQkAAKiQAEhE+QI4C1MSAAn4ggd4kzMxDQEAABUSAB1TugBHczZ2TwB0yBc4wMKckd0SAABQIQHQEWULsDRnZXcEAABUSAB0QNECDM6Z2Q0B0DJfyADDc3a2TwAAQIUEQIsULMDonKHtEgAAUCEB0BLlCjA+Z2l7BAAAVEgAtECxAjTHmdoOAdAwX6gAzXO2Nk8AAECFBECDFCpAe5yxzRIAAFAhAdAQZQrQPmdtcwQAAFRIADRAkQJ0x5nbDAEAABUSAGNSogDdc/aOTwAAQIUEwBgUKEA6zuDxCAAAqJAAGJHyBEjPWTw6AQAAFRIAAFAhATACV04A+XAmj0YAAECFBMCQlCZAfpzNwxMAAFAhATAEhQmQL2f0cAQAAFRIAABAhQTAgFwtAeTPWT04AQAAFRIAA1CUAP3hzB6MAACACgkAAKiQAFiCqySA/nF2L00AAECFBAAAVEgALMIVEkB/OcMXJwAAoEICAAAqJAAW4OoIoP+c5QsTAABQIQEAABUSAPNwZQRQDmf6/AQAAFRIAABAhQQAAFRIAMzhWRFAeZztRxMAAFAhAQAAFRIAs7giAiiXM/5IAgAAKrQi9QKo0zXXvD+uueb9qZfRWxs3bo0bbvhdZ69Xyv9fr746EwcOTL/+z2v//tJLB+O55/bF1NQrMTW1L3bv3hdPP703tmx5Pp588sU4eHAm9bKhFQIAqMaKFctixYplcfzxxwz035+enokdO/bEli0vxGOPPRsPPbQrHn98d7z6qiig/wTA6zwbAuZavnxZbNiwOjZsWB0XX3x6RETs3z8djzzybDzwwP/Fvfduix079iReJcNYu/b8mJralHoZWRAAAEOYnFweF120Li66aF1cd90F8ec/T8XGjVvjv/5ra+zatTf18mBgAgBgDOeeuzbOPXdtXHfdP8e9926LO+/8c2zevDv1smBJfgoAoAHLly+Lyy57V9x118fjhz+8LC68cF3qJcGiBEB4/g8064ILTo0f/ODSuPnmf4v1609IvRzmcOa/RgAAtOSSSzbEL37xH/H5z/9TLFs2kXo5cAQBANCiycnl8cUvnh933HFpnHrqqtTLgTcIAIAOXHDBqfGTn3wiPvzh01IvBSJCAAB05qSTJuPb3/73+OQnz0q9FBAA3gwCdGnZsom46aZ/jU9/+r2pl1I1Z78AAOjcxETEV77ygbj66velXgoVEwAAiVx//YXx0Y++M/UyqJQAAEhkYiLim9/8cJx77trUS6FCAgAgoZUrV8Stt14cq1YN9hcKoSkCACCxdetWxZe+dGHqZVCZqgPAu0CBXFxxxdlx0UVvT72MqtQ+A6oOAIBcTExE3Hjjv/iVwXRGAABkYsOG1XHZZWekXgaVEAAAGfGHg+jKitQLAFjIVVfdHZs37x7rf2Nycnkce+zyWLNmZZxyyvHxrnedFOecsyY+8IF1cfrpb2lopc3ZsGF1XHLJO+Oee7alXgqFEwBUpYmBQr/s3z8d+/dPx549B2L79hfjwQefeeM/e+c73xKXX35mXHHF2XHSSZMJV3mkyy8/SwDQOo8AgGpt3/5i3Hbbw3HppT+N7353Uxw4MJ16SRER8aEPvT3WrFmZehkUrtoAqP3HP4A3vfzywbj99kfiyiv/M7ZseSH1cmL58mVx6aXeDNiFmmdBtQEAMNfWrS/Epz51dzz88K7US4mLLz499RIonAAAmGXv3oPxhS/cF3/5y3NJ13HeeW+LFSsc0bTHVxfAHC+/fDC+/OXfxt69B5OtYeXKFfGe9/gjQbRHAADMY8eOPXH77f+ddA0XXHBq0tenbAIAYAE/+tET8eyz+5K9/tlnr0n22pRPAAAs4ODBmfjxj/+S7PVPO+3EZK9N+QQAwCJS/kKe0047IdlrUz4BALCIbdteiJ07X0ry2mvXHhfHHecXttIOAQCwhMceS/fro9/61uOSvTZlqzIAav7NT8DwnnzyxWSv7QagfbXOhCoDAGAYTz+d5hFAhACgPQIAYAkvv/xqstc+7rhjkr02ZRMAAEtI+VcCJyeXJ3ttyiYAAJaQcgjv35/HnyimPAIAYAmrVqW7ht+3L93fI6BsAgBgCevWrUr22vv2pXv/AWUTAABL2LBhdbLXFgC0RQAALOG8896W7LVT/jEiyiYAABZx1lknxymnHJ/ktXfv3hevvOIGgHb4DRNU5a67Pp56CSPbuHFr3HDD71Ivozof+9iGZK/91FN7kr025XMDALCAycnlceWVZyd7fQFAmwQAwAI+85n3xsknr0z2+n/963PJXpvyCQCAeZxxxur43OfOS7qGhx7alfT1KZsAAJjjhBOOjVtu+UisXJnubVL79r0aTzzhBoD2CACAWU488di4/fZL4t3vPinpOh599NmYnp5JugbK5qcAAF535pknx623fiROP/0tqZcSv/nNk6mXQOEEAFC9VauOiauvfl989rP/GMcck/5idHp6JjZu3Jp6GRROAADVOuOM1fGJT5wZV1zxD7F69WTq5bzhD3/YGX//+yupl0HhBABQtGOOWRaTkytizZqVceqpx8cZZ5wU55yzJj74wbfHO95xYurlzevnP//f1EugAgIAyFaff3PjqLZufSF+/evtqZdBBdI/7ALgDd/73iMxM3Mo9TKogAAAyMS2bS948x+dEQAAGTh0KOIb33jAd/90RgAAZOCnP/1r/PGPz6ReBhURAACJPfPM3rjllj+lXgaVEQAACe3fPx3XX//b2Lv3YOqlUBkBAJDIoUMRX/va/bF58+7US6FCVQbA1NSm1EsAiFtv/VPcd5+f+U+t1pngFwEBdOzQoYibb34w7rxzc+qlUDEBANChmZlDcdNNf4if/ex/Ui+FygkAgI48//z+uPHG38f99z+VeikgAKjLVVfd7Q1XJPHww7viq1+9P3bt2pt6KRARAgCgVfv3T8cddzwa3//+o37LH1kRAAAtue++7fGtbz0YO3e+lHopcBQBANCwTZt2xXe+sykefNCv9iVfAgCgAdPTM/GrX22PO+/cHI8/7n0m5E8AAIzhiSem4p57tsUvf7klnnnGG/zoj2oDYGpqU6xde37qZQA9s3//dDz66LPxwAM74557tsaOHXtSL4kx1PpbACMqDgCApczMHIqnntoTf/vb8/HYY7vjoYeeiccf3x0HD86kXhqMTQAA1ZienokDB2biwIHpOHBgJg4enI6XXjoYU1P7Xv/nlZia2hdPP/1SbNnyQmzf/mIcODCdetnQCgEAZMsvboL2VPnXAAGgdgIAACokAACgQlUHQM0//gFQu9pnQNUBAAC1EgAAUCEBAAAVEgAAUCEBAAAVqj4Aan8XKECNnP0CAACqJAAAoEICAAAqJAAAoEICILwZBKAmzvzXCAAAqJAAAIAKrUi9AOjSXXd9PPUSGvX1r/8+7r77b6mXAfSQG4DXeSYEUD5n/ZsEAABUSAAAQIUEAABUSADM4tkQQLmc8UcSAABQIQEAABUSAHO4IgIoj7P9aAIAACokAACgQgIAACokAObhWRFAOZzp8xMAAFAhAQAAFRIAC3BlBNB/zvKFCQAAqJAAAIAKCYBFuDoC6C9n+OIEAABUSAAAQIUEwBJcIQH0j7N7aRPr1197KPUicrd27fmplwDAEATA0twAAECFBMAAlCRAfzizByMAAKBCAmBAihIgf87qwQkAAKiQAACACgmAIbhaAsiXM3o4AgAAKiQAhqQwAfLjbB6eAACACgmAEShNgHw4k0cjAACgQgIAACokAEbkygkgPWfx6AQAAFRIAIxBeQKk4wwejwAAgAoJgDEpUIDuOXvHJwAAoEICoAFKFKA7ztxmCAAAqJAAaIgiBWifs7Y5AgAAKiQAGqRMAdrjjG2WAACACgmAhilUgOY5W5snAFrgCxWgOc7UdggAAKiQAGiJYgUYn7O0PQIAACokAFqkXAFG5wxtlwAAgAoJgJYpWIDhOTvbJwA64AsZYHDOzG4IAACokADoiKIFWJqzsjsCAAAqJAA6pGwBFuaM7JYA6JgvcICjORu7JwAAoEICIAGlC/AmZ2IaAiARX/AAzsKUBAAAVEgAJKR8gZo5A9MSAInZAECNnH3pCYAM2AhATZx5eRAAAFAhAZAJRQzUwFmXDwGQERsDKJkzLi8CIDM2CFAiZ1t+BAAAVEgAZEgpAyVxpuVJAGTKhgFK4CzLlwDImI0D9JkzLG8CAAAqJAAyp6CBPnJ25U8A9ICNBPSJM6sfBEBP2FBAHzir+kMA9IiNBeTMGdUvAqBnbDAgR86m/hEAAFAhAdBDShvIiTOpnwRAT9lwQA6cRf0lAHrMxgNScgb1mwDoORsQSMHZ038CoAA2ItAlZ04ZBEAhbEigC86acgiAgtiYQJucMWURAIWxQYE2OFvKIwAKZKMCTXKmlEkAFMqGBZrgLCmXACiYjQuMwxlSNgFQOBsYGIWzo3wCoAI2MjAMZ0YdBEAlbGhgEM6KegiAitjYwGKcEXURAJWxwYH5OBvqIwAqZKMDszkT6iQAKmXDAxHOgpqtSL0A0jm88deuPT/xSoCuGfy4AcBBAJWx54kQALzOgQB1sNc5TADwBgcDlM0eZzYBwBEcEFAme5u5vAmQo3hzIJTD4GchbgBYkIMD+s0eZjECgEU5QKCf7F2W4hEAS/JIAPrD4GdQbgAYmIMF8maPMgwBwFAcMJAne5NheQTA0DwSgHwY/IzKDQAjc/BAWvYg4xAAjMUBBGnYe4zLIwDG5pEAdMfgpyluAGiMgwnaZY/RJDcANMptADTP4KcNbgBohQMLmmEv0RY3ALTGbQCMzuCnbQKA1gkBGJzBT1c8AqAzDjZYnD1Cl9wA0Cm3AXA0g58UBABJCAEw+ElLAJCUEKBGBj858B4AsuBApBa+1smFGwCy4TaAkhn85EYAkB0hQEkMfnIlAMiWEKDPDH5yJwDInhCgTwx++kIA0BtCgJwZ/PSNAKB3hAA5MfjpKwFAb80+eMUAXTL0KYEAoAhuBeiCwU9JBABFEQK0weCnRAKAInk8wLgMfUonACieWwGGYfBTCwFANdwKsBBDnxoJAKokBjD0qd1ERMT69dceSr0QyIEYKJuhD6/ZufO2CTcAMIubgfIY+jA/AQALmDs4BEE/GPgwGAEAA3I7kC9DH4YnAGAEbgfSMvBhfAIAGiAI2mXgQ/MEALRgvoElCgZj2EM3Jg7/ix8FhDRqDQODHtLYufO2iQg3AJDcYoOw73FgyEO+BABkbNAB2nUoGOzQfwIACmAgA8NadvhfDj8TAADKNHvWL1vsvwgAlEkAAECFBAAAVOiIAPA+AAAo09wZ7wYAACokAACgQkcFgMcAAFCW+Wa7GwAAqNC8AeAWAADKsNBMdwMAABUSAABQoQUDwGMAAOi3xWa5GwAAqNCiAeAWAAD6aakZ7gYAACq0ZAC4BQCAfhlkdrsBAIAKDRQAbgEAoB8GndluAACgQgMHgFsAAMjbMLPaDQAAVGioAHALAAB5GnZGD30DIAIAIC+jzGaPAACgQiMFgFsAAMjDqDN55BsAEQAAaY0zi8d6BCACACCNcWew9wAAQIXGDgC3AADQrSZmbyM3ACIAALrR1Mxt7BGACACAdjU5axt9D4AIAIB2ND1jvQkQACrUeAC4BQCAZrUxW1u5ARABANCMtmZqa48ARAAAjKfNWdrqewBEAACMpu0Z2vqbAEUAAAyni9nZyU8BiAAAGExXM7Pzwbx+/bWHun5NAMhd198sd/57ANwGAMCRUszGJL8ISAQAwGtSzcRkvwlQBABQu5SzMIsh7H0BANQkh2+Cs/hbADl8IgCgC7nMvCwCICKfTwgAtCWnWZfNQmbzSACAkuQ0+A/L5gZgthw/UQAwilxnWpaLms1tAAB9lOvgPyzrxc0mBADog9wH/2G9WORsQgCAHPVl8B/Wq8XOJgQAyEHfBv9hvVz0bEIAgBT6OvgP6/Xi5xIDALSp70N/tmI+kNmEAABNKmnwH1bcBzSXGABgFCUO/dmK/uDmIwgAmE/pA3+uqj7Y+QgCgDrVNvDnqvqDX4o4AOi32of8Yv4fBeeqXVB5SToAAAAASUVORK5CYII=" alt="Logo Estudio Patitucci">
+  <div class="cover-badge">Actualización de la app</div>
+  <h1>Avances — App Estudio Patitucci</h1>
+  <p>Resumen de cambios del 31/05 al 03/06 de 2026</p>
+</div>
+
+<div class="main">
+
+  <div class="stats-grid">
+    <div class="stat"><div class="stat-n">14</div><div class="stat-l">Cambios totales</div></div>
+    <div class="stat"><div class="stat-n">3</div><div class="stat-l">Sesiones de trabajo</div></div>
+    <div class="stat"><div class="stat-n">7.5<span style="font-size:14px">/10</span></div><div class="stat-l">Salud del código</div></div>
+    <div class="stat"><div class="stat-n">0</div><div class="stat-l">Bugs críticos abiertos</div></div>
+  </div>
+
+  <div class="filters">
+    <button class="filter-btn active" onclick="filtrar('todos',this)">Todos</button>
+    <button class="filter-btn" onclick="filtrar('s',this)">Seguridad</button>
+    <button class="filter-btn" onclick="filtrar('c',this)">Calculador</button>
+    <button class="filter-btn" onclick="filtrar('i',this)">Flujo inspector</button>
+    <button class="filter-btn" onclick="filtrar('u',this)">UX / UI</button>
+    <button class="filter-btn" onclick="filtrar('m',this)">Mails</button>
+  </div>
+
+  <div id="lista">
+
+    <div class="day-group">
+      <div class="day-label">Hoy — 03/06/2026</div>
+      <div class="item" data-cat="i">
+        <div class="item-icon ic-i">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="item-title">Validación: no se puede enviar con horas en $0 <span class="tag tag-i">Flujo inspector</span></p>
+          <p class="item-desc">Si cargaste piezas en el calculador, al menos una debe tener horas asignadas antes de poder enviar el relevamiento. Evita envíos incompletos.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="day-group">
+      <div class="day-label">02/06/2026</div>
+      <div class="item" data-cat="s">
+        <div class="item-icon ic-s">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="item-title">Permisos en panel del administrador <span class="tag tag-s">Seguridad</span></p>
+          <p class="item-desc">Solo el Administrador puede eliminar o archivar inspecciones. El cambio de estado queda restringido a: <strong>Administrador, Mariano, Bruno y Valentino</strong>.</p>
+        </div>
+      </div>
+      <div class="item" data-cat="c">
+        <div class="item-icon ic-c">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="item-title">Nuevas piezas: largueros delanteros <span class="tag tag-c">Calculador</span></p>
+          <p class="item-desc">Larguero delantero izquierdo y derecho agregados en Sedán, Pickup simple y doble. Subzona "Frente de carrocería", 16 hs, 0.5 paños.</p>
+        </div>
+      </div>
+      <div class="item" data-cat="c">
+        <div class="item-icon ic-c">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="item-title">Corrección: parantes de carrocería a 0.5 paños <span class="tag tag-c">Calculador</span></p>
+          <p class="item-desc">Todos los parantes en todos los modelos corregidos a 0.5 paños. El valor anterior era incorrecto.</p>
+        </div>
+      </div>
+      <div class="item" data-cat="u">
+        <div class="item-icon ic-u">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="item-title">Botón "Limpiar" en formulario de relevamiento <span class="tag tag-u">UX / UI</span></p>
+          <p class="item-desc">Nuevo botón rojo junto a "Enviar" para limpiar todo el formulario. Pide confirmación antes de borrar para evitar pérdidas accidentales.</p>
+        </div>
+      </div>
+      <div class="item" data-cat="u">
+        <div class="item-icon ic-u">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="item-title">Panel de administrador más rápido <span class="tag tag-u">UX / UI</span></p>
+          <p class="item-desc">Optimización interna que reduce renders innecesarios. Mejora notoria cuando hay muchas inspecciones cargadas.</p>
+        </div>
+      </div>
+      <div class="item" data-cat="m">
+        <div class="item-icon ic-m">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="item-title">Mails automáticos por compañía <span class="tag tag-m">Mails</span></p>
+          <p class="item-desc">Los mails a Rivadavia ahora salen desde una dirección diferenciada. La app detecta la compañía automáticamente y elige el remitente correcto.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="day-group">
+      <div class="day-label">31/05 — 01/06/2026</div>
+      <div class="item" data-cat="c">
+        <div class="item-icon ic-c">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h16" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="item-title">Rediseño del calculador: grupos por zona <span class="tag tag-c">Calculador</span></p>
+          <p class="item-desc">Todas las zonas tienen sub-grupos visuales: Paragolpes, Capot, GDI/GDD, Puertas, Espejo, etc. Más fácil encontrar cada pieza al cargar un relevamiento.</p>
+        </div>
+      </div>
+      <div class="item" data-cat="c">
+        <div class="item-icon ic-c">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="item-title">Nueva subzona "Estructura trasera" en todos los modelos <span class="tag tag-c">Calculador</span></p>
+          <p class="item-desc">Panel de cola, piso de baúl, alojamiento de rueda y largueros agrupados en una sola sección. Aplica a Sedán, SUV, Pickup y Utilitario.</p>
+        </div>
+      </div>
+      <div class="item" data-cat="c">
+        <div class="item-icon ic-c">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="item-title">Renombres para mayor claridad <span class="tag tag-c">Calculador</span></p>
+          <p class="item-desc">"Lateral de Carrocería", agrupación de faros traseros con extensiones y máscara plástica con travesaños en "Frente de carrocería". Nombres más claros en toda la app.</p>
+        </div>
+      </div>
+      <div class="item" data-cat="c">
+        <div class="item-icon ic-c">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div>
+          <p class="item-title">Corrección en redondeo de días de chapa <span class="tag tag-c">Calculador</span></p>
+          <p class="item-desc">El cálculo de días ahora redondea al 0.5 superior correcto. Antes podía mostrar valores intermedios inexactos en el presupuesto.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="legend">
+    <div class="leg-item"><div class="leg-dot" style="background:#A32D2D"></div>Seguridad</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#185FA5"></div>Calculador</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#3B6D11"></div>Flujo inspector</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#534AB7"></div>UX / UI</div>
+    <div class="leg-item"><div class="leg-dot" style="background:#854F0B"></div>Mails</div>
+  </div>
+
+</div>
+
+<script>
+function filtrar(cat, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.item').forEach(el => {
+    el.classList.toggle('hidden', cat !== 'todos' && el.dataset.cat !== cat);
+  });
+  document.querySelectorAll('.day-group').forEach(g => {
+    g.style.display = g.querySelectorAll('.item:not(.hidden)').length ? '' : 'none';
+  });
+}
+</script>
+
+</body>
+</html>
