@@ -1953,6 +1953,7 @@ function abrirModal(id){
   html+='<button class="btn-secondary btn-sm" onclick="generarPDFCompleto(\''+esc(i.ID)+'\')">📄 Informe PDF</button>';
   if(rel&&rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length)html+='<button class="btn-sm" style="background:rgba(220,38,38,.12);color:#dc2626;border:1px solid rgba(220,38,38,.3)" onclick="exportarParaOrion(\''+esc(i.ID)+'\')">🔴 Cargar en ORIÓN</button>';
   if(i.Estado==='Pendientes de carga'||i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)" onclick="enviarATaller(\''+esc(i.ID)+'\')">&#x1F517; Enviar a taller</button>';
+  if(i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3)" onclick="revocarTaller(\''+esc(i.ID)+'\')">&#x1F6AB; Anular link</button>';
   if(usuarioActual === 'Administrador') html+='<button class="btn-danger btn-sm" onclick="eliminarInsp(\''+esc(i.ID)+'\')">Eliminar</button>';
   html+='<button class="btn-secondary btn-sm" onclick="cerrarModal()" style="margin-left:auto">✕ Cerrar</button>';
   html+='</div>';
@@ -2726,6 +2727,23 @@ function copiarLinkTaller(){
       var m=s('taller-copy-msg');if(m){m.style.display='block';setTimeout(function(){m.style.display='none';},2500);}
     }).catch(function(){document.execCommand('copy');});
   }catch(e){document.execCommand('copy');}
+}
+
+async function revocarTaller(id){
+  if(!confirm('¿Anular el link de taller de esta inspección?\n\nEl link actual dejará de funcionar de inmediato y la inspección volverá a "Pendientes de carga".'))return;
+  var btn=event&&(event.currentTarget||event.target);
+  if(btn){btn.disabled=true;btn.textContent='Anulando...';}
+  try{
+    var res=await apiCall({action:'revocarTokenTaller',id:id,usuario:usuarioActual});
+    if(res.ok){
+      var insp=inspecciones.find(function(x){return x.ID==id;});
+      if(insp)insp.Estado='Pendientes de carga';
+      actualizarBadgesAdmin();
+      renderTablasAdmin();
+      alert('Link anulado. La inspección volvió a "Pendientes de carga".');
+    }else{alert('Error: '+(res.msg||'No se pudo anular el link.'));}
+  }catch(e){alert('Error de conexión.');}
+  if(btn){btn.disabled=false;btn.textContent='🚫 Anular link';}
 }
 
 function mailRemitente(cia){
