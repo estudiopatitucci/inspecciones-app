@@ -640,6 +640,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
       <button class="sidebar-item active" id="amenu-dashboard" onclick="adminTab('dashboard')">📊 Dashboard</button>
       <div class="sidebar-section">Inspecciones</div>
       <button class="sidebar-item" id="amenu-nueva" onclick="adminTab('nueva')">➕ Nueva inspección</button>
+      <button class="sidebar-item" id="amenu-busqueda" onclick="adminTab('busqueda')">🔍 Buscar</button>
       <button class="sidebar-item" id="amenu-pendientes" onclick="adminTab('pendientes')">
         📋 Pend. de carga <span class="badge" id="badge-pend" style="display:none">0</span>
       </button>
@@ -854,6 +855,15 @@ tr:hover td{background:rgba(255,255,255,.02)}
         </div>
       </div>
 
+
+      <!-- BUSQUEDA GLOBAL -->
+      <div id="asec-busqueda" style="display:none">
+        <h2 style="font-size:20px;font-weight:600;margin-bottom:16px">🔍 Buscar inspección</h2>
+        <div class="card" style="margin-bottom:16px">
+          <input type="text" id="global-search" oninput="renderBusqueda()" placeholder="Patente, nº siniestro, asegurado, localidad..." style="width:100%;font-size:15px;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text1)"/>
+        </div>
+        <div id="global-search-results"><p style="color:var(--text2);font-size:14px;text-align:center;padding:32px 0">Escribí para buscar en todas las inspecciones.</p></div>
+      </div>
       <!-- PENDIENTES DE CARGA -->
       <div id="asec-pendientes" style="display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:10px">
@@ -940,7 +950,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <input type="date" id="fil-desde-cerr" onchange="renderTablaAdmin('cerradas')" style="width:135px" title="Desde"/>
             <input type="date" id="fil-hasta-cerr" onchange="renderTablaAdmin('cerradas')" style="width:135px" title="Hasta"/>
             <button class="btn-secondary btn-sm" onclick="limpiarFiltros('cerr')">✕ Limpiar</button>
-            <button class="btn-success btn-sm" onclick="exportarExcel()">⬇ Excel (todas)</button>
+            <button class="btn-secondary btn-sm" onclick="exportarExcel()">⬇ Excel (todas)</button><button class="btn-secondary btn-sm" onclick="exportarFacturacion()" title="Exporta solo las cerradas con los filtros activos, con campos de facturación">📋 Exportar facturación</button>
           </div>
         </div>
         <div id="tabla-cerr"></div>
@@ -1470,12 +1480,42 @@ const g=id=>s(id)?.value?.trim()||'';
 const esc=v=>{if(!v)return'';return String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));};
 const estadoPill=e=>{const m={'Pendientes de carga':'blue','Pendiente de verificar':'yellow','Pendientes de resolver':'orange','Esperando taller':'amber',Cerradas:'green'};return '<span class="pill pill-'+(m[e]||'gray')+'">'+esc(e)+'</span>';};
 const formatFecha=f=>{if(!f)return'-';try{const d=new Date(f);if(!isNaN(d.getTime()))return d.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});}catch(e){}return String(f).split('T')[0];};
-async function apiCall(data){const r=await fetch(API,{method:'POST',body:JSON.stringify(Object.assign({token:SECRET_TOKEN},data))});return r.json();}
+// ─── TOAST DE ERROR DE RED ────────────────────────────────────────────────────
+function _mostrarToastError(msg,retryFn){
+  var prev=s('_toast-red');if(prev)prev.remove();
+  var t=document.createElement('div');t.id='_toast-red';
+  t.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1e293b;color:#f1f5f9;padding:13px 16px;border-radius:12px;font-size:13.5px;z-index:99999;box-shadow:0 4px 24px rgba(0,0,0,.4);display:flex;align-items:center;gap:10px;max-width:92vw;min-width:260px;border-left:4px solid #ef4444';
+  var sp=document.createElement('span');sp.textContent=msg;sp.style.flex='1';t.appendChild(sp);
+  if(retryFn){var rb=document.createElement('button');rb.textContent='Reintentar';rb.style.cssText='background:var(--accent,#2563eb);color:#fff;border:none;border-radius:8px;padding:5px 13px;font-size:13px;cursor:pointer;white-space:nowrap;flex-shrink:0';rb.onclick=function(){t.remove();retryFn();};t.appendChild(rb);}
+  var cb=document.createElement('button');cb.textContent='×';cb.style.cssText='background:none;border:none;color:#94a3b8;font-size:19px;cursor:pointer;padding:0 3px;flex-shrink:0;line-height:1';cb.onclick=function(){t.remove();};t.appendChild(cb);
+  document.body.appendChild(t);
+  setTimeout(function(){if(document.body.contains(t))t.remove();},9000);
+}
+
+// ─── API CALL CON TIMEOUT ─────────────────────────────────────────────────────
+async function apiCall(data,_retryFn){
+  var ctrl=new AbortController();
+  var tid=setTimeout(function(){ctrl.abort();},30000);
+  try{
+    var r=await fetch(API,{method:'POST',body:JSON.stringify(Object.assign({token:SECRET_TOKEN},data)),signal:ctrl.signal});
+    clearTimeout(tid);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    return r.json();
+  }catch(e){
+    clearTimeout(tid);
+    var msg=e.name==='AbortError'
+      ?'El servidor tardó demasiado (timeout). Verificá tu conexión e intentá de nuevo.'
+      :'Error de conexión con el servidor. Verificá tu acceso e intentá de nuevo.';
+    _mostrarToastError(msg,_retryFn||null);
+    throw e;
+  }
+}
 function apiCallXHR(data,onProgress){return new Promise(function(resolve,reject){var xhr=new XMLHttpRequest();xhr.open('POST',API);xhr.responseType='json';if(onProgress&&xhr.upload){xhr.upload.onprogress=function(e){if(e.lengthComputable)onProgress(e.loaded,e.total);};}xhr.onload=function(){if(xhr.status>=200&&xhr.status<300){resolve(xhr.response);}else{reject(new Error('HTTP '+xhr.status));}};xhr.onerror=function(){reject(new Error('red'));};xhr.send(JSON.stringify(Object.assign({token:SECRET_TOKEN},data)));});}
 function mostrarProgresoSubida(loaded,total,nFotos){var wrap=s('upload-progress-wrap');var bar=s('upload-progress-bar');var pct=s('upload-progress-pct');var lbl=s('upload-progress-label');var sub=s('upload-progress-sub');if(!wrap)return;var pctVal=total>0?Math.min(99,Math.round(loaded/total*100)):0;if(bar)bar.style.width=pctVal+'%';if(pct)pct.textContent=pctVal+'%';if(lbl)lbl.textContent='Subiendo '+(nFotos||'')+(nFotos===1?' foto...':(nFotos>1?' fotos...':'...'));if(sub){var mb=(loaded/1048576).toFixed(1)+' / '+(total/1048576).toFixed(1)+' MB';sub.textContent=mb;}}
 function ocultarProgresoSubida(){var wrap=s('upload-progress-wrap');if(wrap)wrap.style.display='none';var bar=s('upload-progress-bar');if(bar)bar.style.width='0%';}
 function iniciarProgresoSubida(nFotos){var wrap=s('upload-progress-wrap');if(wrap)wrap.style.display='block';var bar=s('upload-progress-bar');if(bar)bar.style.width='0%';var pct=s('upload-progress-pct');if(pct)pct.textContent='0%';var lbl=s('upload-progress-label');if(lbl)lbl.textContent='Subiendo '+(nFotos||'')+(nFotos===1?' foto...':(nFotos>1?' fotos...':'...'));var sub=s('upload-progress-sub');if(sub)sub.textContent='';}
-async function apiGet(){const r=await fetch(API+'?token='+SECRET_TOKEN);return r.json();}
+async function _fetchTimeout(url,opts,ms){var ctrl=new AbortController();var tid=setTimeout(function(){ctrl.abort();},ms||30000);try{var r=await fetch(url,Object.assign({},opts,{signal:ctrl.signal}));clearTimeout(tid);return r;}catch(e){clearTimeout(tid);throw e;}}
+async function apiGet(){const r=await _fetchTimeout(API+'?token='+SECRET_TOKEN,{},30000);return r.json();}
 
 async function doLogin(){
   const nombre=s('login-nombre').value,pass=s('login-pass').value,err=s('login-error');
@@ -1559,11 +1599,12 @@ async function cambiarPass(){
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
 function adminTab(t){
-  ['dashboard','nueva','pendientes','taller','revision','resolver','cerradas','stats','archivo','perfil'].forEach(x=>{
+  ['dashboard','nueva','busqueda','pendientes','taller','revision','resolver','cerradas','stats','archivo','perfil'].forEach(x=>{
     const btn=s('amenu-'+x);if(btn)btn.className='sidebar-item'+(t===x?' active':'');
     const sec=s('asec-'+x);if(sec)sec.style.display=t===x?'block':'none';
   });
   if(t==='dashboard')renderDashboard();
+  if(t==='busqueda'){var gs=s('global-search');if(gs){gs.value='';gs.focus();}var gr=s('global-search-results');if(gr)gr.innerHTML='<p style="color:var(--text2);font-size:14px;text-align:center;padding:32px 0">Escribí para buscar en todas las inspecciones.</p>';}
   if(t==='pendientes')renderTablaAdmin('pendientes');
   if(t==='taller')renderTalleres();
   if(t==='revision')renderTablaAdmin('revision');
@@ -1715,6 +1756,35 @@ function dibujarTorta(datos){
 }
 
 // ─── TABLA ADMIN ──────────────────────────────────────────────────────────────
+function renderBusqueda(){
+  var q=(s('global-search')&&s('global-search').value||'').trim().toLowerCase();
+  var cont=s('global-search-results');
+  if(!q){cont.innerHTML='<p style="color:var(--text2);font-size:14px;text-align:center;padding:32px 0">Escribí para buscar en todas las inspecciones.</p>';return;}
+  var todos=inspecciones.filter(function(i){return((i.Siniestro||'')+(i.Patente||'')+(i.Asegurado||'')+(i.Localidad||'')).toLowerCase().includes(q);});
+  if(!todos.length){cont.innerHTML='<div class="loading">Sin resultados para "'+esc(q)+'".</div>';return;}
+  todos.sort(function(a,b){return(b.FechaInsp||'').localeCompare(a.FechaInsp||'');});
+  function hl(str){
+    if(!str)return'-';
+    var t=String(str),tl=t.toLowerCase(),idx=tl.indexOf(q);
+    if(idx===-1)return esc(t);
+    return esc(t.slice(0,idx))+'<mark style="background:rgba(251,191,36,.3);border-radius:2px;padding:0 1px">'+esc(t.slice(idx,idx+q.length))+'</mark>'+esc(t.slice(idx+q.length));
+  }
+  cont.innerHTML='<p style="font-size:12px;color:var(--text2);margin-bottom:10px">'+todos.length+' resultado'+(todos.length!==1?'s':'')+' en todas las secciones</p>'
+    +'<div class="tabla-wrap"><table><thead><tr><th>Fecha</th><th>Siniestro</th><th>Patente</th><th>Asegurado</th><th>Compañía</th><th>Inspector</th><th>Estado</th><th></th></tr></thead><tbody>'
+    +todos.map(function(i){
+      return '<tr>'
+        +'<td>'+formatFecha(i.FechaInsp)+'</td>'
+        +'<td class="mono">'+hl(i.Siniestro)+'</td>'
+        +'<td><strong>'+hl(i.Patente)+'</strong></td>'
+        +'<td>'+hl(i.Asegurado)+'</td>'
+        +'<td style="font-size:12px">'+esc(i.Compania||'-')+'</td>'
+        +'<td><span class="pill pill-blue">'+esc(i.Inspector||'-')+'</span></td>'
+        +'<td>'+estadoPill(i.Estado)+' '+_slaIndicador(_diasEnEstado(i))+'</td>'
+        +'<td><button class="btn-secondary btn-sm" onclick="abrirModal(\''+esc(i.ID)+'\')">Ver</button></td>'
+        +'</tr>';
+    }).join('')+'</tbody></table></div>';
+}
+
 function renderTablasAdmin(){renderTablaAdmin('pendientes');renderTablaAdmin('revision');renderTablaAdmin('resolver');renderTablaAdmin('cerradas');}
 function renderTablaAdmin(tipo){
   const filtros={pendientes:function(i){return i.Estado==='Pendientes de carga';},revision:function(i){return i.Estado==='Pendiente de verificar';},resolver:function(i){return i.Estado==='Pendientes de resolver';},cerradas:function(i){return i.Estado==='Cerradas';}};
@@ -1755,7 +1825,7 @@ function renderTablaAdmin(tipo){
         +'<td>'+esc(i.Localidad||'-')+'</td>'
         +'<td style="font-size:12px">'+esc(i.Compania||'-')+'</td>'
         +'<td><span class="pill pill-blue">'+esc(i.Inspector||'-')+'</span></td>'
-        +'<td>'+estadoPill(i.Estado)+'</td>'
+        +'<td>'+estadoPill(i.Estado)+' '+_slaIndicador(_diasEnEstado(i))+'</td>'
         +'<td style="display:flex;gap:6px;flex-wrap:wrap">'
         +'<button class="btn-secondary btn-sm" onclick="abrirModal(\''+esc(i.ID)+'\')">Ver detalle</button>'
         +(venc?'<button class="btn-sm" style="background:rgba(229,83,83,.12);color:var(--red);border:1px solid rgba(229,83,83,.3)" onclick="enviarRecordatorio(\''+esc(i.ID)+'\')">✉ Recordatorio</button>':'')
@@ -1931,18 +2001,25 @@ function abrirModal(id){
   html+='<input type="text" id="dev-input" placeholder="Escribí una devolución..." style="flex:1"/>';
   html+='<button class="btn-secondary btn-sm" onclick="guardarDevolucion(\''+esc(i.ID)+'\')">Enviar</button>';
   html+='</div><span id="dev-aviso" class="msg" style="display:inline-block;margin-top:4px"></span></div>';
-  // ─── Historial
+  // ─── Historial (T11 audit log)
   var hist=i.Historial||[];
   html+='<div style="border-top:1px solid var(--border);padding-top:14px;margin-bottom:14px">';
-  html+='<p class="section-title">Historial de estados</p>';
+  html+='<p class="section-title">Audit log — Historial de estados</p>';
   if(hist.length){
-    html+='<div style="display:flex;flex-direction:column;gap:6px">';
-    hist.forEach(function(h){
-      html+='<div style="display:flex;gap:10px;align-items:flex-start;font-size:12px">';
-      html+='<div style="width:7px;height:7px;border-radius:50%;background:var(--accent);margin-top:4px;flex-shrink:0"></div>';
-      html+='<div><span style="color:var(--text)">'+esc(h.estado||'')+'</span>';
-      html+=' <span style="color:var(--text3)">· '+esc(h.fecha||'')+'</span>';
-      if(h.usuario)html+=' <span style="color:var(--text3);font-size:11px">por '+esc(h.usuario)+'</span>';
+    var _estadoColor={'Pendientes de carga':'var(--accent)','Pendiente de verificar':'var(--yellow)','Pendientes de resolver':'var(--orange)','Cerradas':'var(--green)','Esperando taller':'#f59e0b'};
+    html+='<div style="position:relative;padding-left:20px">';
+    html+='<div style="position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:var(--border);border-radius:2px"></div>';
+    hist.forEach(function(h,idx){
+      var col=_estadoColor[h.estado]||'var(--text3)';
+      var isLast=idx===hist.length-1;
+      html+='<div style="position:relative;padding-bottom:'+(isLast?'0':'12px')+';display:flex;gap:10px;align-items:flex-start">';
+      html+='<div style="width:14px;height:14px;border-radius:50%;background:'+col+';border:2px solid var(--bg);margin-top:1px;flex-shrink:0;position:relative;z-index:1;box-shadow:0 0 0 2px '+col+'44"></div>';
+      html+='<div style="flex:1;background:var(--bg2);border-radius:8px;padding:8px 10px;border:1px solid var(--border)">';
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px">';
+      html+='<span style="font-weight:600;font-size:12px;color:'+col+'">'+esc(h.estado||'')+'</span>';
+      html+='<span style="font-size:11px;color:var(--text3)">'+esc(h.fecha||'')+'</span>';
+      html+='</div>';
+      if(h.usuario)html+='<span style="font-size:11px;color:var(--text2);margin-top:2px;display:block">por '+esc(h.usuario)+'</span>';
       html+='</div></div>';
     });
     html+='</div>';
@@ -2092,6 +2169,76 @@ async function eliminarInsp(id){
   }
 }
 
+
+// ─── T9: SLA SEMÁFORO ────────────────────────────────────────────────────────
+var SLA_UMBRALES={verde:2,amarillo:5}; // días
+function _diasEnEstado(i){
+  var hist=i.Historial||[];
+  var ref=null;
+  for(var k=hist.length-1;k>=0;k--){
+    if(hist[k].estado===i.Estado&&hist[k].fecha){ref=hist[k].fecha;break;}
+  }
+  if(!ref)ref=i.FechaInsp;
+  if(!ref)return null;
+  try{var d=new Date(ref);if(isNaN(d))return null;return Math.max(0,Math.floor((Date.now()-d.getTime())/86400000));}catch(e){return null;}
+}
+function _slaIndicador(dias){
+  if(dias===null)return'';
+  var c=dias<=SLA_UMBRALES.verde?'#16a34a':dias<=SLA_UMBRALES.amarillo?'#f59e0b':'#dc2626';
+  var lbl=dias===0?'hoy':dias===1?'1d':dias+'d';
+  return'<span title="'+dias+(dias===1?' día':' días')+' en este estado" style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:'+c+';font-weight:600;white-space:nowrap">'
+    +'<span style="width:7px;height:7px;border-radius:50%;background:'+c+';display:inline-block;flex-shrink:0"></span>'
+    +lbl+'</span>';
+}
+
+// ─── T12: EXPORT FACTURACIÓN ──────────────────────────────────────────────────
+function exportarFacturacion(){
+  var cia=s('fil-cia-cerr')?s('fil-cia-cerr').value||'':'';
+  var desde=s('fil-desde-cerr')?s('fil-desde-cerr').value||'':'';
+  var hasta=s('fil-hasta-cerr')?s('fil-hasta-cerr').value||'':'';
+  var lista=inspecciones.filter(function(i){
+    if(i.Estado!=='Cerradas')return false;
+    if(cia&&i.Compania!==cia)return false;
+    if(desde&&i.FechaInsp&&i.FechaInsp<desde)return false;
+    if(hasta&&i.FechaInsp&&i.FechaInsp>hasta)return false;
+    return true;
+  });
+  if(!lista.length){_mostrarToastError('No hay inspecciones cerradas con los filtros actuales.');return;}
+  try{
+    var filas=lista.map(function(i){
+      var diasTotal=null;
+      var hist=i.Historial||[];
+      var fechaCierre=null;
+      for(var k=hist.length-1;k>=0;k--){if(hist[k].estado==='Cerradas'&&hist[k].fecha){fechaCierre=hist[k].fecha;break;}}
+      if(fechaCierre&&i.FechaInsp){
+        try{var dc=new Date(fechaCierre),di=new Date(i.FechaInsp);if(!isNaN(dc)&&!isNaN(di))diasTotal=Math.max(0,Math.floor((dc-di)/86400000));}catch(e){}
+      }
+      return{
+        'Siniestro':String(i.Siniestro||''),
+        'Compañía':String(i.Compania||''),
+        'Fecha insp.':String(i.FechaInsp||''),
+        'Fecha cierre':fechaCierre?new Date(fechaCierre).toLocaleDateString('es-AR'):'',
+        'Días total':diasTotal!==null?diasTotal:'',
+        'Patente':String(i.Patente||''),
+        'Modelo':String(i.Modelo||''),
+        'Asegurado':String(i.Asegurado||''),
+        'Tel.':String(i.Tel||''),
+        'Dirección':String(i.Direccion||''),
+        'Localidad':String(i.Localidad||''),
+        'Inspector':String(i.Inspector||''),
+        'Daños declarados':String(i.Danos||''),
+        'Km verificado':i.Relevamiento&&i.Relevamiento.km?String(i.Relevamiento.km):'',
+        'Daños verificados':i.Relevamiento&&i.Relevamiento.danos?String(i.Relevamiento.danos):''
+      };
+    });
+    var ws=XLSX.utils.json_to_sheet(filas);
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,'Cerradas',ws);
+    var suffix=(cia?'_'+cia.replace(/\s/g,''):'')+(desde?'_'+desde:'')+(hasta?'_al_'+hasta:'');
+    XLSX.writeFile(wb,'Facturacion_Patitucci'+suffix+'.xlsx');
+  }catch(e){_mostrarToastError('Error al exportar: '+e.message);}
+}
+
 function exportarExcel(){
   if(!inspecciones.length){alert('No hay inspecciones.');return;}
   try{
@@ -2124,7 +2271,7 @@ async function cargarArchivo(){
   tablaEl.innerHTML='<div class="loading"><div class="spinner"></div>Cargando archivo...</div>';
   estadoEl.style.display='none';
   try{
-    var res=await fetch(API+'?token='+SECRET_TOKEN+'&action=getArchivadas');
+    var res=await _fetchTimeout(API+'?token='+SECRET_TOKEN+'&action=getArchivadas',{},30000);
     var data=await res.json();
     if(data.ok){
       inspeccionesArchivadas=data.data||[];
@@ -2251,6 +2398,57 @@ function renderStats(){
         +'</div>';
     }).join('');
   }
+  // T13: Tiempo promedio de cierre por inspector
+  var tiempoInsp={};
+  inspecciones.filter(function(i){return i.Estado==='Cerradas';}).forEach(function(i){
+    var hist=i.Historial||[];
+    var fechaCierre=null;
+    for(var k=hist.length-1;k>=0;k--){if(hist[k].estado==='Cerradas'&&hist[k].fecha){fechaCierre=hist[k].fecha;break;}}
+    if(!fechaCierre||!i.FechaInsp)return;
+    try{
+      var dias=Math.max(0,Math.floor((new Date(fechaCierre)-new Date(i.FechaInsp))/86400000));
+      if(!tiempoInsp[i.Inspector])tiempoInsp[i.Inspector]={suma:0,n:0};
+      tiempoInsp[i.Inspector].suma+=dias;tiempoInsp[i.Inspector].n++;
+    }catch(e){}
+  });
+  // T13: Tendencia mensual últimos 6 meses
+  var ahora=new Date(),meses=[],mesesLabel=[];
+  for(var m=5;m>=0;m--){
+    var d=new Date(ahora.getFullYear(),ahora.getMonth()-m,1);
+    meses.push({y:d.getFullYear(),mo:d.getMonth(),count:0});
+    mesesLabel.push(d.toLocaleDateString('es-AR',{month:'short',year:'2-digit'}));
+  }
+  inspecciones.forEach(function(i){
+    if(!i.FechaInsp)return;
+    try{var d=new Date(i.FechaInsp);meses.forEach(function(mb){if(d.getFullYear()===mb.y&&d.getMonth()===mb.mo)mb.count++;});}catch(e){}
+  });
+  var maxMes=Math.max.apply(null,meses.map(function(m){return m.count;}).concat([1]));
+  var tendenciaHTML='<div style="display:flex;align-items:flex-end;gap:8px;height:80px;margin-top:8px">'
+    +meses.map(function(mb,i){
+      var h=Math.max(4,Math.round((mb.count/maxMes)*72));
+      return'<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">'
+        +'<span style="font-size:10px;color:var(--text2);font-weight:600">'+mb.count+'</span>'
+        +'<div style="width:100%;background:var(--accent);border-radius:4px 4px 0 0;height:'+h+'px;opacity:0.8"></div>'
+        +'<span style="font-size:9px;color:var(--text3);text-align:center">'+mesesLabel[i]+'</span>'
+        +'</div>';
+    }).join('')+'</div>';
+  function tiempoInspHTML(){
+    var entries=Object.entries(tiempoInsp).sort(function(a,b){return(a[1].suma/a[1].n)-(b[1].suma/b[1].n);});
+    if(!entries.length)return'<p style="font-size:12px;color:var(--text3)">Sin datos de cerradas.</p>';
+    var maxDias=Math.max.apply(null,entries.map(function(e){return e[1].suma/e[1].n;}));
+    return entries.map(function(e){
+      var avg=Math.round(e[1].suma/e[1].n);
+      var pct=Math.round((avg/Math.max(maxDias,1))*100);
+      var col=avg<=3?'var(--green)':avg<=7?'var(--yellow)':'var(--red)';
+      return'<div style="margin-bottom:10px">'
+        +'<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">'
+        +'<span style="color:var(--text2)">'+esc(e[0])+'</span>'
+        +'<span style="font-weight:600;color:'+col+'">'+avg+' días prom. <span style="color:var(--text3);font-weight:400">('+e[1].n+' cerradas)</span></span>'
+        +'</div>'
+        +'<div style="background:var(--bg3);border-radius:4px;height:6px"><div style="width:'+pct+'%;background:'+col+';height:100%;border-radius:4px"></div></div>'
+        +'</div>';
+    }).join('');
+  }
   s('stats-container').innerHTML='<div class="stats-grid" style="margin-bottom:20px">'
     +'<div class="stat-card"><p class="stat-num">'+total+'</p><p class="stat-lbl">Total</p></div>'
     +'<div class="stat-card"><p class="stat-num" style="color:var(--accent)">'+porEstado['Pendientes de carga']+'</p><p class="stat-lbl">Pend. de carga</p></div>'
@@ -2258,10 +2456,14 @@ function renderStats(){
     +'<div class="stat-card"><p class="stat-num" style="color:var(--green)">'+porEstado.Cerradas+'</p><p class="stat-lbl">Cerradas</p></div>'
     +'<div class="stat-card"><p class="stat-num" style="color:var(--red)">'+venc+'</p><p class="stat-lbl">⚠ Vencidas</p></div>'
     +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">'
     +'<div class="card"><p class="section-title">Por inspector</p>'+barList(porInsp)+'</div>'
     +'<div class="card"><p class="section-title">Por compañía</p>'+barList(porCia)+'</div>'
     +'<div class="card"><p class="section-title">Por tipo de siniestro</p>'+barList(porTipo)+'</div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'
+    +'<div class="card"><p class="section-title">⏱ Tiempo promedio de cierre por inspector</p>'+tiempoInspHTML()+'</div>'
+    +'<div class="card"><p class="section-title">📅 Tendencia mensual (últimos 6 meses)</p>'+tendenciaHTML+'</div>'
     +'</div>';
 }
 
@@ -2624,13 +2826,61 @@ function deselTaller(){
   hide('bloque-taller');
 }
 
+
+// ─── VALIDACIÓN DE DUPLICADOS ─────────────────────────────────────────────────
+var _guardarIgnorarDup=false;
+var _dupContinuarFn=null;
+function _checkDuplicado(sin,pat){
+  var dups=[];
+  inspecciones.forEach(function(i){
+    var sinMatch=sin&&String(i.Siniestro||'').trim()===String(sin).trim();
+    var patMatch=pat&&(i.Patente||'').toUpperCase().trim()===pat.toUpperCase().trim();
+    if((sinMatch||patMatch)&&!dups.find(function(d){return d.insp.ID===i.ID;}))
+      dups.push({insp:i,campo:sinMatch?'siniestro':'patente'});
+  });
+  return dups;
+}
+function _ejecutarGuardar(){
+  var fn=_dupContinuarFn;_dupContinuarFn=null;_guardarIgnorarDup=true;if(fn)fn();
+}
+function _cerrarAlertaDup(){
+  _dupContinuarFn=null;_guardarIgnorarDup=false;
+  var m=s('msg-guard');if(m){m.className='msg';m.innerHTML='';}
+}
+function _mostrarAlertaDuplicado(dups,onContinuar){
+  _dupContinuarFn=onContinuar;
+  var m=s('msg-guard');
+  var rows=dups.map(function(d){
+    var i=d.insp;
+    return '<div style="background:var(--bg2);border-radius:8px;padding:10px 12px;margin-bottom:6px;font-size:13px;line-height:1.6">'
+      +'<strong>Siniestro:</strong> '+esc(i.Siniestro||'-')
+      +' &nbsp;|&nbsp; <strong>Patente:</strong> '+esc(i.Patente||'-')
+      +' &nbsp;|&nbsp; <strong>Estado:</strong> '+estadoPill(i.Estado)
+      +' &nbsp;|&nbsp; <strong>Inspector:</strong> '+esc(i.Inspector||'-')
+      +' &nbsp;|&nbsp; <strong>Fecha:</strong> '+formatFecha(i.FechaInsp)
+      +' <button class="btn-secondary btn-sm" style="margin-left:6px" onclick="abrirModal(\''+esc(i.ID)+'\')">Ver detalle</button>'
+      +'</div>';
+  }).join('');
+  m.innerHTML='<div style="background:rgba(234,179,8,.1);border:1px solid rgba(234,179,8,.45);border-radius:10px;padding:14px 16px">'
+    +'<p style="font-weight:600;color:#92400e;margin-bottom:10px">⚠ Ya existe '
+    +(dups.length===1?'una inspección':'inspecciones')
+    +' con el mismo '+(dups[0].campo==='siniestro'?'número de siniestro':'número de siniestro o patente')+':</p>'
+    +rows
+    +'<div style="display:flex;gap:10px;margin-top:10px">'
+    +'<button class="btn-secondary btn-sm" onclick="_cerrarAlertaDup()">Cancelar</button>'
+    +'<button class="btn-sm" style="background:var(--red);color:#fff;border:none;padding:5px 14px;border-radius:8px;cursor:pointer;font-size:13px" onclick="_ejecutarGuardar()">Guardar de todas formas</button>'
+    +'</div></div>';
+}
+
 async function guardarTaller(){
   var sin=g('f-sin'),pat=g('f-pat'),msg=s('msg-guard');
   if(!sin){msg.className='msg err';msg.textContent='Nº siniestro obligatorio.';return;}
   if(!pat){msg.className='msg err';msg.textContent='Patente obligatoria.';return;}
-  if(inspecciones.some(function(i){return String(i.Siniestro).trim()===String(sin).trim();})){
-    if(!confirm('⚠ Ya existe una inspección con el siniestro "'+sin+'".\n¿Querés guardar de todas formas?'))return;
+  if(!_guardarIgnorarDup){
+    var _dups=_checkDuplicado(sin,pat.toUpperCase());
+    if(_dups.length){_mostrarAlertaDuplicado(_dups,guardarTaller);return;}
   }
+  _guardarIgnorarDup=false;
   msg.className='msg';msg.textContent='Guardando...';
   try{
     var res=await apiCall({action:'guardar',sin,cia:g('f-cia'),tipo:g('f-tipo'),finsp:g('f-finsp'),fsin:g('f-fsin'),pat:pat.toUpperCase(),mod:g('f-mod'),anio:g('f-anio'),chasis:g('f-chasis'),motor:g('f-motor'),km:g('f-km'),aseg:g('f-aseg'),tel:g('f-tel'),dir:g('f-dir'),localidad:g('f-localidad'),danos:g('f-danos'),danosDen:g('f-danos-den'),inspector:'Taller',estado:'Esperando taller',asignarTaller:true,mailEnviado:false,enviarMail:false,historial:[{estado:'Esperando taller',fecha:new Date().toLocaleString('es-AR'),usuario:'Administrador'}]});
@@ -2771,9 +3021,11 @@ async function guardar(enviarMail){
   if(!pat){msg.className='msg err';msg.textContent='Patente obligatoria.';return;}
   if(!inspActual&&!asignarTallerMode){msg.className='msg err';msg.textContent='Seleccioná un inspector o el botón Taller.';return;}
   // Validación de duplicados
-  if(inspecciones.some(function(i){return String(i.Siniestro).trim()===String(sin).trim();})){
-    if(!confirm('⚠ Ya existe una inspección con el siniestro "'+sin+'".\n¿Querés guardar de todas formas?'))return;
+  if(!_guardarIgnorarDup){
+    var _dups=_checkDuplicado(sin,pat.toUpperCase());
+    if(_dups.length){_mostrarAlertaDuplicado(_dups,function(){guardar(enviarMail);});return;}
   }
+  _guardarIgnorarDup=false;
   msg.className='msg';msg.textContent='Guardando...';
   try{
     // Incluir datos del calculador pre-cargados por IA (si el admin los confirmó)
@@ -2854,7 +3106,7 @@ function renderSeccionInsp(tipo){
         +'<td>'+esc(i.Asegurado||'-')+'</td>'
         +'<td style="font-size:12px">'+esc(i.Direccion||'-')+(i.Localidad?', '+esc(i.Localidad):'')+'</td>'
         +'<td style="font-size:12px">'+esc(i.Compania||'-')+'</td>'
-        +'<td>'+estadoPill(i.Estado)+'</td>'
+        +'<td>'+estadoPill(i.Estado)+' '+_slaIndicador(_diasEnEstado(i))+'</td>'
         +'<td>'+btn+'</td>'
         +'</tr>';
     }).join('')
@@ -3326,8 +3578,20 @@ function crearBotonEliminar(wrapper,entry){
 async function subirFotoADrive(fotoEntry,idx){
   var res;
   if(tallerTokenActual){
-    var r=await fetch(API,{method:'POST',body:JSON.stringify({action:'uploadFotoTaller',tallerToken:tallerTokenActual,foto:fotoEntry.dataUrl,idx:idx})});
-    res=await r.json();
+    var ctrl=new AbortController();
+    var tid=setTimeout(function(){ctrl.abort();},30000);
+    try{
+      var r=await fetch(API,{method:'POST',body:JSON.stringify({action:'uploadFotoTaller',tallerToken:tallerTokenActual,foto:fotoEntry.dataUrl,idx:idx}),signal:ctrl.signal});
+      clearTimeout(tid);
+      res=await r.json();
+    }catch(e){
+      clearTimeout(tid);
+      var msg=e.name==='AbortError'
+        ?'Timeout al subir foto. Verificá tu conexión e intentá de nuevo.'
+        :'Error de red al subir foto. Verificá tu conexión.';
+      _mostrarToastError(msg);
+      throw e;
+    }
   } else {
     res=await apiCall({action:'uploadFoto',id:relId,foto:fotoEntry.dataUrl,idx:idx});
   }
@@ -3913,7 +4177,7 @@ async function iniciarVistaTaller(token){
   var ls=s('screen-loading');ls.style.display='flex';
   var lmsg=document.getElementById('loading-msg');if(lmsg)lmsg.textContent='Cargando inspección...';
   try{
-    var res=await fetch(API+'?tallerToken='+encodeURIComponent(token));
+    var res=await _fetchTimeout(API+'?tallerToken='+encodeURIComponent(token),{},30000);
     var data=await res.json();
     ls.style.display='none';
     if(!data.ok){mostrarErrorTaller(data.msg||'Link inválido o expirado.');return;}
@@ -4005,13 +4269,20 @@ function mostrarPantallaTaller(insp){
   },150);
 }
 
-function agregarFotosTaller(e){
-  Array.from(e.target.files).forEach(function(file){
-    var reader=new FileReader();
-    reader.onload=function(ev){tallerFotos.push({id:'f'+Date.now()+Math.random(),dataUrl:ev.target.result,name:file.name});renderFotosTaller();};
-    reader.readAsDataURL(file);
-  });
+async function agregarFotosTaller(e){
+  var files=Array.from(e.target.files);
   e.target.value='';
+  var msgEl=s('t-msg');
+  for(var fi=0;fi<files.length;fi++){
+    var file=files[fi];
+    if(!file.type.startsWith('image/')&&!/\.(jpg|jpeg|png)$/i.test(file.name))continue;
+    if(msgEl&&files.length>1){msgEl.className='msg';msgEl.textContent='Comprimiendo foto '+(fi+1)+' de '+files.length+'...';}
+    var dataUrl=await new Promise(function(res){var r=new FileReader();r.onload=function(){res(r.result);};r.readAsDataURL(file);});
+    var compressed=await comprimirFoto(dataUrl,1200,0.82);
+    tallerFotos.push({id:'f'+Date.now()+Math.random(),dataUrl:compressed,name:file.name});
+    renderFotosTaller();
+  }
+  if(msgEl&&msgEl.textContent.startsWith('Comprimiendo'))msgEl.textContent='';
 }
 
 function renderFotosTaller(){
@@ -4065,7 +4336,7 @@ async function enviarRelTallerDesdeForm(){
     origenTaller:true
   };
   try{
-    var r2=await fetch(API,{method:'POST',body:JSON.stringify({action:'relevamientoTaller',tallerToken:tallerTokenActual,relevamiento:rel})});
+    var r2=await _fetchTimeout(API,{method:'POST',body:JSON.stringify({action:'relevamientoTaller',tallerToken:tallerTokenActual,relevamiento:rel})},60000);
     var data=await r2.json();
     if(data.ok){
       epDbDelete(tallerTokenActual).catch(function(){});
@@ -4108,7 +4379,7 @@ async function enviarRelTaller(){
       fotos:tallerFotos.map(function(f){return f.dataUrl;}),
       fechaEnvio:new Date().toISOString()
     };
-    var res=await fetch(API,{method:'POST',body:JSON.stringify({action:'relevamientoTaller',tallerToken:tallerTokenActual,relevamiento:rel})});
+    var res=await _fetchTimeout(API,{method:'POST',body:JSON.stringify({action:'relevamientoTaller',tallerToken:tallerTokenActual,relevamiento:rel})},60000);
     var data=await res.json();
     if(data.ok){
       if(msg){msg.className='msg ok';msg.textContent='✓ ¡Relevamiento enviado correctamente!';}
@@ -4259,7 +4530,7 @@ async function lpEnviarContacto(e){
   var btn=e.target.querySelector('button[type=submit]');
   btn.disabled=true;btn.textContent='Enviando...';
   try{
-    var res=await fetch(API,{method:'POST',body:JSON.stringify({action:'contacto',nombre,email,empresa,telefono,mensaje})});
+    var res=await _fetchTimeout(API,{method:'POST',body:JSON.stringify({action:'contacto',nombre,email,empresa,telefono,mensaje})},30000);
     var data=await res.json();
     if(data.ok){
       btn.textContent='✓ Mensaje enviado';
@@ -6142,99 +6413,4 @@ var _BASE_MOTO={
     _p('Cacha lateral izquierda',S,0.5,0,0,'Lateral izquierdo'),
     _p('Cacha lateral izquierda superior',S,0.5,0,0,'Lateral izquierdo'),
     _p('Cacha lateral izquierda inferior',S,0.5,0,0,'Lateral izquierdo'),
-    _p('Embellecedor izquierdo',S,0.5,0,0,'Lateral izquierdo'),
-    _p('Protector lateral izquierdo',N,0.5,0,0,'Lateral izquierdo'),
-    _p('Gráfica / Calcomanía izquierda',N,0.5,0,0,'Lateral izquierdo'),
-    _p('Pedal de cambio',N,0.5,0,0,'Controles izquierdo'),
-    _p('Posa pié izquierdo',N,0.5,0,0,'Controles izquierdo'),
-    _p('Varillaje de cambios',N,0.5,0,0,'Controles izquierdo'),
-    _p('Posa pié conductor izquierdo',N,0.5,0,0,'Controles izquierdo'),
-    _p('Posa pié acompañante izquierdo',N,0.5,0,0,'Controles izquierdo'),
-    _p('Soporte acompañante izquierdo',N,0.5,0,0,'Controles izquierdo'),
-    _p('Contrapeso izquierdo',N,0.5,0,0,'Controles izquierdo'),
-    _p('Tapa izquierda de motor',N,0.5,0,0,'Motor izquierdo'),
-    _p('Tapa magneto',N,0.5,0,0,'Motor izquierdo'),
-    _p('Palanca de arranque',N,0.5,0,0,'Motor izquierdo'),
-    _p('Protector motor izquierdo',N,0.5,0,0,'Motor izquierdo')
-  ],
-  'Lateral Derecha':[
-    _p('Cacha lateral derecha',S,0.5,0,0,'Lateral derecho'),
-    _p('Cacha lateral derecha superior',S,0.5,0,0,'Lateral derecho'),
-    _p('Cacha lateral derecha inferior',S,0.5,0,0,'Lateral derecho'),
-    _p('Embellecedor derecho',S,0.5,0,0,'Lateral derecho'),
-    _p('Protector lateral derecho',N,0.5,0,0,'Lateral derecho'),
-    _p('Gráfica / Calcomanía derecha',N,0.5,0,0,'Lateral derecho'),
-    _p('Escape',N,0.5,0,0,'Controles derecho'),
-    _p('Cubre escape',N,0.5,0,0,'Controles derecho'),
-    _p('Soporte escape',N,0.5,0,0,'Controles derecho'),
-    _p('Pedal de freno',N,0.5,0,0,'Controles derecho'),
-    _p('Posa pié derecho',N,0.5,0,0,'Controles derecho'),
-    _p('Varilla de freno',N,0.5,0,0,'Controles derecho'),
-    _p('Bomba de freno trasera',N,0.5,0,0,'Controles derecho'),
-    _p('Depósito líquido de freno trasero',N,0.5,0,0,'Controles derecho'),
-    _p('Manguera de freno trasero',N,0.5,0,0,'Controles derecho'),
-    _p('Posa pié acompañante derecho',N,0.5,0,0,'Controles derecho'),
-    _p('Soporte acompañante derecho',N,0.5,0,0,'Controles derecho'),
-    _p('Tapa derecha de motor',N,0.5,0,0,'Motor derecho'),
-    _p('Tapa embrague',N,0.5,0,0,'Motor derecho'),
-    _p('Protector motor derecho',N,0.5,0,0,'Motor derecho')
-  ],
-  'Parte Trasera':[
-    _p('Guardabarro trasero',N,1,0,0,'Mecánica trasera'),
-    _p('Llanta trasera',N,0.5,0,0,'Mecánica trasera'),
-    _p('Cubierta trasera',N,0.5,0,0,'Mecánica trasera'),
-    _p('Amortiguador izquierdo',N,0.5,0,0,'Mecánica trasera'),
-    _p('Amortiguador derecho',N,0.5,0,0,'Mecánica trasera'),
-    _p('Basculante (Tren trasero)',N,3,0,0,'Mecánica trasera'),
-    _p('Rulemanes traseros',N,0.5,0,0,'Mecánica trasera'),
-    _p('Eje trasero',N,0.5,0,0,'Mecánica trasera'),
-    _p('Sistema monoshock',N,1,0,0,'Mecánica trasera'),
-    _p('Bieletas',N,0.5,0,0,'Mecánica trasera'),
-    _p('Faro trasero',N,0.5,0,0,'Óptica trasera'),
-    _p('Luz de freno',N,0.5,0,0,'Óptica trasera'),
-    _p('Giro trasero izquierdo',N,0.5,0,0,'Óptica trasera'),
-    _p('Giro trasero derecho',N,0.5,0,0,'Óptica trasera'),
-    _p('Luz de patente',N,0.5,0,0,'Óptica trasera'),
-    _p('Soporte faro trasero',N,0.5,0,0,'Óptica trasera'),
-    _p('Colín',N,1,0,0,'Carrocería trasera'),
-    _p('Cacha de cola izquierda',S,0.5,0,0,'Carrocería trasera'),
-    _p('Cacha de cola derecha',S,0.5,0,0,'Carrocería trasera'),
-    _p('Portapatente',N,0.5,0,0,'Carrocería trasera'),
-    _p('Portaobjetos',N,0.5,0,0,'Carrocería trasera'),
-    _p('Asiento conductor',N,1,0,0,'Habitáculo'),
-    _p('Asiento acompañante',N,0.5,0,0,'Habitáculo'),
-    _p('Cerradura de asiento',N,0.5,0,0,'Habitáculo'),
-    _p('Parrilla trasera',N,0.5,0,0,'Habitáculo'),
-    _p('Manija acompañante izquierda',N,0.5,0,0,'Habitáculo'),
-    _p('Manija acompañante derecha',N,0.5,0,0,'Habitáculo'),
-    _p('Subchasis trasero',N,4,0,0,'Estructura trasera'),
-    _p('Soporte guardabarro',N,0.5,0,0,'Estructura trasera')
-  ],
-  'Chasis':[
-    _p('Chasis principal',S,4,1,8,'Chasis'),
-    _p('Subchasis',S,4,1,6,'Chasis'),
-    _p('Basculante',S,3,0.5,5,'Chasis'),
-    _p('Soportes de motor',N,1,0,0,'Chasis'),
-    _p('Soportes de escape',N,0.5,0,0,'Chasis'),
-    _p('Soportes de carenado',N,0.5,0,0,'Chasis'),
-    _p('Araña frontal',S,3,1,0,'Chasis')
-  ]
-};
-
-var _TIPOS_MAP={
-  'Sedán / Hatchback (4-5 Puertas)':_BASE1,
-  'Sedán / Hatchback (3 Puertas)':_BASE2,
-  'SUV / Weekend':_BASE1,
-  'Utilitario / Furgón':_BASE5,
-  'Pickup A Cabina Simple':_BASE3,
-  'Pickup B Cabina Simple':_BASE3,
-  'Pickup A Cabina Doble':_BASE4,
-  'Pickup B Cabina Doble':_BASE4,
-  'Motovehiculo':_BASE_MOTO
-};
-window.CALC_DATA_GRID=_TIPOS_MAP;
-
-})();
-</script>
-</body>
-</html>
+    _p('Embellecedor 
