@@ -2931,27 +2931,37 @@ async function enviarATaller(id){
 function mostrarLinkTaller(link,exp){
   var expStr='-';
   if(exp){try{expStr=new Date(exp).toLocaleString('es-AR');}catch(e){}}
-  var waMsg=encodeURIComponent('🔧 Hola! Te enviamos el link para cargar la inspección en el Estudio Patitucci.\n\nAccedé acá (válido 48 hs):\n'+link);
+  var manualUrl='https://estudiopatitucci.com.ar/manual-taller.html';
+  var waMsg=encodeURIComponent('🔧 Hola! Te enviamos el link para cargar la inspección en el Estudio Patitucci.\n\n📋 Inspección (válido 48 hs):\n'+link+'\n\n📖 Manual de uso:\n'+manualUrl);
   var cont=s('modal-body')||document.body;
   var div=document.createElement('div');
   div.style.cssText='background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.3);border-radius:12px;padding:16px;margin-bottom:14px';
   div.innerHTML='<p style="font-weight:600;color:#f59e0b;margin-bottom:8px">🔗 Link generado para el taller</p>'
     +'<p style="font-size:12px;color:var(--text2);margin-bottom:10px">Vence: <strong style="color:var(--text)">'+esc(expStr)+'</strong> &nbsp;&bull;&nbsp; Uso único</p>'
+    // Link de inspección
+    +'<p style="font-size:11px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Link de inspección</p>'
     +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
     +'<input type="text" id="taller-link-input" value="'+esc(link)+'" readonly style="flex:1;font-size:12px;background:var(--bg3);min-width:0"/>'
     +'<button class="btn-primary btn-sm" onclick="copiarLinkTaller()">Copiar</button>'
     +'</div>'
     +'<span id="taller-copy-msg" style="font-size:12px;color:var(--green);display:none;margin-bottom:8px">✓ Copiado al portapapeles</span>'
-    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:4px">'
+    // Link del manual
+    +'<p style="font-size:11px;color:var(--text3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;margin-top:4px">Manual del taller</p>'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'
+    +'<input type="text" value="'+esc(manualUrl)+'" readonly style="flex:1;font-size:12px;background:var(--bg3);min-width:0"/>'
+    +'<button class="btn-secondary btn-sm" onclick="(function(){var t=this;navigator.clipboard.writeText(\''+manualUrl+'\').then(function(){t.textContent=\'✓ Copiado\';setTimeout(function(){t.textContent=\'Copiar\';},2000);});}).call(this)">Copiar</button>'
+    +'<a href="'+esc(manualUrl)+'" target="_blank" rel="noopener" style="font-size:12px;color:var(--accent);text-decoration:none;white-space:nowrap">Ver 👁</a>'
+    +'</div>'
+    // WhatsApp (envía ambos links)
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:2px">'
     +'<input type="tel" id="taller-wa-tel" placeholder="WhatsApp del taller (ej: 11 2345 6789)" oninput="actualizarWaLink()" '
     +'style="flex:1;font-size:12px;min-width:0"/>'
     +'<a id="taller-wa-btn" href="https://wa.me/?text='+waMsg+'" target="_blank" rel="noopener" '
     +'style="display:inline-flex;align-items:center;gap:6px;background:#25d366;color:#fff;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap">'
     +'📲 Enviar por WhatsApp</a>'
     +'</div>'
-    +'<p style="font-size:11px;color:var(--text3);margin-top:5px">Sin número: abre WhatsApp y elegís el contacto. Con número: abre la conversación directamente.</p>';
+    +'<p style="font-size:11px;color:var(--text3);margin-top:5px">El mensaje de WhatsApp incluye el link de inspección <strong style="color:var(--text2)">y</strong> el manual. Sin número: elegís el contacto. Con número: abre la conversación directamente.</p>';
   cont.insertBefore(div,cont.firstChild);
-  // Guardar waMsg para actualizarWaLink
   window._tallerWaMsg=waMsg;
 }
 
