@@ -4046,69 +4046,110 @@ function generarPDFCompleto(id){
   var sinNum=(i.Siniestro||'siniestro').replace(/[^a-zA-Z0-9]/g,'_');
   var patNum=(i.Patente||'').replace(/\s/g,'');
   var filename='Pericial_'+sinNum+(patNum?'_'+patNum:'')+'_'+new Date().toISOString().slice(0,10)+'.pdf';
-  if(typeof html2pdf==='undefined'){
-    var s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    s.onload=function(){_generarYDescargarPDF(html,filename);};
-    s.onerror=function(){
-      var b=new Blob([html],{type:'text/html;charset=utf-8'});
-      window.open(URL.createObjectURL(b),'_blank');
-      toast('Usá Ctrl+P → Guardar como PDF','warn');
-    };
-    document.head.appendChild(s);
-  }else{
-    _generarYDescargarPDF(html,filename);
-  }
+  mostrarVistaPrevia(html,filename);
 }
 
-function _generarYDescargarPDF(htmlStr,filename){
-  var parser=new DOMParser();
-  var doc=parser.parseFromString(htmlStr,'text/html');
-  var styleText=(doc.querySelector('style')||{textContent:''}).textContent;
-  function makeWrap(){
-    var w=document.createElement('div');
-    w.style.cssText='position:fixed;left:-9999px;top:0;width:794px;background:#fff;box-sizing:border-box';
-    var s=document.createElement('style');s.textContent=styleText;w.appendChild(s);
-    w.insertAdjacentHTML('beforeend',doc.body.innerHTML);
-    document.body.appendChild(w);return w;
-  }
-  var opt={
-    margin:0,filename:filename,
-    image:{type:'jpeg',quality:0.95},
-    html2canvas:{scale:2,useCORS:true,windowWidth:794,logging:false},
-    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
-  };
-  function genBlob(wrap){
-    return html2pdf().set(opt).from(wrap).outputPdf('blob').then(function(blob){
-      if(document.body.contains(wrap))document.body.removeChild(wrap);
-      return blob;
-    });
-  }
-  if(window.showSaveFilePicker){
-    var fh;
-    window.showSaveFilePicker({
-      suggestedName:filename,
-      types:[{description:'PDF',accept:{'application/pdf':['.pdf']}}]
-    }).then(function(h){fh=h;return genBlob(makeWrap());})
-      .then(function(blob){return fh.createWritable().then(function(w){return w.write(blob).then(function(){return w.close();});});})
-      .then(function(){toast('PDF guardado correctamente','ok');})
-      .catch(function(e){
-        if(e.name!=='AbortError'){
-          genBlob(makeWrap()).then(function(blob){_downloadPDFBlob(blob,filename);});
-          toast('Descargando PDF...','ok');
-        }
+function mostrarVistaPrevia(htmlStr,filename){
+  // Cerrar si ya hay uno abierto
+  var prev=document.getElementById('pdf-preview-overlay');
+  if(prev)prev.remove();
+
+  var overlay=document.createElement('div');
+  overlay.id='pdf-preview-overlay';
+  overlay.style.cssText='position:fixed;inset:0;z-index:10000;display:flex;flex-direction:column;background:#1a1a2e';
+
+  // Barra superior
+  var bar=document.createElement('div');
+  bar.style.cssText='background:#111827;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.1)';
+  bar.innerHTML=''
+    +'<span style="color:#fff;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%">📄 '+filename+'</span>'
+    +'<div style="display:flex;gap:8px;flex-shrink:0">'
+    +'<button id="btn-pdf-imprimir" style="background:#4f7cff;color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer">⬇ Descargar PDF</button>'
+    +'<button id="btn-pdf-cerrar" style="background:rgba(255,255,255,.1);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer">✕ Cerrar</button>'
+    +'</div>';
+  overlay.appendChild(bar);
+
+  // Iframe de previsualización
+  var frame=document.createElement('iframe');
+  frame.id='pdf-preview-frame';
+  frame.style.cssText='flex:1;border:none;background:#fff';
+  overlay.appendChild(frame);
+
+  document.body.appendChild(overlay);
+
+  // Escribir HTML en el iframe
+  var doc=frame.contentDocument||frame.contentWindow.document;
+  doc.open();doc.write(htmlStr);doc.close();
+
+  // Botones
+  document.getElementById('btn-pdf-cerrar').onclick=function(){overlay.remove();};
+  document.getElementById('btn-pdf-imprimir').onclick=async function(){
+    var btn=this;
+    btn.disabled=true;btn.textContent='Generando...';
+
+    // 1. Abrir selector de carpeta inmediatamente (requiere gesto del usuario)
+    var fh=null;
+    if(window.showSaveFilePicker){
+      try{
+        fh=await window.showSaveFilePicker({
+          suggestedName:filename,
+          types:[{description:'PDF',accept:{'application/pdf':['.pdf']}}]
+        });
+      }catch(e){
+        btn.disabled=false;btn.textContent='⬇ Descargar PDF';
+        if(e.name!=='AbortError')toast('Selector cancelado','warn');
+        return;
+      }
+    }
+
+    // 2. Cargar html2pdf si no está
+    if(typeof html2pdf==='undefined'){
+      await new Promise(function(res,rej){
+        var s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        s.onload=res;s.onerror=rej;document.head.appendChild(s);
       });
-  }else{
-    genBlob(makeWrap()).then(function(blob){_downloadPDFBlob(blob,filename);});
-  }
-}
+    }
 
-function _downloadPDFBlob(blob,filename){
-  var url=URL.createObjectURL(blob);
-  var a=document.createElement('a');
-  a.href=url;a.download=filename;document.body.appendChild(a);a.click();
-  document.body.removeChild(a);
-  setTimeout(function(){URL.revokeObjectURL(url);},10000);
+    // 3. Renderizar el HTML en un div visible (evita el PDF en blanco)
+    var parser=new DOMParser();
+    var pdoc=parser.parseFromString(htmlStr,'text/html');
+    var styleText=(pdoc.querySelector('style')||{textContent:''}).textContent;
+    var container=document.createElement('div');
+    container.style.cssText='position:fixed;top:0;left:0;width:794px;background:#fff;z-index:20000;box-sizing:border-box;overflow:visible';
+    var sEl=document.createElement('style');sEl.textContent=styleText;container.appendChild(sEl);
+    container.insertAdjacentHTML('beforeend',pdoc.body.innerHTML);
+    document.body.appendChild(container);
+    void container.offsetHeight; // forzar layout
+
+    var opt={
+      margin:0,filename:filename,
+      image:{type:'jpeg',quality:0.95},
+      html2canvas:{scale:2,useCORS:true,logging:false,scrollX:0,scrollY:0,windowWidth:794},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+    };
+
+    try{
+      var blob=await html2pdf().set(opt).from(container).outputPdf('blob');
+      document.body.removeChild(container);
+      if(fh){
+        var w=await fh.createWritable();
+        await w.write(blob);await w.close();
+        toast('PDF guardado','ok');
+      }else{
+        // Fallback: descarga directa
+        var url=URL.createObjectURL(blob);
+        var a=document.createElement('a');a.href=url;a.download=filename;
+        document.body.appendChild(a);a.click();document.body.removeChild(a);
+        setTimeout(function(){URL.revokeObjectURL(url);},10000);
+        toast('PDF descargado','ok');
+      }
+    }catch(e){
+      if(document.body.contains(container))document.body.removeChild(container);
+      toast('Error al generar PDF','error');
+    }
+    btn.disabled=false;btn.textContent='⬇ Descargar PDF';
+  };
 }
 
 // ─── DESCARGA MASIVA DE FOTOS ─────────────────────────────────────────────────
@@ -4116,11 +4157,11 @@ async function descargarTodasLasFotos(cacheKey){
   var fl=window._fotosCache&&window._fotosCache[cacheKey];
   if(!fl||!fl.length){toast('No hay fotos disponibles','warn');return;}
 
-  // Armar lista de {fileId, name}
+  // Armar lista de {id, name}
   var items=fl.map(function(f,i){
     var id=f.id||'';
     if(!id&&f.viewUrl&&f.viewUrl.includes('/file/d/')){
-      try{id=f.viewUrl.split('/file/d/')[1].split('/')[0];}catch(e){}
+      try{id=f.viewUrl.split('/file/d/')[1].split('/')[0];}catch(e2){}
     }
     var ext=(f.name&&f.name.match(/\.(jpg|jpeg|png|gif|webp)$/i))?f.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)[0]:'.jpg';
     return{id:id,name:'foto_'+String(i+1).padStart(2,'0')+ext};
@@ -4128,44 +4169,47 @@ async function descargarTodasLasFotos(cacheKey){
 
   if(!items.length){toast('Los links de Drive no están disponibles','warn');return;}
 
-  // Intentar selector de carpeta
+  // Selector de carpeta (requiere gesto del usuario — llamar primero)
   var folder=null;
   if(window.showDirectoryPicker){
     try{folder=await window.showDirectoryPicker({mode:'readwrite'});}
-    catch(e){if(e.name==='AbortError')return;folder=null;}
+    catch(e){if(e.name==='AbortError')return;}
+  }
+  if(!folder){toast('Tu navegador no soporta selector de carpeta','warn');return;}
+
+  toast('Descargando '+items.length+' foto'+(items.length>1?'s':'')+' en paralelo...','ok');
+
+  // Función para bajar un archivo vía GAS (evita CORS de Drive)
+  function base64ToBlob(b64,mime){
+    var bin=atob(b64),len=bin.length,buf=new ArrayBuffer(len),view=new Uint8Array(buf);
+    for(var i=0;i<len;i++)view[i]=bin.charCodeAt(i);
+    return new Blob([buf],{type:mime});
+  }
+  async function fetchViaGAS(item){
+    var url=API+'?token='+SECRET_TOKEN+'&action=getFile&fileId='+item.id;
+    var r=await fetch(url);
+    var data=await r.json();
+    if(!data.ok)throw new Error(data.msg||'error GAS');
+    return{blob:base64ToBlob(data.base64,data.mimeType||'image/jpeg'),name:item.name};
   }
 
-  toast('Descargando '+items.length+' foto'+(items.length>1?'s':'')+'...','ok');
+  // Descargar todos en paralelo
+  var results=await Promise.allSettled(items.map(fetchViaGAS));
+
+  // Escribir a la carpeta elegida
   var ok=0,fail=0;
-
-  for(var i=0;i<items.length;i++){
-    var item=items[i];
-    var dlUrl='https://drive.google.com/uc?export=download&id='+item.id;
-    if(folder){
+  for(var j=0;j<results.length;j++){
+    var res=results[j];
+    if(res.status==='fulfilled'){
       try{
-        var resp=await fetch(dlUrl,{credentials:'include'});
-        if(!resp.ok)throw new Error('HTTP '+resp.status);
-        var blob=await resp.blob();
-        var fh=await folder.getFileHandle(item.name,{create:true});
+        var fh=await folder.getFileHandle(res.value.name,{create:true});
         var w=await fh.createWritable();
-        await w.write(blob);await w.close();
+        await w.write(res.value.blob);await w.close();
         ok++;
-      }catch(e){
-        // CORS u otro error — fallback link
-        var a=document.createElement('a');a.href=dlUrl;a.download=item.name;a.target='_blank';
-        document.body.appendChild(a);a.click();document.body.removeChild(a);
-        await new Promise(function(r){setTimeout(r,900);});
-        ok++;
-      }
-    }else{
-      // Sin picker: descarga secuencial al folder de descargas
-      var a=document.createElement('a');a.href=dlUrl;a.download=item.name;a.target='_blank';
-      document.body.appendChild(a);a.click();document.body.removeChild(a);
-      await new Promise(function(r){setTimeout(r,900);});
-      ok++;
-    }
+      }catch(we){fail++;}
+    }else{fail++;}
   }
-  toast(ok+' foto'+(ok>1?'s':'')+' descargada'+(ok>1?'s':'')+(fail?' ('+fail+' fallaron)':''),'ok');
+  toast(ok+' foto'+(ok>1?'s':'')+' guardada'+(ok>1?'s':'')+' en la carpeta elegida'+(fail?' · '+fail+' fallaron':''),'ok');
 }
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
