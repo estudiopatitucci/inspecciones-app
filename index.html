@@ -688,6 +688,16 @@ tr:hover td{background:rgba(255,255,255,.02)}
             <div id="chart-insp" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"></div>
           </div>
         </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          <div class="card" style="margin-bottom:0">
+            <p class="section-title">🔧 Piezas más dañadas</p>
+            <div id="dash-top-piezas"><p style="font-size:13px;color:var(--text2)">Sin datos suficientes.</p></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <p class="section-title">📍 Zonas más afectadas</p>
+            <div id="dash-top-zonas"><p style="font-size:13px;color:var(--text2)">Sin datos suficientes.</p></div>
+          </div>
+        </div>
         <div class="card">
           <p class="section-title">Últimas inspecciones</p>
           <div id="dash-recientes"></div>
@@ -1522,15 +1532,49 @@ async function doLogin(){
   if(!nombre){err.textContent='Seleccioná tu nombre.';return;}
   if(!pass){err.textContent='Ingresá tu contraseña.';return;}
   err.textContent='';
-  // Validar contraseña contra el backend
   const btn=s('screen-login').querySelector('button.btn-primary');
-  btn.textContent='Verificando...';btn.disabled=true;
-  try {
-    const res=await apiCall({action:'login',nombre,clave:pass});
-    if(!res||!res.ok){err.textContent=res&&res.msg?res.msg:'Contraseña incorrecta.';btn.textContent='Ingresar';btn.disabled=false;return;}
-  } catch(e) {
-    err.textContent='Error de conexión. Intentá de nuevo.';btn.textContent='Ingresar';btn.disabled=false;return;
+  btn.disabled=true;
+
+  // Intento de login con timeout propio (sin toast, el error va inline)
+  async function _tryLogin(label){
+    btn.textContent=label;
+    var ctrl=new AbortController();
+    var elapsed=0;
+    var ticker=setInterval(function(){
+      elapsed++;
+      btn.textContent=label+' '+elapsed+'s';
+    },1000);
+    var tid=setTimeout(function(){ctrl.abort();},15000);
+    try{
+      var r=await fetch(API,{method:'POST',body:JSON.stringify({token:SECRET_TOKEN,action:'login',nombre:nombre,clave:pass}),signal:ctrl.signal});
+      clearTimeout(tid);clearInterval(ticker);
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return await r.json();
+    }catch(e){
+      clearTimeout(tid);clearInterval(ticker);
+      throw e;
+    }
   }
+
+  var res;
+  try{
+    res=await _tryLogin('Verificando...');
+  }catch(e){
+    // Primer intento falló — reintentar una vez
+    err.textContent='Conexión lenta, reintentando...';
+    await new Promise(function(r){setTimeout(r,1500);});
+    try{
+      res=await _tryLogin('Reintentando...');
+    }catch(e2){
+      err.textContent=e2.name==='AbortError'
+        ?'El servidor no responde. Verificá tu conexión.'
+        :'Sin conexión. Verificá tu acceso e intentá de nuevo.';
+      btn.textContent='Ingresar';btn.disabled=false;return;
+    }
+  }
+
+  if(!res||!res.ok){err.textContent=res&&res.msg?res.msg:'Contraseña incorrecta.';btn.textContent='Ingresar';btn.disabled=false;return;}
+  err.textContent='';
   btn.textContent='Cargando...';
   hide('screen-login');
   const ls=s('screen-loading');ls.style.display='flex';
@@ -1701,6 +1745,38 @@ function renderDashboard(){
       </div>
       <span style="font-size:12px;font-weight:600;color:var(--text);width:20px;text-align:right">${v}</span>
     </div>`).join('')||'<p style="font-size:13px;color:var(--text2)">Sin datos</p>';
+  // Daños frecuentes — analizar calculador de todas las inspecciones
+  var contPiezas={},contZonas={};
+  inspecciones.forEach(function(insp){
+    var rel=insp.Relevamiento;
+    if(typeof rel==='string'){try{rel=JSON.parse(rel);}catch(e){rel=null;}}
+    if(!rel||!rel.calculador||!rel.calculador.piezas)return;
+    var vistas={};
+    rel.calculador.piezas.forEach(function(p){
+      var key=(p.zona||'')+'||'+(p.pieza||'');
+      if(vistas[key])return; // contar una vez por inspección
+      vistas[key]=1;
+      if(p.pieza)contPiezas[p.pieza]=(contPiezas[p.pieza]||0)+1;
+      if(p.zona)contZonas[p.zona]=(contZonas[p.zona]||0)+1;
+    });
+  });
+  function renderBarras(cont,elId,top){
+    var sorted=Object.entries(cont).sort(function(a,b){return b[1]-a[1];}).slice(0,top);
+    var maxV=sorted.length?sorted[0][1]:1;
+    s(elId).innerHTML=sorted.length?sorted.map(function(e){
+      var pct=Math.round((e[1]/maxV)*100);
+      return '<div style="margin-bottom:10px">'
+        +'<div style="display:flex;justify-content:space-between;margin-bottom:3px">'
+        +'<span style="font-size:12px;color:var(--text);max-width:75%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(e[0])+'</span>'
+        +'<span style="font-size:12px;font-weight:600;color:var(--accent)">'+e[1]+'</span>'
+        +'</div>'
+        +'<div style="background:var(--bg3);border-radius:4px;height:6px;overflow:hidden">'
+        +'<div style="width:'+pct+'%;background:var(--accent);height:100%;border-radius:4px;transition:width .4s"></div>'
+        +'</div></div>';
+    }).join(''):'<p style="font-size:13px;color:var(--text2)">Sin datos suficientes.</p>';
+  }
+  renderBarras(contPiezas,'dash-top-piezas',8);
+  renderBarras(contZonas,'dash-top-zonas',6);
   // Recientes
   const recientes=inspecciones.slice(0,5);
   s('dash-recientes').innerHTML=recientes.length?`
@@ -2027,6 +2103,7 @@ function abrirModal(id){
   // ─── Botones
   html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
   html+='<button class="btn-secondary btn-sm" onclick="generarPDFCompleto(\''+esc(i.ID)+'\')">📄 Informe de Pericial</button>';
+  html+='<button class="btn-sm" style="background:rgba(37,211,102,.12);color:#25d366;border:1px solid rgba(37,211,102,.3)" onclick="compartirWhatsApp(\''+esc(i.ID)+'\')">💬 WhatsApp</button>';
   if(rel&&rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length)html+='<button class="btn-sm" style="background:rgba(220,38,38,.12);color:#dc2626;border:1px solid rgba(220,38,38,.3)" onclick="exportarParaOrion(\''+esc(i.ID)+'\')">🤖 Agente IA</button>';
   if(i.Estado==='Pendientes de carga'||i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)" onclick="enviarATaller(\''+esc(i.ID)+'\')">&#x1F517; Enviar a taller</button>';
   if(i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3)" onclick="revocarTaller(\''+esc(i.ID)+'\')">&#x1F6AB; Anular link</button>';
@@ -3063,11 +3140,32 @@ async function guardar(enviarMail){
 async function cargarInspector(){
   try{
     const res=await apiGet();
-    if(res.ok){
+    if(res&&res.ok){
       inspecciones=(res.data||[]).filter(function(i){return i.Inspector===usuarioActual;});
+      epCacheGuardarInsp(res.data||[]).catch(function(){});
+      _ocultarBannerOffline();
       actualizarBadgesInspector();renderSeccionInsp('abiertas');
+      // Reconectado y con datos frescos: intentar vaciar la cola pendiente
+      procesarColaEnvio();
+    } else {
+      // El Service Worker devuelve {ok:false} sin conexión (no lanza excepción)
+      await _cargarInspeccionesOffline();
     }
-  }catch(e){s('lista-abiertas').innerHTML='<div class="loading">Error de conexión.</div>';}
+  }catch(e){
+    await _cargarInspeccionesOffline();
+  }
+}
+async function _cargarInspeccionesOffline(){
+  var cached=await epCacheLeerInsp().catch(function(){return null;});
+  if(cached&&cached.data&&cached.data.length){
+    inspecciones=cached.data.filter(function(i){return i.Inspector===usuarioActual;});
+    _mostrarBannerOffline(cached.ts);
+    actualizarBadgesInspector();renderSeccionInsp('abiertas');
+    _actualizarIndicadorCola();
+  } else {
+    _mostrarBannerOffline(null);
+    var el=s('lista-abiertas');if(el)el.innerHTML='<div class="loading">Sin conexión y sin datos guardados todavía.</div>';
+  }
 }
 
 function actualizarBadgesInspector(){
@@ -3227,8 +3325,14 @@ var _epDB=null;
 function epDbOpen(){
   return new Promise(function(resolve,reject){
     if(_epDB){resolve(_epDB);return;}
-    var req=indexedDB.open('ep_borradores',1);
-    req.onupgradeneeded=function(e){e.target.result.createObjectStore('drafts',{keyPath:'id'});};
+    var req=indexedDB.open('ep_borradores',2);
+    req.onupgradeneeded=function(e){
+      var db=e.target.result;
+      // Guardas: no recrear ni borrar stores existentes (preserva 'drafts')
+      if(!db.objectStoreNames.contains('drafts'))       db.createObjectStore('drafts',{keyPath:'id'});
+      if(!db.objectStoreNames.contains('inspecciones')) db.createObjectStore('inspecciones',{keyPath:'key'});
+      if(!db.objectStoreNames.contains('cola_envio'))   db.createObjectStore('cola_envio',{keyPath:'id'});
+    };
     req.onsuccess=function(e){_epDB=e.target.result;resolve(_epDB);};
     req.onerror=function(){reject(req.error);};
   });
@@ -3257,6 +3361,99 @@ function epDbDelete(id){
     return new Promise(function(resolve){
       var tx=db.transaction('drafts','readwrite');
       tx.objectStore('drafts').delete(String(id));
+      tx.oncomplete=resolve;tx.onerror=resolve;
+    });
+  });
+}
+
+// ─── OFFLINE — INDICADORES DE CONEXIÓN ───────────────────────────────────────
+function _mostrarBannerOffline(ts){
+  var b=document.getElementById('ep-offline-banner');
+  if(!b){
+    b=document.createElement('div');
+    b.id='ep-offline-banner';
+    b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:99999;background:#b45309;color:#fff;font-size:12.5px;font-weight:600;text-align:center;padding:7px 12px;box-shadow:0 2px 8px rgba(0,0,0,.25);letter-spacing:.01em';
+    document.body.appendChild(b);
+  }
+  var txt='⚠ Modo offline — sin conexión';
+  if(ts){var d=new Date(ts);txt='⚠ Modo offline — datos del '+d.toLocaleString('es-AR');}
+  b.textContent=txt;b.style.display='block';
+}
+function _ocultarBannerOffline(){
+  var b=document.getElementById('ep-offline-banner');
+  if(b)b.style.display='none';
+}
+function _actualizarIndicadorCola(){
+  return epColaList().then(function(jobs){
+    var n=jobs?jobs.length:0;
+    var c=document.getElementById('ep-cola-chip');
+    if(!c){
+      c=document.createElement('div');
+      c.id='ep-cola-chip';
+      c.style.cssText='position:fixed;bottom:16px;left:16px;z-index:99998;background:#1e293b;color:#fff;font-size:12px;font-weight:600;padding:8px 13px;border-radius:20px;box-shadow:0 3px 12px rgba(0,0,0,.35);cursor:pointer;display:none';
+      c.title='Tocá para reintentar el envío';
+      c.onclick=function(){procesarColaEnvio();};
+      document.body.appendChild(c);
+    }
+    if(n>0){
+      c.textContent='📤 '+n+' relevamiento'+(n>1?'s':'')+' en cola'+(navigator.onLine?' · enviando…':' (offline)');
+      c.style.display='block';
+    } else {
+      c.style.display='none';
+    }
+  }).catch(function(){});
+}
+
+// ─── OFFLINE — CACHÉ DE INSPECCIONES ─────────────────────────────────────────
+function epCacheGuardarInsp(arr){
+  return epDbOpen().then(function(db){
+    return new Promise(function(resolve){
+      var tx=db.transaction('inspecciones','readwrite');
+      tx.objectStore('inspecciones').put({key:'all',data:arr||[],ts:Date.now()});
+      tx.oncomplete=resolve;tx.onerror=resolve;
+    });
+  });
+}
+function epCacheLeerInsp(){
+  return epDbOpen().then(function(db){
+    return new Promise(function(resolve){
+      var req=db.transaction('inspecciones','readonly').objectStore('inspecciones').get('all');
+      req.onsuccess=function(){resolve(req.result||null);};
+      req.onerror=function(){resolve(null);};
+    });
+  });
+}
+
+// ─── OFFLINE — COLA DE ENVÍO ─────────────────────────────────────────────────
+function epColaSave(job){
+  return epDbOpen().then(function(db){
+    return new Promise(function(resolve,reject){
+      var tx=db.transaction('cola_envio','readwrite');
+      tx.objectStore('cola_envio').put(job);
+      tx.oncomplete=resolve;tx.onerror=function(){reject(tx.error);};
+    });
+  });
+}
+function epColaList(){
+  return epDbOpen().then(function(db){
+    return new Promise(function(resolve){
+      var st=db.transaction('cola_envio','readonly').objectStore('cola_envio');
+      if(st.getAll){
+        var req=st.getAll();
+        req.onsuccess=function(){resolve(req.result||[]);};
+        req.onerror=function(){resolve([]);};
+      } else {
+        var out=[];
+        st.openCursor().onsuccess=function(e){var c=e.target.result;if(c){out.push(c.value);c.continue();}else resolve(out);};
+      }
+    });
+  });
+}
+function epColaDelete(id){
+  return epDbOpen().then(function(db){
+    return new Promise(function(resolve){
+      var tx=db.transaction('cola_envio','readwrite');
+      tx.objectStore('cola_envio').delete(String(id));
       tx.oncomplete=resolve;tx.onerror=resolve;
     });
   });
@@ -3542,7 +3739,16 @@ async function comprimirFoto(dataUrl,maxPx,quality){
       var c=document.createElement('canvas');
       c.width=w;c.height=h;
       c.getContext('2d').drawImage(img,0,0,w,h);
-      resolve(c.toDataURL('image/jpeg',quality));
+      // Primera pasada
+      var result=c.toDataURL('image/jpeg',quality);
+      // Si supera 500 KB, reducir calidad hasta que entre o llegar a 0.4
+      var MAX_B64=Math.round(500*1024/0.75); // ~500KB en bytes reales
+      var q=quality;
+      while(result.length>MAX_B64&&q>0.4){
+        q=Math.round((q-0.08)*100)/100;
+        result=c.toDataURL('image/jpeg',q);
+      }
+      resolve(result);
     };
     img.onerror=function(){resolve(dataUrl);};
     img.src=dataUrl;
@@ -3690,34 +3896,57 @@ async function procesarFotosInput(e){
     errores.push('Máximo '+MAX_FOTOS+' fotos en total. Se tomarán las primeras '+disponibles+' de las seleccionadas.');
     files=files.slice(0,disponibles);
   }
-  var validCount=0;
+  // Filtrar archivos válidos primero
+  var validas=[];
   for(var fi=0;fi<files.length;fi++){
     var file=files[fi];
-    var esImg=file.type.startsWith('image/')||/\.(jpg|jpeg|png)$/i.test(file.name);
-    if(!esImg){errores.push('"'+file.name+'" no es una imagen válida.');continue;}
+    if(!file.type.startsWith('image/')&&!/\.(jpg|jpeg|png)$/i.test(file.name)){errores.push('"'+file.name+'" no es una imagen válida.');continue;}
     if(file.size>MAX_SIZE){errores.push('"'+file.name+'" supera 20 MB.');continue;}
-    errDiv.textContent='Comprimiendo '+(fi+1)+' de '+files.length+'...';
-    var dataUrl=await new Promise(function(res){var r=new FileReader();r.onload=function(){res(r.result);};r.readAsDataURL(file);});
-    var compressed=await comprimirFoto(dataUrl,1200,0.82);
-    var uid='f_'+Date.now()+'_'+fi;
-    var fotoEntry={_uid:uid,dataUrl:compressed,name:file.name,driveLink:null,status:'pendiente'};
+    validas.push(file);
+  }
+  if(!validas.length){if(errores.length){errDiv.style.color='var(--red)';errDiv.textContent=errores.join(' · ');}e.target.value='';return;}
+  errDiv.textContent='Comprimiendo '+validas.length+' foto'+(validas.length>1?'s':'')+' en paralelo...';
+
+  // Comprimir todas en paralelo
+  var tamanioOrigTotal=0;
+  var resultados=await Promise.all(validas.map(function(f,fi){
+    tamanioOrigTotal+=f.size;
+    return new Promise(function(res){
+      var r=new FileReader();
+      r.onload=async function(){
+        var compressed=await comprimirFoto(r.result,1200,0.82);
+        res({compressed:compressed,name:f.name,uid:'f_'+Date.now()+'_'+fi});
+      };
+      r.readAsDataURL(f);
+    });
+  }));
+
+  // Agregar al preview y a fotosPendientes
+  var tamanioCompTotal=0;
+  resultados.forEach(function(item){
+    tamanioCompTotal+=Math.round(item.compressed.length*0.75);
+    var fotoEntry={_uid:item.uid,dataUrl:item.compressed,name:item.name,driveLink:null,status:'pendiente'};
     fotosPendientes.push(fotoEntry);
-    validCount++;
     var wrapper=document.createElement('div');
-    wrapper.setAttribute('data-uid',uid);
+    wrapper.setAttribute('data-uid',item.uid);
     wrapper.style.cssText='position:relative;display:inline-block';
     var img=document.createElement('img');
-    img.src=compressed;
+    img.src=item.compressed;
     img.style.cssText='width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--border);cursor:pointer;display:block;opacity:0.7';
     img.onclick=function(){window.open(this.src,'_blank');};
     var overlay=_overlayPendiente();
     wrapper.appendChild(img);wrapper.appendChild(overlay);
     prev.appendChild(wrapper);
-    actualizarContadorFotos();
-  }
+  });
+  var validCount=resultados.length;
   actualizarContadorFotos();
+
+  // Mostrar resumen con ahorro
+  var origMB=(tamanioOrigTotal/1048576).toFixed(1);
+  var compKB=Math.round(tamanioCompTotal/1024);
+  var ahorroMsg=tamanioOrigTotal>0?' ('+origMB+' MB → '+compKB+' KB)':'';
   if(errores.length){errDiv.style.color='var(--red)';errDiv.textContent=errores.join(' · ');}
-  else if(validCount>0){errDiv.style.color='var(--text2)';errDiv.textContent=validCount+' foto'+(validCount>1?'s':'')+' lista'+(validCount>1?'s':'')+'. Cuando termines, presioná "Subir fotos".';}
+  else if(validCount>0){errDiv.style.color='var(--text2)';errDiv.textContent=validCount+' foto'+(validCount>1?'s':'')+' lista'+(validCount>1?'s':'')+ahorroMsg+'. Presioná "Subir fotos".';}
   e.target.value='';
 }
 async function subirTodasLasFotos(){
@@ -3784,9 +4013,13 @@ async function enviarRel(){
   var errCampos=validarCamposRel();
   if(errCampos){msg.className='msg err';msg.textContent=errCampos;return;}
   if(!fotosPendientes.length){msg.className='msg err';msg.textContent='Subí al menos una foto JPG.';return;}
-  if(fotosSubiendo>0){msg.className='msg err';msg.textContent='Esperá que terminen de subir las fotos.';return;}
-  if(fotosPendientes.some(function(f){return f.status==='pendiente';})){msg.className='msg err';msg.textContent='Presioná "Subir fotos" antes de enviar.';return;}
-  if(fotosPendientes.some(function(f){return f.status==='error';})){msg.className='msg err';msg.textContent='Hay fotos con error. Reintentá antes de enviar.';return;}
+  // Estas verificaciones solo aplican online: sin conexión las fotos no pudieron subirse a Drive
+  // y se encolan con sus dataUrl para subirse al reconectar.
+  if(navigator.onLine){
+    if(fotosSubiendo>0){msg.className='msg err';msg.textContent='Esperá que terminen de subir las fotos.';return;}
+    if(fotosPendientes.some(function(f){return f.status==='pendiente';})){msg.className='msg err';msg.textContent='Presioná "Subir fotos" antes de enviar.';return;}
+    if(fotosPendientes.some(function(f){return f.status==='error';})){msg.className='msg err';msg.textContent='Hay fotos con error. Reintentá antes de enviar.';return;}
+  }
   msg.className='msg';msg.textContent='Enviando...';
   var calcTotalHs=relCalcState.piezas.reduce(function(acc,p){return acc+(p.hsTrabajo||0);},0);
   var calcTotalOpHs=relOpState.reduce(function(acc,o){
@@ -3804,6 +4037,11 @@ async function enviarRel(){
   var _fl=fotosPendientes.filter(function(f){return f.driveLink;}).map(function(f){return f.driveLink;});
   var tareasText = s('rel-tareas') ? s('rel-tareas').value.trim() : '';
   var rel={km,danos,calculador:calcData,taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),fotosLinks:_fl,cantFotos:_fl.length,fechaEnvio:new Date().toISOString(),tareasARealizar:tareasText};
+  // Sin conexión: encolar para envío automático al reconectar (no se pierde nada).
+  if(!navigator.onLine){
+    await _encolarRel(rel,msg);
+    return;
+  }
   try{
     var i=inspecciones.find(function(x){return x.ID==relId;});
     var res=await apiCall({action:'actualizar',id:relId,relevamiento:rel,estado:'Pendiente de verificar'});
@@ -3825,7 +4063,243 @@ async function enviarRel(){
     ocultarProgresoSubida();msg.className='msg ok';msg.textContent='✓ Relevamiento enviado. La inspección pasó a "Pendiente de verificar".';
     toast('Relevamiento enviado correctamente.','ok');
     setTimeout(function(){cerrarRel();},1500);
-  }catch(e){ocultarProgresoSubida();msg.className='msg err';msg.textContent='Error al enviar. Intentá de nuevo.';}
+  }catch(e){
+    ocultarProgresoSubida();
+    // Falló la conexión justo al enviar (timeout/red): encolar para reintento automático.
+    await _encolarRel(rel,msg);
+  }
+}
+
+// ─── ENCOLAR RELEVAMIENTO OFFLINE ────────────────────────────────────────────
+async function _encolarRel(rel,msg){
+  var fotos=fotosPendientes.map(function(f){return {dataUrl:f.dataUrl||null,driveLink:f.driveLink||null,name:f.name||'foto.jpg'};});
+  var job={id:String(relId),tipo:'inspector',rel:rel,fotos:fotos,estado:'Pendiente de verificar',ts:Date.now()};
+  try{
+    await epColaSave(job);
+    // Reflejar localmente que ya quedó cargado (pendiente de sincronizar)
+    var i=inspecciones.find(function(x){return x.ID==relId;});
+    if(i){i.Relevamiento=rel;i.Estado='Pendiente de verificar';}
+    try{actualizarBadgesInspector();}catch(e){}
+    if(msg){msg.className='msg ok';msg.textContent='📥 Sin conexión: relevamiento guardado. Se enviará solo al recuperar internet.';}
+    toast('Relevamiento guardado offline. Se enviará automáticamente al reconectar.','info');
+    _actualizarIndicadorCola();
+    setTimeout(function(){cerrarRel();},1900);
+  }catch(e){
+    if(msg){msg.className='msg err';msg.textContent='No se pudo guardar offline. Intentá de nuevo.';}
+  }
+}
+
+// ─── PROCESADOR DE LA COLA DE ENVÍO ──────────────────────────────────────────
+var _colaProcesando=false;
+async function procesarColaEnvio(){
+  if(_colaProcesando)return;
+  if(!navigator.onLine)return;
+  _colaProcesando=true;
+  try{
+    var jobs=await epColaList();
+    if(!jobs||!jobs.length){return;}
+    // Snapshot del servidor para evitar duplicados (relevamiento ya enviado por otra vía)
+    var serverData=null;
+    try{var r=await apiGet();if(r&&r.ok)serverData=r.data||[];}catch(e){}
+    for(var k=0;k<jobs.length;k++){
+      var job=jobs[k];
+      if(serverData){
+        var srv=serverData.find(function(x){return x.ID==job.id;});
+        if(srv){
+          var srel=srv.Relevamiento;
+          if(typeof srel==='string'){try{srel=JSON.parse(srel);}catch(e){srel=null;}}
+          // Si el servidor ya tiene este mismo relevamiento (misma fechaEnvio), no reenviar.
+          if(srel&&srel.fechaEnvio&&job.rel&&srel.fechaEnvio===job.rel.fechaEnvio){
+            await epColaDelete(job.id);
+            continue;
+          }
+        }
+      }
+      try{
+        await _enviarJobCola(job);
+        await epColaDelete(job.id);
+        epDbDelete(job.id).catch(function(){});
+        try{localStorage.removeItem('bdr_'+job.id);}catch(e){}
+      }catch(e){
+        // Sigue sin conexión real: dejar en cola y reintentar en el próximo evento online.
+        break;
+      }
+    }
+  } finally {
+    _colaProcesando=false;
+    _actualizarIndicadorCola();
+  }
+}
+async function _enviarJobCola(job){
+  var fotos=job.fotos||[];
+  var links=[];
+  for(var idx=0;idx<fotos.length;idx++){
+    var f=fotos[idx];
+    if(f.driveLink){links.push(f.driveLink);continue;}   // ya estaba subida
+    if(!f.dataUrl)continue;
+    var resF=await apiCall({action:'uploadFoto',id:job.id,foto:f.dataUrl,idx:idx});
+    if(resF&&resF.ok&&resF.link){links.push(resF.link);f.driveLink=resF.link;}
+    else{throw new Error('foto');}
+  }
+  var rel=job.rel;
+  rel.fotosLinks=links;
+  rel.cantFotos=links.length;
+  var res2=await apiCall({action:'actualizar',id:job.id,relevamiento:rel,estado:job.estado||'Pendiente de verificar'});
+  if(!(res2&&(res2.ok||res2.relevamiento||res2.fotosLinks)))throw new Error('actualizar');
+  if(res2&&res2.relevamiento){
+    if(res2.relevamiento.fotosLinks)rel.fotosLinks=res2.relevamiento.fotosLinks;
+    if(res2.relevamiento.cantFotos) rel.cantFotos=res2.relevamiento.cantFotos;
+    if(res2.relevamiento.carpetaUrl)rel.carpetaUrl=res2.relevamiento.carpetaUrl;
+  } else if(res2&&res2.fotosLinks){
+    rel.fotosLinks=res2.fotosLinks;
+    if(res2.cantFotos) rel.cantFotos=res2.cantFotos;
+    if(res2.carpetaUrl)rel.carpetaUrl=res2.carpetaUrl;
+  }
+  var i=inspecciones.find(function(x){return x.ID==job.id;});
+  if(i){i.Relevamiento=rel;i.Estado=job.estado||'Pendiente de verificar';}
+  try{actualizarBadgesInspector();}catch(e){}
+  try{var actual=s('isec-abiertas');if(actual&&actual.style.display!=='none')renderSeccionInsp('abiertas');}catch(e){}
+  toast('✓ Relevamiento de '+((i&&i.Patente)?i.Patente:job.id)+' enviado al recuperar conexión.','ok');
+}
+
+// ─── PLANTILLAS DE DAÑOS FRECUENTES ──────────────────────────────────────────
+var PLANTILLAS_DANOS=[
+  {
+    id:'choque-trasero',
+    nombre:'Choque trasero',
+    emoji:'⬅️',
+    desc:'Paragolpes + tapa de baúl / portón',
+    piezas:[
+      {zona:'Trasera',pieza:'Paragolpes trasero',tarea:'Sustituir',nivelDano:'',hsTrabajo:6,panos:1.5},
+      {zona:'Trasera',pieza:'Tapa de baúl (Modelos Sedán)',tarea:'Reparar',nivelDano:'Medio',hsTrabajo:6,panos:2.5},
+      {zona:'Trasera',pieza:'Tapa de baúl (Modelos Sedán)',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:2.5},
+      {zona:'Trasera',pieza:'Portón trasero (Modelos Hatchback / SUV)',tarea:'Reparar',nivelDano:'Medio',hsTrabajo:6,panos:2.5},
+      {zona:'Trasera',pieza:'Portón trasero (Modelos Hatchback / SUV)',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:2.5}
+    ]
+  },
+  {
+    id:'choque-frontal',
+    nombre:'Choque frontal',
+    emoji:'➡️',
+    desc:'Paragolpes + capot',
+    piezas:[
+      {zona:'Frontal',pieza:'Paragolpes delantero',tarea:'Sustituir',nivelDano:'',hsTrabajo:8,panos:1.5},
+      {zona:'Frontal',pieza:'Capot',tarea:'Reparar',nivelDano:'Medio',hsTrabajo:3,panos:3},
+      {zona:'Frontal',pieza:'Capot',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:3}
+    ]
+  },
+  {
+    id:'lateral-izq',
+    nombre:'Lateral izquierdo',
+    emoji:'⬆️',
+    desc:'Puertas + guardabarros izquierdos',
+    piezas:[
+      {zona:'Lateral Izquierda',pieza:'Guardabarros delantero izquierdo',tarea:'Reparar',nivelDano:'Medio',hsTrabajo:4,panos:1},
+      {zona:'Lateral Izquierda',pieza:'Guardabarros delantero izquierdo',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:1},
+      {zona:'Lateral Izquierda',pieza:'Puerta delantera izquierda',tarea:'Reparar',nivelDano:'Medio',hsTrabajo:6,panos:1.5},
+      {zona:'Lateral Izquierda',pieza:'Puerta delantera izquierda',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:1.5},
+      {zona:'Lateral Izquierda',pieza:'Puerta trasera izquierda',tarea:'Reparar',nivelDano:'Medio',hsTrabajo:6,panos:1.5},
+      {zona:'Lateral Izquierda',pieza:'Puerta trasera izquierda',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:1.5}
+    ]
+  },
+  {
+    id:'lateral-der',
+    nombre:'Lateral derecho',
+    emoji:'⬇️',
+    desc:'Puertas + guardabarros derechos',
+    piezas:[
+      {zona:'Lateral Derecha',pieza:'Guardabarros delantero derecho',tarea:'Reparar',nivelDano:'Medio',hsTrabajo:4,panos:1},
+      {zona:'Lateral Derecha',pieza:'Guardabarros delantero derecho',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:1},
+      {zona:'Lateral Derecha',pieza:'Puerta delantera derecha',tarea:'Reparar',nivelDano:'Medio',hsTrabajo:6,panos:1.5},
+      {zona:'Lateral Derecha',pieza:'Puerta delantera derecha',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:1.5},
+      {zona:'Lateral Derecha',pieza:'Puerta trasera derecha',tarea:'Reparar',nivelDano:'Medio',hsTrabajo:6,panos:1.5},
+      {zona:'Lateral Derecha',pieza:'Puerta trasera derecha',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:1.5}
+    ]
+  },
+  {
+    id:'granizo',
+    nombre:'Granizo',
+    emoji:'🌨️',
+    desc:'Capot + techo + tapa de baúl / portón',
+    piezas:[
+      {zona:'Frontal',pieza:'Capot',tarea:'Reparar',nivelDano:'Leve',hsTrabajo:3,panos:3},
+      {zona:'Frontal',pieza:'Capot',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:3},
+      {zona:'Techo',pieza:'Techo',tarea:'Reparar',nivelDano:'Leve',hsTrabajo:8,panos:3},
+      {zona:'Techo',pieza:'Techo',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:3},
+      {zona:'Trasera',pieza:'Tapa de baúl (Modelos Sedán)',tarea:'Reparar',nivelDano:'Leve',hsTrabajo:6,panos:2.5},
+      {zona:'Trasera',pieza:'Tapa de baúl (Modelos Sedán)',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:2.5},
+      {zona:'Trasera',pieza:'Portón trasero (Modelos Hatchback / SUV)',tarea:'Reparar',nivelDano:'Leve',hsTrabajo:6,panos:2.5},
+      {zona:'Trasera',pieza:'Portón trasero (Modelos Hatchback / SUV)',tarea:'Pintar',nivelDano:'',hsTrabajo:0,panos:2.5}
+    ]
+  }
+];
+
+function mostrarPlantillas(){
+  var prev=document.getElementById('plantillas-overlay');if(prev)prev.remove();
+  var overlay=document.createElement('div');
+  overlay.id='plantillas-overlay';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick=function(e){if(e.target===overlay)overlay.remove();};
+  var box=document.createElement('div');
+  box.style.cssText='background:var(--bg2);border-radius:14px;padding:20px;width:100%;max-width:460px;max-height:85vh;overflow-y:auto;border:1px solid var(--border)';
+  box.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'
+    +'<p style="font-size:15px;font-weight:600;margin:0">📋 Plantillas de daños frecuentes</p>'
+    +'<button onclick="document.getElementById(\'plantillas-overlay\').remove()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text2)">✕</button>'
+    +'</div>'
+    +'<p style="font-size:12px;color:var(--text2);margin-bottom:14px">Seleccioná un escenario para pre-cargar las piezas. Podés ajustar horas y nivel después.</p>'
+    +PLANTILLAS_DANOS.map(function(pl){
+      return '<button onclick="aplicarPlantilla(\''+pl.id+'\')" style="width:100%;text-align:left;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;display:flex;align-items:center;gap:12px;transition:border-color .15s" '
+        +'onmouseover="this.style.borderColor=\'var(--accent)\'" onmouseout="this.style.borderColor=\'var(--border)\'">'
+        +'<span style="font-size:22px">'+pl.emoji+'</span>'
+        +'<div><p style="font-weight:600;font-size:13px;margin:0;color:var(--text)">'+pl.nombre+'</p>'
+        +'<p style="font-size:11px;color:var(--text2);margin:2px 0 0">'+pl.desc+'</p></div>'
+        +'</button>';
+    }).join('')
+    +'<p style="font-size:11px;color:var(--text3);margin-top:8px;text-align:center">Las piezas se agregan al calculador actual sin borrar lo existente.</p>';
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
+function aplicarPlantilla(plantillaId){
+  var pl=PLANTILLAS_DANOS.find(function(p){return p.id===plantillaId;});
+  if(!pl)return;
+  pl.piezas.forEach(function(p){
+    // Evitar duplicado exacto
+    var existe=relCalcState.piezas.some(function(x){return x.zona===p.zona&&x.pieza===p.pieza&&x.tarea===p.tarea;});
+    if(!existe){
+      relCalcState.piezas.push({_id:relCalcIdx++,zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano||'',hsTrabajo:p.hsTrabajo||0,panos:p.panos||0});
+    }
+  });
+  document.getElementById('plantillas-overlay').remove();
+  if(typeof gridRender==='function')gridRender();
+  else if(typeof relCalcRender==='function')relCalcRender();
+  toast(pl.nombre+' cargada — ajustá horas y nivel según el daño real','ok');
+}
+
+// ─── COMPARTIR POR WHATSAPP ───────────────────────────────────────────────────
+function compartirWhatsApp(id){
+  var i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
+  var rel=i.Relevamiento;if(typeof rel==='string'){try{rel=JSON.parse(rel);}catch(e){rel=null;}}
+  var fmt=function(v){return v||'-';};
+  var vehiculo=fmt(i.Modelo)+(i.Anio?' ('+i.Anio+')':'');
+  var domicilio=[i.Direccion,i.Localidad].filter(Boolean).join(', ')||'-';
+  var lineas=[
+    '*Estudio Patitucci — Inspección*',
+    '',
+    '📋 Siniestro: '+fmt(i.Siniestro),
+    '🏢 Compañía: '+fmt(i.Compania),
+    '🚗 Patente: '+fmt(i.Patente)+(vehiculo!=='-'?' | '+vehiculo:''),
+    '👤 Asegurado: '+fmt(i.Asegurado),
+    '📱 Tel: '+fmt(i.Tel),
+    '📍 '+domicilio,
+    '🔧 Inspector: '+fmt(i.Inspector),
+    '📅 Fecha insp.: '+fmt(formatFecha(i.FechaInsp)),
+    '📌 Estado: '+fmt(i.Estado),
+  ];
+  if(i.Danos)lineas.push('','⚠️ Daños: '+i.Danos);
+  if(rel&&rel.taller)lineas.push('','🏭 Taller: '+rel.taller+(rel.telTaller?' | '+rel.telTaller:''));
+  var msg=lineas.join('\n');
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
 }
 
 // ─── Exportar para ORIÓN ──────────────────────────────────────────────────────
@@ -4616,6 +5090,20 @@ async function enviarRelTaller(){
     var link=document.getElementById('apple-touch-icon');
     if(link)link.href=png;
   }
+
+  // ─── Detección de conectividad (modo offline) ──────────────────────────────
+  window.addEventListener('online',function(){
+    _ocultarBannerOffline();
+    toast('Conexión recuperada. Sincronizando…','info');
+    procesarColaEnvio();
+    if(typeof usuarioActual!=='undefined'&&usuarioActual&&typeof cargarInspector==='function')cargarInspector();
+  });
+  window.addEventListener('offline',function(){
+    _mostrarBannerOffline(null);
+  });
+  // Estado inicial al cargar la app
+  if(!navigator.onLine)_mostrarBannerOffline(null);
+  _actualizarIndicadorCola();
 
   // Registrar Service Worker
   if('serviceWorker' in navigator){
