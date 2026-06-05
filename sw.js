@@ -1,7 +1,10 @@
 // ── Service Worker — Estudio Patitucci ──────────────────────────────────────
-const CACHE_NAME = 'ep-v10';
+const CACHE_NAME = 'ep-v12';
 
 const STATIC_ASSETS = [
+  './styles.css',
+  './data-piezas.js',
+  './hero-bg.jpg',
   './index.html',
   './manifest.json',
   './icon.svg',
