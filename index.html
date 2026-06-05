@@ -1297,7 +1297,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
         <div class="card">
           <p class="section-title">Vehículo verificado</p>
           <div style="margin-bottom:12px"><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Kilometraje real *</label><input type="number" id="rel-km" style="width:200px"/></div>
-          <div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Observaciones del siniestro</label><textarea id="rel-danos" rows="3" style="resize:vertical"></textarea></div>
+          <div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Observaciones del inspector</label><textarea id="rel-danos" rows="3" style="resize:vertical"></textarea></div>
         </div>
 
         <!-- ── 5. Fotos ── -->
@@ -1894,8 +1894,8 @@ function renderResumenCalcAdmin(calc){
     return a+(o.horas||0);
   },0);
   var totPanos = piezas.reduce(function(a,p){
-    if(p.tarea==='Pintar') return a+(p.panos||1);
-    if(p.tarea==='Difuminar') return a+0.5;
+    if(hasTarea(p,'Pintar')) return a+(p.panos||1);
+    if(hasTarea(p,'Difuminar')) return a+0.5;
     return a;
   },0);
   var gran = totHs + totOpHs;
@@ -1956,8 +1956,6 @@ function abrirModal(id){
     if(rel.mailTaller)html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Mail taller</span><strong style="color:var(--text)">'+esc(rel.mailTaller)+'</strong></div>';
     if(rel.fechaEnvio)html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Fecha envío</span><strong style="color:var(--text)">'+formatFecha(rel.fechaEnvio)+'</strong></div>';
     html+='</div>';
-    html+='<div style="margin-bottom:10px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Observaciones del siniestro</span>';
-    html+='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.danos||'-')+'</div></div>';
     if(rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length){
       html+=renderResumenCalcAdmin(rel.calculador);
       // ── Tareas a realizar ──
@@ -1973,6 +1971,7 @@ function abrirModal(id){
       html+='<div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.notas)+'</div></div>';
     }
     html+=renderFotos(rel);
+    if(rel.danos)html+='<div style="margin-top:12px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Observaciones del inspector</span><div style="background:var(--bg3);border-radius:8px;padding:10px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.danos)+'</div></div>';
     html+='</div>';
   } else {
     html+='<p style="font-size:13px;color:var(--text2);margin-bottom:16px">Relevamiento pendiente.</p>';
@@ -2027,8 +2026,8 @@ function abrirModal(id){
   html+='</div>';
   // ─── Botones
   html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
-  html+='<button class="btn-secondary btn-sm" onclick="generarPDFCompleto(\''+esc(i.ID)+'\')">📄 Informe PDF</button>';
-  if(rel&&rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length)html+='<button class="btn-sm" style="background:rgba(220,38,38,.12);color:#dc2626;border:1px solid rgba(220,38,38,.3)" onclick="exportarParaOrion(\''+esc(i.ID)+'\')">🔴 Cargar en ORIÓN</button>';
+  html+='<button class="btn-secondary btn-sm" onclick="generarPDFCompleto(\''+esc(i.ID)+'\')">📄 Informe de Pericial</button>';
+  if(rel&&rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length)html+='<button class="btn-sm" style="background:rgba(220,38,38,.12);color:#dc2626;border:1px solid rgba(220,38,38,.3)" onclick="exportarParaOrion(\''+esc(i.ID)+'\')">🤖 Agente IA</button>';
   if(i.Estado==='Pendientes de carga'||i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)" onclick="enviarATaller(\''+esc(i.ID)+'\')">&#x1F517; Enviar a taller</button>';
   if(i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3)" onclick="revocarTaller(\''+esc(i.ID)+'\')">&#x1F6AB; Anular link</button>';
   if(usuarioActual === 'Administrador') html+='<button class="btn-danger btn-sm" onclick="eliminarInsp(\''+esc(i.ID)+'\')">Eliminar</button>';
@@ -2043,6 +2042,7 @@ function safeGoogleUrl(url){
   try{var u=new URL(url);if(u.protocol!=='https:')return'#';if(!/(drive|docs|lh\d+)\.google\.com$/.test(u.hostname))return'#';return url;}
   catch(e){return'#';}
 }
+var _fotosCache=window._fotosCache||(window._fotosCache={});
 function renderFotos(r, ocultarCarpeta){
   if(!r)return'';
   var fl=r.fotosLinks||[];var cu=safeGoogleUrl(r.carpetaUrl||'');
@@ -2055,9 +2055,11 @@ function renderFotos(r, ocultarCarpeta){
   html+='<span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em">Fotos ('+cant+')</span>';
   html+='</div>';
   if(fl.length){
-    // Caso A: el GAS devolvió links de Drive — mostrar miniaturas con link
-    // Botón carpeta al tope para acceso rápido cuando fallen las miniaturas por permisos
-    if(!ocultarCarpeta&&cu&&cu!=='#')html+='<div style="margin-bottom:10px"><a href="'+cu+'" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:var(--accent);text-decoration:none;display:inline-flex;align-items:center;gap:6px;background:rgba(99,102,241,.1);padding:6px 12px;border-radius:8px;border:1px solid rgba(99,102,241,.2)">📁 Ver todas las fotos en Drive</a></div>';
+    // Caso A: el GAS devolvió links de Drive — mostrar miniaturas
+    // Botón Descargar todas
+    var ck='fc_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    _fotosCache[ck]=fl;
+    html+='<div style="margin-bottom:10px"><button onclick="descargarTodasLasFotos(\''+ck+'\')" style="font-size:12px;color:#fff;background:var(--accent);border:none;cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-weight:600">⬇ Descargar todas</button></div>';
     html+='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px">';
     fl.forEach(function(f,fi){
       var fileId=f.id||'';
@@ -2090,12 +2092,11 @@ function renderFotos(r, ocultarCarpeta){
       html+='</div>';
     });
     html+='</div>';
-    if(cu)html+='<a href="'+cu+'" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none">📁 Ver en Drive</a>';
+    // (enlace a Drive eliminado)
   } else if(cant>0){
     // Caso C: el GAS registró la cantidad pero sin links ni base64
     html+='<div style="background:rgba(240,180,41,.08);border:1px solid rgba(240,180,41,.2);border-radius:8px;padding:10px;font-size:12px;color:var(--yellow)">';
     html+='⚠️ '+cant+' foto'+(cant>1?'s':'')+' recibida'+(cant>1?'s':'')+' pero los links de Drive no están disponibles.';
-    if(cu)html+=' <a href="'+cu+'" target="_blank" style="color:var(--accent);text-decoration:none">Ver en Drive</a>';
     html+='</div>';
   }
   html+='</div>';return html;
@@ -2339,7 +2340,7 @@ function verDetalleArchivada(id){
     html+='<div style="background:rgba(46,204,113,.08);border:1px solid rgba(46,204,113,.2);border-radius:10px;padding:14px;margin-bottom:16px">';
     html+='<p style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:10px">✓ Relevamiento</p>';
     html+='<div style="font-size:13px;color:var(--text2);margin-bottom:6px">Km: <strong style="color:var(--text)">'+esc(rel.km)+'</strong></div>';
-    html+='<div style="font-size:13px;color:var(--text2)">Observaciones del siniestro: <div style="background:var(--bg3);border-radius:8px;padding:8px;margin-top:4px;color:var(--text)">'+esc(rel.danos||'-')+'</div></div>';
+    html+='<div style="font-size:13px;color:var(--text2)">Observaciones del inspector: <div style="background:var(--bg3);border-radius:8px;padding:8px;margin-top:4px;color:var(--text)">'+esc(rel.danos||'-')+'</div></div>';
     html+=renderFotos(rel, true);
     html+='</div>';
   }
@@ -3146,7 +3147,7 @@ function verDetalleInsp(id){
     html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:2px">Km verificado</span><strong style="color:var(--text)">'+esc(rel.km)+'</strong></div>';
     if(rel.taller)html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:2px">Taller</span><strong style="color:var(--text)">'+esc(rel.taller)+'</strong></div>';
     html+='</div>';
-    html+='<div style="margin-bottom:8px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Observaciones del siniestro</span>';
+    html+='<div style="margin-bottom:8px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Observaciones del inspector</span>';
     html+='<div style="background:var(--bg3);border-radius:6px;padding:8px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.danos||'-')+'</div></div>';
     if(rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length){
       html+=renderResumenCalcAdmin(rel.calculador);
@@ -3786,7 +3787,7 @@ async function enviarRel(){
     if(o.operacion==='Desmontaje y montaje de accesorios') return acc+(o.horas||0);
     return acc;
   },0);
-  var calcTotalPanos=relCalcState.piezas.reduce(function(acc,p){if(p.tarea==='Pintar')return acc+(p.panos||0);if(p.tarea==='Difuminar')return acc+0.5;return acc;},0);
+  var calcTotalPanos=relCalcState.piezas.reduce(function(acc,p){if(hasTarea(p,'Pintar'))return acc+(p.panos||0);if(hasTarea(p,'Difuminar'))return acc+0.5;return acc;},0);
   var _totalOpCosto=relOpState.reduce(function(acc,o){return acc+(o.costo||0);},0);
   var _diasChapa=Math.ceil((calcTotalHs+calcTotalOpHs)/8*2)/2;
   var _costoChapa=_diasChapa*relCostoDiaChapa;
@@ -3919,7 +3920,7 @@ function generarPDFCompleto(id){
     var ZMEC=['Mecánica / Vano Motor','Mecánica','Tren Delantero y Tracción','Tren Delantero y Tracción 4x4','Tren Delantero y Suspensión','Tren Trasero'];
     var totalHsChapaPDF=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a:a+(p.hsTrabajo||p.horas||0);},0);
     var totalHsMecPDF=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a+(p.hsTrabajo||p.horas||0):a;},0);
-    var totalPanos=calc.piezas.reduce(function(a,p){return a+(p.tarea==='Pintar'?(p.panos||1):p.tarea==='Difuminar'?0.5:0);},0);
+    var totalPanos=calc.piezas.reduce(function(a,p){return a+(hasTarea(p,'Pintar')?(p.panos||1):hasTarea(p,'Difuminar')?0.5:0);},0);
     var diasTotal=totalHsChapaPDF>0?Math.ceil(totalHsChapaPDF/8*2)/2:0;
     // Costos
     var costoDia=calc.costoDiaChapa||0,costoHMec=calc.costoHoraMecánica||0,costoPano=calc.costoPanoPintura||0;
@@ -3950,7 +3951,7 @@ function generarPDFCompleto(id){
       +'</tr></thead><tbody>'+filas+'</tbody>'
       +'<tfoot><tr style="background:#e8e8f8;font-weight:700;border-top:2px solid #1a1a6e">'
       +'<td colspan="4" style="padding:5px 8px">TOTAL</td>'
-      +'<td style="padding:5px 8px;text-align:center">'+totalHs+' hs ('+diasTotal+' días)</td>'
+      +'<td style="padding:5px 8px;text-align:center">'+(totalHsChapaPDF+totalHsMecPDF)+' hs ('+diasTotal+' días)</td>'
       +'<td style="padding:5px 8px;text-align:center">'+totalPanos+'</td>'
       +'</tr></tfoot></table>'
       +(filasOp?'<h2>Operaciones Especiales</h2><table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:10px"><thead><tr style="background:#1a1a6e;color:#fff"><th style="padding:5px 8px;text-align:left" colspan="2">Operación</th><th style="padding:5px 8px;text-align:right">Costo</th></tr></thead><tbody>'+filasOp+'</tbody></table>':'')
@@ -4042,8 +4043,129 @@ function generarPDFCompleto(id){
     +'<footer>Estudio Patitucci · estudiopatitucci.com.ar · Homologado CESVI Argentina · '+fecha+'</footer>'
     +'</body></html>';
 
-  var win=window.open('','_blank');
-  if(win){win.document.write(html);win.document.close();setTimeout(function(){win.print();},700);}
+  var sinNum=(i.Siniestro||'siniestro').replace(/[^a-zA-Z0-9]/g,'_');
+  var patNum=(i.Patente||'').replace(/\s/g,'');
+  var filename='Pericial_'+sinNum+(patNum?'_'+patNum:'')+'_'+new Date().toISOString().slice(0,10)+'.pdf';
+  if(typeof html2pdf==='undefined'){
+    var s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    s.onload=function(){_generarYDescargarPDF(html,filename);};
+    s.onerror=function(){
+      var b=new Blob([html],{type:'text/html;charset=utf-8'});
+      window.open(URL.createObjectURL(b),'_blank');
+      toast('Usá Ctrl+P → Guardar como PDF','warn');
+    };
+    document.head.appendChild(s);
+  }else{
+    _generarYDescargarPDF(html,filename);
+  }
+}
+
+function _generarYDescargarPDF(htmlStr,filename){
+  var parser=new DOMParser();
+  var doc=parser.parseFromString(htmlStr,'text/html');
+  var styleText=(doc.querySelector('style')||{textContent:''}).textContent;
+  function makeWrap(){
+    var w=document.createElement('div');
+    w.style.cssText='position:fixed;left:-9999px;top:0;width:794px;background:#fff;box-sizing:border-box';
+    var s=document.createElement('style');s.textContent=styleText;w.appendChild(s);
+    w.insertAdjacentHTML('beforeend',doc.body.innerHTML);
+    document.body.appendChild(w);return w;
+  }
+  var opt={
+    margin:0,filename:filename,
+    image:{type:'jpeg',quality:0.95},
+    html2canvas:{scale:2,useCORS:true,windowWidth:794,logging:false},
+    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+  };
+  function genBlob(wrap){
+    return html2pdf().set(opt).from(wrap).outputPdf('blob').then(function(blob){
+      if(document.body.contains(wrap))document.body.removeChild(wrap);
+      return blob;
+    });
+  }
+  if(window.showSaveFilePicker){
+    var fh;
+    window.showSaveFilePicker({
+      suggestedName:filename,
+      types:[{description:'PDF',accept:{'application/pdf':['.pdf']}}]
+    }).then(function(h){fh=h;return genBlob(makeWrap());})
+      .then(function(blob){return fh.createWritable().then(function(w){return w.write(blob).then(function(){return w.close();});});})
+      .then(function(){toast('PDF guardado correctamente','ok');})
+      .catch(function(e){
+        if(e.name!=='AbortError'){
+          genBlob(makeWrap()).then(function(blob){_downloadPDFBlob(blob,filename);});
+          toast('Descargando PDF...','ok');
+        }
+      });
+  }else{
+    genBlob(makeWrap()).then(function(blob){_downloadPDFBlob(blob,filename);});
+  }
+}
+
+function _downloadPDFBlob(blob,filename){
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){URL.revokeObjectURL(url);},10000);
+}
+
+// ─── DESCARGA MASIVA DE FOTOS ─────────────────────────────────────────────────
+async function descargarTodasLasFotos(cacheKey){
+  var fl=window._fotosCache&&window._fotosCache[cacheKey];
+  if(!fl||!fl.length){toast('No hay fotos disponibles','warn');return;}
+
+  // Armar lista de {fileId, name}
+  var items=fl.map(function(f,i){
+    var id=f.id||'';
+    if(!id&&f.viewUrl&&f.viewUrl.includes('/file/d/')){
+      try{id=f.viewUrl.split('/file/d/')[1].split('/')[0];}catch(e){}
+    }
+    var ext=(f.name&&f.name.match(/\.(jpg|jpeg|png|gif|webp)$/i))?f.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)[0]:'.jpg';
+    return{id:id,name:'foto_'+String(i+1).padStart(2,'0')+ext};
+  }).filter(function(x){return x.id;});
+
+  if(!items.length){toast('Los links de Drive no están disponibles','warn');return;}
+
+  // Intentar selector de carpeta
+  var folder=null;
+  if(window.showDirectoryPicker){
+    try{folder=await window.showDirectoryPicker({mode:'readwrite'});}
+    catch(e){if(e.name==='AbortError')return;folder=null;}
+  }
+
+  toast('Descargando '+items.length+' foto'+(items.length>1?'s':'')+'...','ok');
+  var ok=0,fail=0;
+
+  for(var i=0;i<items.length;i++){
+    var item=items[i];
+    var dlUrl='https://drive.google.com/uc?export=download&id='+item.id;
+    if(folder){
+      try{
+        var resp=await fetch(dlUrl,{credentials:'include'});
+        if(!resp.ok)throw new Error('HTTP '+resp.status);
+        var blob=await resp.blob();
+        var fh=await folder.getFileHandle(item.name,{create:true});
+        var w=await fh.createWritable();
+        await w.write(blob);await w.close();
+        ok++;
+      }catch(e){
+        // CORS u otro error — fallback link
+        var a=document.createElement('a');a.href=dlUrl;a.download=item.name;a.target='_blank';
+        document.body.appendChild(a);a.click();document.body.removeChild(a);
+        await new Promise(function(r){setTimeout(r,900);});
+        ok++;
+      }
+    }else{
+      // Sin picker: descarga secuencial al folder de descargas
+      var a=document.createElement('a');a.href=dlUrl;a.download=item.name;a.target='_blank';
+      document.body.appendChild(a);a.click();document.body.removeChild(a);
+      await new Promise(function(r){setTimeout(r,900);});
+      ok++;
+    }
+  }
+  toast(ok+' foto'+(ok>1?'s':'')+' descargada'+(ok>1?'s':'')+(fail?' ('+fail+' fallaron)':''),'ok');
 }
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
@@ -4324,7 +4446,7 @@ async function enviarRelTallerDesdeForm(){
     if(o.operacion==='Desmontaje y montaje de accesorios') return acc+(o.horas||0);
     return acc;
   },0);
-  var calcTotalPanos=relCalcState.piezas.reduce(function(acc,p){if(p.tarea==='Pintar')return acc+(p.panos||0);if(p.tarea==='Difuminar')return acc+0.5;return acc;},0);
+  var calcTotalPanos=relCalcState.piezas.reduce(function(acc,p){if(hasTarea(p,'Pintar'))return acc+(p.panos||0);if(hasTarea(p,'Difuminar'))return acc+0.5;return acc;},0);
   var calcData={
     tipo:relCalcState.tipo,
     piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),
@@ -4603,8 +4725,8 @@ function relActualizarCosto(){
   },0);
   var totalHsChapaConOp = totalHsChapa + totalOpHs;
   var totalPanos = relCalcState.piezas.reduce(function(acc,p){
-    if(p.tarea==='Pintar')    return acc+(p.panos||0);
-    if(p.tarea==='Difuminar') return acc+0.5;
+    if(hasTarea(p,'Pintar'))    return acc+(p.panos||0);
+    if(hasTarea(p,'Difuminar')) return acc+0.5;
     return acc;
   },0);
   var totalCostoOps = relOpState.reduce(function(acc,o){return acc+(o.costo||0);},0);
@@ -4663,8 +4785,8 @@ function relGenerarTareas(){
   },0);
   var dias = Math.ceil((totalHsChapa + totalOpHs) / 8 * 2) / 2;
   var totalPanos = piezas.reduce(function(a,p){
-    if(p.tarea==='Pintar')    return a+(p.panos||0);
-    if(p.tarea==='Difuminar') return a+0.5;
+    if(hasTarea(p,'Pintar'))    return a+(p.panos||0);
+    if(hasTarea(p,'Difuminar')) return a+0.5;
     return a;
   },0);
   var totalCostoOps = ops.reduce(function(a,o){return a+(o.costo||0);},0); // Varios
@@ -4698,15 +4820,19 @@ function relGenerarTareas(){
 
   var operacionesList = orden.map(function(key){
     var g = grupos[key];
-    // Tarea principal (R o S), luego D, luego P
-    var principal = g.tareas.find(function(t){return t.tarea==='Reparar'||t.tarea==='Sustituir';})
-                 || g.tareas.find(function(t){return t.tarea==='Difuminar';})
+    // Tarea principal (R o S), luego D, luego P — soporta tarea compuesta "Reparar+Pintar"
+    var principal = g.tareas.find(function(t){return hasTarea(t,'Reparar')||hasTarea(t,'Sustituir');})
+                 || g.tareas.find(function(t){return hasTarea(t,'Difuminar');})
                  || g.tareas[0];
     if(!principal) return null;
-    var pintar    = g.tareas.find(function(t){return t.tarea==='Pintar';});
-    var difuminar = g.tareas.find(function(t){return t.tarea==='Difuminar';});
+    var pintar    = g.tareas.find(function(t){return hasTarea(t,'Pintar');});
+    var difuminar = g.tareas.find(function(t){return hasTarea(t,'Difuminar');});
 
-    var ab    = abrev[principal.tarea] || principal.tarea.charAt(0);
+    // Para tarea compuesta (ej "Reparar+Pintar"), pintar está en la misma entrada
+    if(!pintar && hasTarea(principal,'Pintar'))    pintar    = principal;
+    if(!difuminar && hasTarea(principal,'Difuminar')) difuminar = principal;
+
+    var ab    = (hasTarea(principal,'Reparar')?'R':hasTarea(principal,'Sustituir')?'S':hasTarea(principal,'Difuminar')?'D':'?');
     var hs    = (principal.hsTrabajo||0);
     var panos = pintar?(pintar.panos||0):difuminar?0.5:0;
 
@@ -5014,7 +5140,32 @@ function gridSetPanos(rid, tarea, valor){
 function otraAdd(){ relCalcState.piezas.push({_id:relCalcIdx++,zona:'Otras piezas',pieza:'',tarea:'Reparar',nivelDano:'',hsTrabajo:0,panos:0}); gridRender(); }
 function otraRemove(id){ relCalcState.piezas=relCalcState.piezas.filter(function(x){return x._id!==id;}); gridRender(); guardarBorrador(); }
 function otraUpdateNombre(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(e){e.pieza=v;gridUpdateAll();guardarBorrador();} }
-function otraSetTarea(id,t){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.tarea=t;e.nivelDano='';e.hsTrabajo=0;e.panos=(t==='Pintar'||t==='Difuminar')?1:0; gridRender(); guardarBorrador(); }
+// Verifica si una pieza tiene una tarea (soporta tarea simple o compuesta "Reparar+Pintar")
+function hasTarea(p,t){ if(!p||!p.tarea) return false; return p.tarea===t||p.tarea.split('+').indexOf(t)>=0; }
+
+function otraSetTarea(id,t){
+  var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return;
+  var parts=(e.tarea&&e.tarea!=='')?e.tarea.split('+'):[];
+  var isChapa=(t==='Reparar'||t==='Sustituir'), isPintura=(t==='Pintar'||t==='Difuminar');
+  if(isChapa){
+    var otherChapa=t==='Reparar'?'Sustituir':'Reparar';
+    parts=parts.filter(function(x){return x!==otherChapa;});
+    var idx=parts.indexOf(t);
+    if(idx>=0){ parts.splice(idx,1); e.nivelDano=''; e.hsTrabajo=0; }
+    else{ parts.unshift(t); e.nivelDano=''; e.hsTrabajo=0; }
+  } else if(isPintura){
+    var otherPintura=t==='Pintar'?'Difuminar':'Pintar';
+    parts=parts.filter(function(x){return x!==otherPintura;});
+    var idx=parts.indexOf(t);
+    if(idx>=0){ parts.splice(idx,1); e.panos=0; }
+    else{ parts.push(t); e.panos=1; }
+  }
+  // Limpiar horas si ya no hay chapa; limpiar paños si ya no hay pintura
+  if(!parts.some(function(x){return x==='Reparar'||x==='Sustituir';})){e.nivelDano='';e.hsTrabajo=0;}
+  if(!parts.some(function(x){return x==='Pintar'||x==='Difuminar';})) e.panos=0;
+  e.tarea=parts.join('+');
+  gridRender(); guardarBorrador();
+}
 function otraSetNivel(id,n){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.nivelDano=n;e.hsTrabajo=0; gridRender(); guardarBorrador(); }
 function otraSetHs(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.hsTrabajo=parseFloat(v)||0; gridUpdateAll(); guardarBorrador(); }
 function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.panos=parseInt(v)||0; gridUpdateAll(); guardarBorrador(); }
@@ -5608,20 +5759,22 @@ function renderAcordeonOtras(){
   if(!isOpen) return '<div class="acc-item">'+header+'<div class="acc-body"></div></div>';
   var otras=relCalcState.piezas.filter(function(x){return x.zona==='Otras piezas';});
   var rows=otras.map(function(pr){
-    var esSust=pr.tarea==='Sustituir',esPintura=pr.tarea==='Pintar'||pr.tarea==='Difuminar';
+    var esSust=hasTarea(pr,'Sustituir'), esRep=hasTarea(pr,'Reparar');
+    var esPintar=hasTarea(pr,'Pintar'), esDifuminar=hasTarea(pr,'Difuminar');
+    var tieneChapa=esSust||esRep, tienePintura=esPintar||esDifuminar;
     var tBtns=['Reparar','Sustituir','Pintar','Difuminar'].map(function(t){
       var lbl={Reparar:'R',Sustituir:'S',Pintar:'P',Difuminar:'D'}[t];
-      return '<button class="task-btn '+lbl+(pr.tarea===t?' on':'')+'" onclick="otraSetTarea('+pr._id+',\''+t+'\')">'+lbl+'</button>';
+      return '<button class="task-btn '+lbl+(hasTarea(pr,t)?' on':'')+'" onclick="otraSetTarea('+pr._id+',\''+t+'\')">'+lbl+'</button>';
     }).join('');
     var nivelHtml='';
-    if(!esSust&&!esPintura){ nivelHtml='<div class="nivel-btns" style="margin-top:6px">'+['Leve','Medio','Fuerte'].map(function(n){
+    if(esRep){ nivelHtml='<div class="nivel-btns" style="margin-top:6px">'+['Leve','Medio','Fuerte'].map(function(n){
       return '<button class="nivel-btn'+(pr.nivelDano===n?' on':'')+'" onclick="otraSetNivel('+pr._id+',\''+n+'\')">'+n+'</button>';
     }).join('')+'</div>'; }
-    var hsRango=getHsRango('',pr.tarea,pr.nivelDano);
+    var hsRango=getHsRango('',esRep?'Reparar':esSust?'Sustituir':'Reparar',pr.nivelDano);
     var hsHab=esSust||pr.nivelDano;
     var hsOpts=hsRango.map(function(h){return '<option value="'+h+'"'+(pr.hsTrabajo===h?' selected':'')+'>'+h+' hs</option>';}).join('');
     var panosHtml='';
-    if(pr.tarea==='Pintar'||pr.tarea==='Difuminar'){
+    if(tienePintura){
       var panosOpts=[0.5,1,1.5,2,2.5,3].map(function(n){return '<option value="'+n+'"'+(pr.panos===n?' selected':'')+'>'+n+(n===1?' paño':' paños')+'</option>';}).join('');
       panosHtml='<select class="sel-panos" onchange="otraSetPanos('+pr._id+',this.value)">'+panosOpts+'</select>';
     }
@@ -5630,7 +5783,7 @@ function renderAcordeonOtras(){
       +'<div class="task-btns">'+tBtns+'</div></div>'
       +nivelHtml
       +'<div style="display:flex;gap:6px;margin-top:6px">'
-      +(pr.tarea!=='Pintar'?('<select class="sel-hs"'+(hsHab?'':' disabled')+' onchange="otraSetHs('+pr._id+',this.value)"><option value="0">0 hs</option>'+hsOpts+'</select>'):'')
+      +(tieneChapa?('<select class="sel-hs"'+(hsHab?'':' disabled')+' onchange="otraSetHs('+pr._id+',this.value)"><option value="0">0 hs</option>'+hsOpts+'</select>'):'')
       +panosHtml+'</div></div>'
       +'<button class="g-btn-del" onclick="otraRemove('+pr._id+')">×</button></div>';
   }).join('');
@@ -5679,8 +5832,8 @@ function gridUpdateTotal(){
     return a;
   },0);
   var panos=relCalcState.piezas.reduce(function(a,p){
-    if(p.tarea==='Pintar')    return a+(p.panos||0);
-    if(p.tarea==='Difuminar') return a+0.5;
+    if(hasTarea(p,'Pintar'))    return a+(p.panos||0);
+    if(hasTarea(p,'Difuminar')) return a+0.5;
     return a;
   },0);
   var gran=total+totalOpHs;
