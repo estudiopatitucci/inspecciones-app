@@ -2612,10 +2612,17 @@ function extraerRivadavia(txt,danosDen,danos){
   // Teléfono: número tras 'DNI XXXXXXXX'
   var tel=find([/DNI\s+\d{7,8}\s+([\d]{6,12})/i]);
 
-  // Dirección: CALLE NÚMERO antes de FILCAR
+  // Dirección: captura todo entre el label 'CALLE' y 'CUIT' o 'FILCAR'
+  // Soporta: "SAN MARTIN 450", "CALLE 136 ESQUINA 530", "AV 44 N 1200", etc.
   var dir='';
-  var mDir=txt.match(/([A-Z][A-Z'\s]{1,30}?)\s+(\d{1,5})\s+FILCAR/i);
-  if(mDir) dir=mDir[1].trim()+' '+mDir[2].trim();
+  var mDir=txt.match(/\bCALLE\s+([\w\s'\.]{3,60}?)\s+(?:CUIT|FILCAR)/i);
+  if(mDir){
+    dir=mDir[1].replace(/\s+/g,' ').trim();
+  } else {
+    // fallback: nombre de calle (letras) + número antes de FILCAR
+    var mDir2=txt.match(/([A-Z][A-Z'\s]{1,30}?)\s+(\d{1,5})\s+FILCAR/i);
+    if(mDir2) dir=mDir2[1].trim()+' '+mDir2[2].trim();
+  }
 
   // Localidad: texto antes de 'Buenos Aires'
   var localidad=find([/([A-Z][A-Z\s]{2,20}?)\s+Buenos\s+Aires/i]);
@@ -4197,7 +4204,7 @@ async function descargarTodasLasFotos(cacheKey){
   var results=await Promise.allSettled(items.map(fetchViaGAS));
 
   // Escribir a la carpeta elegida
-  var ok=0,fail=0;
+  var ok=0,fail=0,errMsg='';
   for(var j=0;j<results.length;j++){
     var res=results[j];
     if(res.status==='fulfilled'){
@@ -4206,10 +4213,18 @@ async function descargarTodasLasFotos(cacheKey){
         var w=await fh.createWritable();
         await w.write(res.value.blob);await w.close();
         ok++;
-      }catch(we){fail++;}
-    }else{fail++;}
+      }catch(we){fail++;if(!errMsg)errMsg='Error al escribir: '+we.message;}
+    }else{
+      fail++;
+      if(!errMsg)errMsg=res.reason?res.reason.message:'Error desconocido';
+    }
   }
-  toast(ok+' foto'+(ok>1?'s':'')+' guardada'+(ok>1?'s':'')+' en la carpeta elegida'+(fail?' · '+fail+' fallaron':''),'ok');
+  if(ok>0){
+    toast(ok+' foto'+(ok>1?'s':'')+' guardada'+(ok>1?'s':'')+' en la carpeta elegida'+(fail?' · '+fail+' fallaron':''),'ok');
+  }else{
+    toast('No se pudo guardar ninguna foto. '+(errMsg||'Verificá que el GAS esté redespleguado.'),'error');
+    console.error('[descargarFotos] Error:',errMsg,results);
+  }
 }
 
 // ─── TOAST ────────────────────────────────────────────────────────────────────
