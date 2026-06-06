@@ -455,6 +455,9 @@
           </div>
           <div class="card">
             <p class="section-title">Asegurado y lugar</p>
+            <div style="background:rgba(220,38,38,.1);border:1.5px solid #dc2626;border-radius:8px;padding:10px 14px;margin-bottom:14px">
+              <p style="color:#dc2626;font-weight:700;font-size:13px;margin:0">⚠️ ATENCIÓN: Verificá que todos los datos se hayan completado correctamente. Si algún campo quedó vacío o incorrecto, completalo a mano antes de guardar.</p>
+            </div>
             <div class="form-grid-2" style="margin-bottom:12px">
               <div class="field"><label>Asegurado / taller</label><input type="text" id="f-aseg"/></div>
               <div class="field"><label>Teléfono</label><input type="text" id="f-tel"/></div>
@@ -874,7 +877,7 @@
         <div class="card">
           <p class="section-title">Taller / asegurado</p>
           <div class="field" style="position:relative;margin-bottom:12px">
-            <label>Nombre * <span style="font-size:10px;color:var(--text3);font-weight:400">— buscá si ya existe</span></label>
+            <label>Nombre * <span style="font-size:10px;color:var(--text3);font-weight:400">— escribí al menos 3 letras para buscar</span></label>
             <input type="text" id="rel-taller" autocomplete="off" oninput="tallerBuscar()" placeholder="Ej: Taller San Martín"/>
             <div id="taller-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:8px;z-index:200;max-height:220px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.18);margin-top:2px"></div>
           </div>
@@ -2392,16 +2395,32 @@ function extraerRivadavia(txt,danosDen,danos){
   // Teléfono: número tras 'DNI XXXXXXXX'
   var tel=find([/DNI\s+\d{7,8}\s+([\d]{6,12})/i]);
 
-  // Dirección: captura todo entre el label 'CALLE' y 'CUIT' o 'FILCAR'
-  // Soporta: "SAN MARTIN 450", "CALLE 136 ESQUINA 530", "AV 44 N 1200", etc.
+  // Dirección: soporta calles con nombre ("SAN MARTIN 450") y calles numéricas
+  // de La Plata/zona ("3 e 41 y 42", "524bis e 14 y 15").
+  // Estrategia: el valor del campo CALLE aparece en el texto justo antes de "FILCAR",
+  // delimitado a izquierda por el último "BS. AS." (fin del domicilio del asegurado).
   var dir='';
-  var mDir=txt.match(/\bCALLE\s+([\w\s'\.]{3,60}?)\s+(?:CUIT|FILCAR)/i);
-  if(mDir){
-    dir=mDir[1].replace(/\s+/g,' ').trim();
-  } else {
-    // fallback: nombre de calle (letras) + número antes de FILCAR
-    var mDir2=txt.match(/([A-Z][A-Z'\s]{1,30}?)\s+(\d{1,5})\s+FILCAR/i);
-    if(mDir2) dir=mDir2[1].trim()+' '+mDir2[2].trim();
+  var _fIdx=txt.indexOf('FILCAR');
+  if(_fIdx>0){
+    var _bef=txt.substring(0,_fIdx);
+    var _bsas=_bef.lastIndexOf('BS. AS.');
+    if(_bsas>=0){
+      var _addr=_bef.substring(_bsas+7).replace(/\s+/g,' ').trim();
+      if(_addr.length>=2) dir=(/^\d/.test(_addr)?'Calle ':'')+_addr;
+    }
+  }
+  // Fallback: regex CALLE→NÚMERO/FILCAR (cuando no hay "BS. AS." en el texto)
+  if(!dir){
+    var mDir=txt.match(/\bCALLE\s+([\w\s',\.]{2,50}?)\s+(?:N[UÚ]MERO|CUIT|FILCAR)/i);
+    if(mDir){
+      var _c=mDir[1].replace(/\s+/g,' ').trim();
+      dir=(/^\d/.test(_c)?'Calle ':'')+_c;
+      var mNum=txt.match(/N[UÚ]MERO\s+(\d+)/i);
+      if(mNum&&mNum[1]) dir+=' '+mNum[1];
+    } else {
+      var mDir2=txt.match(/([A-Z][A-Z'\s]{1,30}?)\s+(\d{1,5})\s+FILCAR/i);
+      if(mDir2) dir=mDir2[1].trim()+' '+mDir2[2].trim();
+    }
   }
 
   // Localidad: texto antes de 'Buenos Aires'
@@ -3699,7 +3718,7 @@ function tallerBuscar(){
   clearTimeout(_tallerTimer);
   var q=(s('rel-taller').value||'').trim();
   var dd=s('taller-dropdown');
-  if(q.length<2){dd.style.display='none';return;}
+  if(q.length<3){dd.style.display='none';return;}
   _tallerTimer=setTimeout(async function(){
     try{
       var res=await apiCall({action:'buscarTalleres',query:q});
@@ -3714,7 +3733,7 @@ function tallerBuscar(){
       }).join('');
       dd.style.display='block';
     }catch(e){dd.style.display='none';}
-  },350);
+  },150);
 }
 function tallerSeleccionar(idx){
   var t=_tallerResultados[idx];if(!t)return;
