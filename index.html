@@ -306,7 +306,7 @@
     <div class="login-logo"><h1>Estudio <span>Patitucci</span></h1><p>Sistema de gestión de inspecciones</p></div>
     <div class="card">
       <label>Usuario</label>
-      <select id='login-nombre' style='width:100%;padding:10px;font-size:14px;border-radius:8px;background:var(--bg3);color:var(--text);border:1px solid var(--border);margin-bottom:12px'><option value=''>Seleccioná tu nombre...</option><option>Administrador</option><option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Ivan</option></select>
+      <select id='login-nombre' style='width:100%;padding:10px;font-size:14px;border-radius:8px;background:var(--bg3);color:var(--text);border:1px solid var(--border);margin-bottom:12px'><option value=''>Seleccioná tu nombre...</option><option>Administrador</option><option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Pablo</option></select>
       <label>Contraseña</label>
       <input type="password" id="login-pass" placeholder="••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
       <button class="btn-primary" onclick="doLogin()" style="width:100%;margin-top:20px;padding:12px;font-size:14px">Ingresar</button>
@@ -534,7 +534,7 @@
               <button class="insp-btn" onclick="selInsp('Mariano')">Mariano</button>
               <button class="insp-btn" onclick="selInsp('Bruno')">Bruno</button>
               <button class="insp-btn" onclick="selInsp('Majo')">Majo</button>
-              <button class="insp-btn" onclick="selInsp('Ivan')">Ivan</button>
+              <button class="insp-btn" onclick="selInsp('Pablo')">Pablo</button>
               <button class="insp-btn" id="btn-sel-taller" onclick="selTaller()" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)">🔧 Taller</button>
             </div>
             <div id="bloque-taller" style="display:none;margin-top:12px">
@@ -578,7 +578,7 @@
             <input type="text" id="buscar-pend" oninput="renderTablaAdmin('pendientes')" placeholder="Buscar..." style="width:160px"/>
             <select id="fil-insp-pend" onchange="renderTablaAdmin('pendientes')" style="width:110px">
               <option value="">Todos</option>
-              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Ivan</option>
+              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Pablo</option>
             </select>
             <select id="fil-cia-pend" onchange="renderTablaAdmin('pendientes')" style="width:150px">
               <option value="">Todas las compañías</option>
@@ -607,7 +607,7 @@
             <input type="text" id="buscar-rev" oninput="renderTablaAdmin('revision')" placeholder="Buscar..." style="width:160px"/>
             <select id="fil-insp-rev" onchange="renderTablaAdmin('revision')" style="width:110px">
               <option value="">Todos</option>
-              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Ivan</option>
+              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Pablo</option>
             </select>
             <select id="fil-cia-rev" onchange="renderTablaAdmin('revision')" style="width:150px">
               <option value="">Todas las compañías</option>
@@ -629,7 +629,7 @@
             <input type="text" id="buscar-resolver" oninput="renderTablaAdmin('resolver')" placeholder="Buscar..." style="width:160px"/>
             <select id="fil-insp-resolver" onchange="renderTablaAdmin('resolver')" style="width:110px">
               <option value="">Todos</option>
-              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Ivan</option>
+              <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Pablo</option>
             </select>
             <select id="fil-cia-resolver" onchange="renderTablaAdmin('resolver')" style="width:150px">
               <option value="">Todas las compañías</option>
@@ -683,7 +683,7 @@
           <input type="text" id="buscar-arch" oninput="renderArchivo()" placeholder="Buscar..." style="width:160px"/>
           <select id="fil-insp-arch" onchange="renderArchivo()" style="width:110px">
             <option value="">Todos</option>
-            <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Ivan</option>
+            <option>Ignacio</option><option>Matías</option><option>Valentino</option><option>Sebastián</option><option>Mariano</option><option>Bruno</option><option>Majo</option><option>Pablo</option>
           </select>
           <select id="fil-cia-arch" onchange="renderArchivo()" style="width:150px">
             <option value="">Todas las compañías</option>
@@ -873,13 +873,19 @@
         <!-- ── 2. Datos del taller / asegurado ── -->
         <div class="card">
           <p class="section-title">Taller / asegurado</p>
-          <div class="form-grid-2" style="margin-bottom:12px">
-            <div class="field"><label>Nombre *</label><input type="text" id="rel-taller"/></div>
-            <div class="field"><label>Teléfono *</label><input type="text" id="rel-tel" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/></div>
+          <div class="field" style="position:relative;margin-bottom:12px">
+            <label>Nombre * <span style="font-size:10px;color:var(--text3);font-weight:400">— buscá si ya existe</span></label>
+            <input type="text" id="rel-taller" autocomplete="off" oninput="tallerBuscar()" placeholder="Ej: Taller San Martín"/>
+            <div id="taller-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:8px;z-index:200;max-height:220px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.18);margin-top:2px"></div>
           </div>
-          <div class="form-grid-2">
+          <div class="form-grid-3" style="margin-bottom:12px">
+            <div class="field"><label>Teléfono *</label><input type="text" id="rel-tel" inputmode="numeric" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/></div>
             <div class="field"><label>Mail *</label><input type="email" id="rel-mail" inputmode="email"/></div>
             <div class="field"><label>CUIT * <span style="font-size:10px;color:var(--text3);font-weight:400">(11 dígitos)</span></label><input type="text" id="rel-cuit" inputmode="numeric" placeholder="20123456789" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,11)"/></div>
+          </div>
+          <div class="form-grid-2">
+            <div class="field"><label>Dirección <span style="font-size:10px;color:var(--text3);font-weight:400">(opcional)</span></label><input type="text" id="rel-dir-taller" placeholder="Calle y número"/></div>
+            <div class="field"><label>Localidad <span style="font-size:10px;color:var(--text3);font-weight:400">(opcional)</span></label><input type="text" id="rel-loc-taller" placeholder="Localidad"/></div>
           </div>
         </div>
 
@@ -1129,7 +1135,7 @@
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const API='https://script.google.com/macros/s/AKfycbywk-SytIxiH7suDaIjfK9ZhQ6qOlAxxAM6hEoeqr8-PKWuk0-qDMmMMxQkOx3f8HMu/exec';
 const SECRET_TOKEN='ep_9k2mX7vQn4pRjL8wZdA3sYtB6uCfHg0E';
-const INSP_MAILS={'Ignacio':'medinainspecciones@gmail.com','Matías':'mns661590@gmail.com','Valentino':'valentinopatitucci5@gmail.com','Sebastián':'Patitucci.mp@gmail.com','Mariano':'Patitucci.mp@gmail.com','Bruno':'bruno@estudiopatitucci.com','Majo':'sanchezmajo2022@gmail.com','Ivan':'Ivanveron202@gmail.com'};
+const INSP_MAILS={'Ignacio':'medinainspecciones@gmail.com','Matías':'mns661590@gmail.com','Valentino':'valentinopatitucci5@gmail.com','Sebastián':'Patitucci.mp@gmail.com','Mariano':'Patitucci.mp@gmail.com','Bruno':'bruno@estudiopatitucci.com','Majo':'sanchezmajo2022@gmail.com','Pablo':'Patitucci.mp@gmail.com'};
 // Inspectores con permiso para cambiar el estado de sus propios relevamientos
 const INSP_PUEDE_CAMBIAR_ESTADO = ['Mariano','Valentino','Bruno'];
 // Contraseñas gestionadas 100% en el backend (GAS + Google Sheets "Usuarios")
@@ -3197,7 +3203,7 @@ function limpiarRelevamiento(){
   relOpRender();
   relCalcRender();
   // Resetear campos del formulario
-  ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit'].forEach(function(x){if(s(x))s(x).value='';});
+  ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit','rel-dir-taller','rel-loc-taller'].forEach(function(x){if(s(x))s(x).value='';});
   // Resetear fotos y mensajes
   s('rel-fotos').value='';
   s('rel-preview').innerHTML='';
@@ -3252,10 +3258,11 @@ function guardarBorrador(){
   var bd={km:s('rel-km').value,danos:s('rel-danos').value,
     calculador:{tipo:relCalcState.tipo,piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo};}),total:calcTotal,operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};})},
     taller:s('rel-taller').value,telTaller:s('rel-tel').value,mailTaller:s('rel-mail').value,
-    cuit:s('rel-cuit').value,costoDiaChapa:relCostoDiaChapa,costoHoraMecánica:relCostoHoraMecánica,costoPanoPintura:relCostoPanoPintura,ts:Date.now()};
+    cuit:s('rel-cuit').value,dirTaller:s('rel-dir-taller')?s('rel-dir-taller').value:'',locTaller:s('rel-loc-taller')?s('rel-loc-taller').value:'',
+    costoDiaChapa:relCostoDiaChapa,costoHoraMecánica:relCostoHoraMecánica,costoPanoPintura:relCostoPanoPintura,ts:Date.now()};
   try{localStorage.setItem('bdr_'+relId,JSON.stringify(bd));}catch(e){}
 }
-['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit'].forEach(function(id){
+['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit','rel-dir-taller','rel-loc-taller'].forEach(function(id){
   var el=s(id);if(el)el.addEventListener('input',guardarBorrador);
 });
 
@@ -3295,8 +3302,10 @@ function abrirRel(id){
     s('rel-tel').value=rel.telTaller||'';
     s('rel-mail').value=rel.mailTaller||'';
     s('rel-cuit').value=rel.cuit||'';
+    if(s('rel-dir-taller'))s('rel-dir-taller').value=rel.dirTaller||'';
+    if(s('rel-loc-taller'))s('rel-loc-taller').value=rel.locTaller||'';
   } else {
-    ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit'].forEach(function(x){s(x).value='';});
+    ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit','rel-dir-taller','rel-loc-taller'].forEach(function(x){if(s(x))s(x).value='';});
   }
   // Verificar borrador — se hace async después de mostrar el form
   s('rel-fotos').value='';s('rel-preview').innerHTML='';s('rel-errores').textContent='';s('msg-rel').textContent='';
@@ -3332,6 +3341,8 @@ function abrirRel(id){
     if(bdr.telTaller)s('rel-tel').value=bdr.telTaller;
     if(bdr.mailTaller)s('rel-mail').value=bdr.mailTaller;
     if(bdr.cuit)s('rel-cuit').value=bdr.cuit;
+    if(bdr.dirTaller&&s('rel-dir-taller'))s('rel-dir-taller').value=bdr.dirTaller;
+    if(bdr.locTaller&&s('rel-loc-taller'))s('rel-loc-taller').value=bdr.locTaller;
     if(bdr.costoDiaChapa){relCostoDiaChapa=bdr.costoDiaChapa;if(s('rel-costo-chapa'))s('rel-costo-chapa').value=bdr.costoDiaChapa;}
     if(bdr.costoHoraMecánica){relCostoHoraMecánica=bdr.costoHoraMecánica;if(s('rel-costo-mecanica'))s('rel-costo-mecanica').value=bdr.costoHoraMecánica;}
     if(bdr.costoPanoPintura){relCostoPanoPintura=bdr.costoPanoPintura;if(s('rel-costo-pano'))s('rel-costo-pano').value=bdr.costoPanoPintura;}
@@ -3682,6 +3693,45 @@ async function subirTodasLasFotos(){
 s('rel-fotos-camara').addEventListener('change', procesarFotosInput);
 s('rel-fotos-galeria').addEventListener('change', procesarFotosInput);
 
+// ── Autocompletado de talleres ─────────────────────────
+var _tallerTimer=null, _tallerResultados=[];
+function tallerBuscar(){
+  clearTimeout(_tallerTimer);
+  var q=(s('rel-taller').value||'').trim();
+  var dd=s('taller-dropdown');
+  if(q.length<2){dd.style.display='none';return;}
+  _tallerTimer=setTimeout(async function(){
+    try{
+      var res=await apiCall({action:'buscarTalleres',query:q});
+      if(!res.ok||!res.talleres||!res.talleres.length){dd.style.display='none';return;}
+      _tallerResultados=res.talleres;
+      dd.innerHTML=res.talleres.map(function(t,i){
+        var sub=[t.cuit?'CUIT '+t.cuit:'',t.loc||t.dir].filter(Boolean).join(' · ');
+        return '<div onclick="tallerSeleccionar('+i+')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:14px" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'
+          +'<strong style="color:var(--text)">'+esc(t.nombre)+'</strong>'
+          +(sub?'<br><span style="font-size:12px;color:var(--text3)">'+esc(sub)+'</span>':'')
+          +'</div>';
+      }).join('');
+      dd.style.display='block';
+    }catch(e){dd.style.display='none';}
+  },350);
+}
+function tallerSeleccionar(idx){
+  var t=_tallerResultados[idx];if(!t)return;
+  s('rel-taller').value=t.nombre;
+  s('rel-tel').value=t.tel||'';
+  s('rel-mail').value=t.mail||'';
+  s('rel-cuit').value=t.cuit||'';
+  if(s('rel-dir-taller'))s('rel-dir-taller').value=t.dir||'';
+  if(s('rel-loc-taller'))s('rel-loc-taller').value=t.loc||'';
+  s('taller-dropdown').style.display='none';
+  guardarBorrador();
+}
+document.addEventListener('click',function(e){
+  var dd=s('taller-dropdown');
+  if(dd&&e.target.id!=='rel-taller'&&!dd.contains(e.target))dd.style.display='none';
+});
+
 function validarCamposRel(){
   var nombre=s('rel-taller').value.trim();
   var tel=s('rel-tel').value.trim();
@@ -3733,7 +3783,7 @@ async function enviarRel(){
   var calcData={tipo:relCalcState.tipo,piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};}),total:calcTotalHs+calcTotalOpHs,totalPanos:calcTotalPanos,costoDiaChapa:relCostoDiaChapa,costoHoraMecánica:relCostoHoraMecánica,costoPanoPintura:relCostoPanoPintura,costoTotal:_costoTotal};
   var _fl=fotosPendientes.filter(function(f){return f.driveLink;}).map(function(f){return f.driveLink;});
   var tareasText = s('rel-tareas') ? s('rel-tareas').value.trim() : '';
-  var rel={km,danos,calculador:calcData,taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),fotosLinks:_fl,cantFotos:_fl.length,fechaEnvio:new Date().toISOString(),tareasARealizar:tareasText};
+  var rel={km,danos,calculador:calcData,taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),dirTaller:s('rel-dir-taller')?s('rel-dir-taller').value.trim():'',locTaller:s('rel-loc-taller')?s('rel-loc-taller').value.trim():'',fotosLinks:_fl,cantFotos:_fl.length,fechaEnvio:new Date().toISOString(),tareasARealizar:tareasText};
   // Sin conexión: encolar para envío automático al reconectar (no se pierde nada).
   if(!navigator.onLine){
     await _encolarRel(rel,msg);
@@ -4206,7 +4256,7 @@ function generarPDFCompleto(id){
     +(i.Danos?'<h2>Daños Declarados</h2><div class="blk">'+esc(i.Danos)+'</div>':'')
     +(i.DanosDen?'<h2>Ocurrencia del Siniestro</h2><div class="blk">'+esc(i.DanosDen)+'</div>':'')
     // ── Taller (si hay relevamiento) ──
-    +(rel&&rel.taller?'<h2>Taller / Asegurado</h2><div class="g"><div class="c"><span>Nombre</span><p>'+esc(rel.taller||'-')+'</p></div><div class="c"><span>Teléfono</span><p>'+esc(rel.telTaller||'-')+'</p></div><div class="c"><span>Mail</span><p>'+esc(rel.mailTaller||'-')+'</p></div><div class="c"><span>CUIT</span><p>'+esc(rel.cuit||'-')+'</p></div></div>':'')
+    +(rel&&rel.taller?'<h2>Taller / Asegurado</h2><div class="g"><div class="c"><span>Nombre</span><p>'+esc(rel.taller||'-')+'</p></div><div class="c"><span>Teléfono</span><p>'+esc(rel.telTaller||'-')+'</p></div><div class="c"><span>Mail</span><p>'+esc(rel.mailTaller||'-')+'</p></div><div class="c"><span>CUIT</span><p>'+esc(rel.cuit||'-')+'</p></div>'+(rel.dirTaller?'<div class="c"><span>Dirección</span><p>'+esc(rel.dirTaller)+'</p></div>':'')+(rel.locTaller?'<div class="c"><span>Localidad</span><p>'+esc(rel.locTaller)+'</p></div>':'')+'</div>':'')
     // ── Daños verificados ──
     +(rel&&rel.danos?'<h2>Daños Verificados</h2><div class="blk">'+esc(rel.danos)+'</div>':'')
     // ── Calculador / Costos ──
@@ -4692,6 +4742,8 @@ async function enviarRelTallerDesdeForm(){
     telTaller:s('rel-tel').value.trim(),
     mailTaller:s('rel-mail').value.trim(),
     cuit:s('rel-cuit').value.trim(),
+    dirTaller:s('rel-dir-taller')?s('rel-dir-taller').value.trim():'',
+    locTaller:s('rel-loc-taller')?s('rel-loc-taller').value.trim():'',
     fotosLinks:fotosPendientes.filter(function(f){return f.driveLink;}).map(function(f){return f.driveLink;}),
     cantFotos:fotosPendientes.filter(function(f){return f.driveLink;}).length,
     fechaEnvio:new Date().toISOString(),
