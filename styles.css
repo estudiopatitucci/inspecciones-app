@@ -130,7 +130,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 .lp-hero{margin-top:64px;background:transparent;min-height:calc(100vh - 64px);display:flex;align-items:center;position:relative;overflow:hidden;padding:4rem 1.5rem 3rem}
 .lp-hero-bg{position:absolute;inset:0;background:radial-gradient(ellipse 900px 500px at 50% 0%,rgba(37,99,235,.18),transparent 70%);opacity:1}
 .lp-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(37,99,235,.15) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(30,74,140,.2) 0%,transparent 50%)}
-.lp-hero-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:60px 60px}
+.lp-hero-grid{display:none}
 .lp-hero-content{position:relative;max-width:720px;margin:0 auto;text-align:center}
 .lp-hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:rgba(37,99,235,.2);border:1px solid rgba(37,99,235,.4);color:#93c5fd;padding:.35rem 1rem;border-radius:100px;font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin-bottom:1.75rem}
 .lp-hero-badge::before{content:'';width:6px;height:6px;background:#60a5fa;border-radius:50%;animation:lp-pulse 2s infinite}
@@ -252,7 +252,7 @@ tr:hover td{background:rgba(255,255,255,.02)}
 @media(max-width:420px){.lp-timeline{grid-template-columns:1fr}}
 /* ── SISTEMA ── */
 .lp-sistema{background:transparent;padding:5rem 1.5rem;position:relative;overflow:hidden;border-top:1px solid rgba(255,255,255,.07)}
-.lp-sistema::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 60% 50%,rgba(37,99,235,.2) 0%,transparent 65%);pointer-events:none}
+.lp-sistema::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 60% 50%,rgba(37,99,235,.08) 0%,transparent 65%);pointer-events:none}
 .lp-sistema-inner{max-width:680px;margin:0 auto;position:relative;z-index:1}
 .lp-sistema .lp-section-tag{color:#93c5fd}
 .lp-sistema h2{color:#fff;font-size:clamp(1.4rem,3vw,2rem);font-weight:800;line-height:1.25;letter-spacing:-.02em;margin:1rem 0}
