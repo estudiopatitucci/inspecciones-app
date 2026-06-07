@@ -88,6 +88,13 @@
 </head>
 <body>
 
+<!-- Banner de actualización PWA -->
+<div id="update-banner" style="display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99999;background:#1e40af;color:#fff;border-radius:12px;padding:12px 20px;display:none;align-items:center;gap:12px;box-shadow:0 4px 24px rgba(0,0,0,.4);font-size:14px;font-weight:500;white-space:nowrap">
+  <span>🔄 Nueva versión disponible</span>
+  <button onclick="window.location.reload()" style="background:#fff;color:#1e40af;border:none;border-radius:8px;padding:6px 14px;font-size:13px;font-weight:700;cursor:pointer">Actualizar APP</button>
+  <button onclick="this.parentElement.style.display='none'" style="background:transparent;border:none;color:rgba(255,255,255,.7);font-size:18px;cursor:pointer;line-height:1;padding:0 2px">✕</button>
+</div>
+
 <!-- LANDING PAGE -->
 <div id="landing-page">
   <nav class="lp-nav">
@@ -991,11 +998,15 @@
                 <input type="text" id="g-search" placeholder="Buscar pieza en todas las zonas…" oninput="gridSearch(this.value)" style="padding-left:36px;padding-right:36px;width:100%"/>
                 <button id="g-search-clear" onclick="gridClearSearch()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--bg);border:1px solid var(--border);color:var(--text2);width:24px;height:24px;border-radius:6px;font-size:13px;display:none;align-items:center;justify-content:center;padding:0;cursor:pointer">✕</button>
               </div>
-              <button id="voz-mic-btn" onclick="vozToggleMic()" title="Cargar piezas por voz">🎤</button>
+              <button id="voz-mic-btn" onclick="vozToggleMic()" title="Cargar piezas por voz (Beta)" style="display:none">🎤</button>
             </div>
             <div id="voz-panel">
               <div id="voz-transcript">Escuchando…</div>
               <div id="voz-feedback"></div>
+              <div id="voz-consulta-lado" style="display:none;margin-top:8px;padding:10px;background:rgba(37,99,235,.1);border:1px solid rgba(37,99,235,.3);border-radius:8px">
+                <p id="voz-consulta-texto" style="font-size:12px;color:var(--text2);margin-bottom:8px"></p>
+                <div id="voz-consulta-btns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+              </div>
             </div>
             <div id="g-search-results" style="display:none"></div>
             <div id="g-acordeones"></div>
@@ -1016,7 +1027,10 @@
           </div>
 
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-            <span style="font-size:12px;color:var(--text2)">Total horas estimadas</span>
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font-size:12px;color:var(--text2)">Total horas estimadas</span>
+              <span id="calc-guardado" style="font-size:11px;color:var(--green);opacity:0;transition:opacity .4s">✓ Guardado</span>
+            </div>
             <span id="rel-calc-total" style="font-size:20px;font-weight:600;color:var(--accent);font-family:'DM Mono',monospace">0 hs</span>
           </div>
 
@@ -1387,6 +1401,10 @@ async function doLogin(){
     s('perfil-nombre').textContent=nombre;
     s('perfil-avatar').textContent=nombre[0].toUpperCase();
     s('perfil-mail').textContent=INSP_MAILS[nombre]||'-';
+    // Gemini Voice: solo visible para usuarios beta
+    var VOZ_BETA=['Mariano','Bruno'];
+    var micBtn=s('voz-mic-btn');
+    if(micBtn) micBtn.style.display=VOZ_BETA.indexOf(nombre)>=0?'':'none';
     await cargarInspector();
     ls.style.display='none';
     btn.textContent='Ingresar';btn.disabled=false;
@@ -3443,9 +3461,27 @@ function limpiarRelevamiento(){
   toast('Relevamiento limpiado.','ok');
 }
 
+function calcResumenCierre(){
+  // R8 — alertas antes de guardar
+  var alertas=[];
+  var piezasSinHoras=relCalcState.piezas.filter(function(p){
+    return (p.tarea==='Reparar'||p.tarea==='Sustituir')&&!(p.hsTrabajo>0);
+  });
+  if(piezasSinHoras.length) alertas.push('⚠ '+piezasSinHoras.length+' pieza'+(piezasSinHoras.length>1?'s sin horas':' sin horas')+': '+piezasSinHoras.map(function(p){return p.pieza;}).join(', '));
+  var piezasSinNivel=relCalcState.piezas.filter(function(p){return p.tarea==='Reparar'&&!p.nivelDano;});
+  if(piezasSinNivel.length) alertas.push('⚠ '+piezasSinNivel.length+' pieza'+(piezasSinNivel.length>1?'s sin nivel de daño':' sin nivel de daño'));
+  if(!s('rel-taller')||!s('rel-taller').value.trim()) alertas.push('⚠ Falta el nombre del taller');
+  return alertas;
+}
+
 async function guardarBorradorCompleto(){
   var key=tallerTokenActual||relId;
   if(!key){toast('No hay inspección activa.','err');return;}
+  // R8 — mostrar resumen antes de guardar si hay alertas
+  var alertas=calcResumenCierre();
+  if(alertas.length){
+    if(!confirm('Hay observaciones antes de guardar:\n\n'+alertas.join('\n')+'\n\n¿Guardar igual?'))return;
+  }
   var msg=s('msg-rel');
   var calcTotal=relCalcState.piezas.reduce(function(acc,p){return acc+(p.hsTrabajo||0);},0);
   var draft={
@@ -3488,7 +3524,11 @@ function guardarBorrador(){
     cuit:s('rel-cuit').value,dirTaller:s('rel-dir-taller')?s('rel-dir-taller').value:'',locTaller:s('rel-loc-taller')?s('rel-loc-taller').value:'',
     costoDiaChapa:relCostoDiaChapa,costoHoraMecánica:relCostoHoraMecánica,costoPanoPintura:relCostoPanoPintura,ts:Date.now()};
   try{localStorage.setItem('bdr_'+relId,JSON.stringify(bd));}catch(e){}
+  // R5 — indicador de guardado
+  var ind=s('calc-guardado');
+  if(ind){ind.style.opacity='1';clearTimeout(ind._t);ind._t=setTimeout(function(){ind.style.opacity='0';},2500);}
 }
+
 ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit','rel-dir-taller','rel-loc-taller'].forEach(function(id){
   var el=s(id);if(el)el.addEventListener('input',guardarBorrador);
 });
@@ -5253,8 +5293,7 @@ async function enviarRelTaller(){
           var newSW=reg.installing;
           newSW.addEventListener('statechange',function(){
             if(newSW.state==='installed'&&navigator.serviceWorker.controller){
-              // Hay una versión anterior activa → nueva versión lista
-              toast('Nueva versión disponible. Recargá para actualizar.','info');
+              mostrarBannerActualizacion();
             }
           });
         });
@@ -5265,7 +5304,7 @@ async function enviarRelTaller(){
       }).catch(function(){});
       // Recargar cuando el SW avisa que se actualizó
       navigator.serviceWorker.addEventListener('message',function(e){
-        if(e.data&&e.data.type==='SW_UPDATED') window.location.reload();
+        if(e.data&&e.data.type==='SW_UPDATED') mostrarBannerActualizacion();
       });
     });
   }
@@ -5336,6 +5375,11 @@ document.addEventListener('click',function(e){
 });
 
 // ── Landing page ────────────────────────────────────────────────
+function mostrarBannerActualizacion(){
+  var b=document.getElementById('update-banner');
+  if(b) b.style.display='flex';
+}
+
 function lpShowLogin(){
   document.getElementById('landing-page').classList.add('hidden');
   s('screen-login').style.display='flex';
@@ -6665,32 +6709,19 @@ function vozBuscarPieza(queryRaw) {
 }
 
 // Agregar pieza/tarea a relCalcState replicando la logica de gridToggleTask
-// hs y panos son opcionales (detectados por voz); si null, se usan los defaults de la pieza
 function vozAgregarTarea(zona, pieza, tarea, nivel, hs, panos) {
-  // Verificar si ya existe
   var existing = gFind(zona, pieza.nombre, tarea);
-  if (existing) return false; // ya estaba
-
-  // Remover incompatibles
+  if (existing) return false;
   var incomp = {Reparar:['Sustituir'],Sustituir:['Reparar'],Pintar:[],Difuminar:['Reparar','Sustituir','Pintar']};
   (incomp[tarea]||[]).forEach(function(t) {
     var e = gFind(zona, pieza.nombre, t);
     if (e) relCalcState.piezas = relCalcState.piezas.filter(function(x){ return x._id!==e._id; });
   });
-
   var esSustituir = tarea==='Sustituir', esReparar = tarea==='Reparar';
-  // Horas: usa el valor de voz si se detectó, si no el default de la pieza
-  var hsInit = (hs != null) ? hs
-             : esSustituir&&pieza.defaultHs ? pieza.defaultHs
-             : esReparar&&pieza.defaultHsR ? pieza.defaultHsR : 0;
-  // Paños: solo aplica para Pintar y Sustituir
-  var panosInit = tarea==='Pintar' ? (panos!=null ? panos : 1)
-                : esSustituir&&pieza.defaultPanos ? pieza.defaultPanos : 0;
+  var hsInit = (hs != null) ? hs : esSustituir&&pieza.defaultHs ? pieza.defaultHs : esReparar&&pieza.defaultHsR ? pieza.defaultHsR : 0;
+  var panosInit = tarea==='Pintar' ? (panos!=null ? panos : 1) : esSustituir&&pieza.defaultPanos ? pieza.defaultPanos : 0;
   var nivelDano = esReparar ? (nivel||'Leve') : '';
-
   relCalcState.piezas.push({_id:relCalcIdx++, zona:zona, pieza:pieza.nombre, tarea:tarea, nivelDano:nivelDano, hsTrabajo:hsInit, panos:panosInit});
-
-  // Auto-Pintar si la pieza requiere pintura (igual que gridToggleTask)
   var esZonaMec = ZONAS_MECANICA_COSTO.indexOf(zona) !== -1;
   if (pieza.requierePintura && !esZonaMec && (esReparar||esSustituir)) {
     if (!gFind(zona, pieza.nombre, 'Pintar')) {
@@ -6701,25 +6732,96 @@ function vozAgregarTarea(zona, pieza, tarea, nivel, hs, panos) {
   return true;
 }
 
-// Parsear un fragmento de voz y aplicarlo al calculador
 function vozParsearYAgregar(txt) {
   var n = vozNorm(txt);
   var acciones = vozDetectarAcciones(n);
-  if (!acciones.length) return {ok:false, msg:'No detecte accion (reparar/sustituir/pintar)'};
+  if (!acciones.length) return {ok:false, msg:'No detecte accion'};
   var ctx = vozBuscarPieza(txt);
   if (!ctx) return {ok:false, msg:'No reconoci la pieza'};
   var nivel = vozDetectarNivel(n);
   var hs    = vozDetectarHoras(n);
   var panos = vozDetectarPanos(n);
   var nuevas = 0;
-  acciones.forEach(function(a) {
-    if (vozAgregarTarea(ctx.zona, ctx.pieza, a.tarea, nivel, hs, panos)) nuevas++;
-  });
-  if (!nuevas) return {ok:false, msg:ctx.pieza.nombre+' ya estaba en el calculador'};
+  acciones.forEach(function(a) { if (vozAgregarTarea(ctx.zona, ctx.pieza, a.tarea, nivel, hs, panos)) nuevas++; });
+  if (!nuevas) return {ok:false, msg:ctx.pieza.nombre+' ya estaba'};
   return {ok:true, pieza:ctx.pieza.nombre, zona:ctx.zona, acciones:acciones.map(function(a){return a.tarea;}), nivel:nivel, hs:hs, panos:panos};
 }
 
-// Panel de feedback
+// ── Gemini Voice ─────────────────────────────────────────────────
+function vozGetPiezasList() {
+  var gridData = CALC_DATA_GRID[relCalcState.tipo] || {};
+  var lista = [];
+  Object.keys(gridData).forEach(function(zona) {
+    (gridData[zona]||[]).forEach(function(p) { lista.push({zona:zona, nombre:p.nombre}); });
+  });
+  return lista;
+}
+
+function vozBuscarPiezaPorNombre(nombre, zona) {
+  var gridData = CALC_DATA_GRID[relCalcState.tipo] || {};
+  var zonas = zona ? [zona] : Object.keys(gridData);
+  for (var z=0; z<zonas.length; z++) {
+    var piezas = gridData[zonas[z]] || [];
+    for (var p=0; p<piezas.length; p++) {
+      if (piezas[p].nombre === nombre) return {zona:zonas[z], pieza:piezas[p]};
+    }
+  }
+  return vozBuscarPieza(nombre);
+}
+
+function vozAplicarRespuestaGemini(res) {
+  var nuevas = 0, msgs = [];
+  (res.acciones||[]).forEach(function(a) {
+    var ctx = vozBuscarPiezaPorNombre(a.pieza, a.zona);
+    if (!ctx) { msgs.push('⚠ No encontré: "'+a.pieza+'"'); return; }
+    var hs    = (a.horas  != null && a.horas  !== 'null') ? parseFloat(a.horas)  : null;
+    var panos = (a.panos  != null && a.panos  !== 'null') ? parseFloat(a.panos)  : null;
+    var nivel = a.nivel && a.nivel !== 'null' ? a.nivel : 'Leve';
+    if (vozAgregarTarea(ctx.zona, ctx.pieza, a.tarea, nivel, hs, panos)) {
+      nuevas++;
+      var tag = a.tarea+(a.tarea==='Reparar'?' ('+nivel.charAt(0)+')':'');
+      msgs.push(ctx.pieza.nombre+' — '+tag+(hs?' · '+hs+'hs':'')+(panos?' · '+panos+'P':''));
+    } else {
+      msgs.push(ctx.pieza.nombre+' ya estaba');
+    }
+  });
+  (res.eliminar||[]).forEach(function(e) {
+    var ctx = vozBuscarPiezaPorNombre(e.pieza, null);
+    if (!ctx) return;
+    var existing = gFind(ctx.zona, ctx.pieza.nombre, e.tarea);
+    if (existing) {
+      relCalcState.piezas = relCalcState.piezas.filter(function(x){ return x._id!==existing._id; });
+      msgs.push('✕ '+ctx.pieza.nombre+' — '+e.tarea);
+      nuevas++;
+    }
+  });
+  if (nuevas > 0) { gridRender(); guardarBorrador(); }
+  vozSetFeedback(msgs.join(' | ')||'Sin cambios', nuevas>0 ? 'voz-ok' : 'voz-warn');
+}
+
+async function vozProcesarConGemini(transcript) {
+  try {
+    var res = await apiCall({action:'interpretarVoz', transcript:transcript, tipo:relCalcState.tipo, piezas:vozGetPiezasList()});
+    if (res.ok) { vozAplicarRespuestaGemini(res); }
+    else { vozFallbackLocal(transcript); }
+  } catch(err) { vozFallbackLocal(transcript); }
+}
+
+function vozFallbackLocal(transcript) {
+  var frags = transcript.split(/,|;|\by también\b|\btambien\b/i).map(function(s){return s.trim();}).filter(Boolean);
+  var msgs = [], hayOk = false;
+  frags.forEach(function(f) {
+    var r = vozParsearYAgregar(f);
+    if (r.ok) {
+      hayOk = true;
+      msgs.push(r.pieza+' — '+r.acciones.join('+')+( r.acciones.indexOf('Reparar')>=0?' ('+r.nivel.charAt(0)+')':'' ));
+    } else { msgs.push('⚠ '+r.msg); }
+  });
+  if (hayOk) { gridRender(); guardarBorrador(); }
+  vozSetFeedback(msgs.join(' | '), hayOk ? 'voz-ok' : 'voz-warn');
+}
+
+// ── Panel de feedback ─────────────────────────────────────────────
 function vozSetFeedback(msg, tipo) {
   var el = document.getElementById('voz-feedback'); if(!el) return;
   el.className = tipo||''; el.textContent = msg||'';
@@ -6729,33 +6831,26 @@ function vozSetTranscript(txt) {
   el.textContent = txt||'';
 }
 
-// SpeechRecognition
+// ── SpeechRecognition ─────────────────────────────────────────────
 var vozSR = window.SpeechRecognition || window.webkitSpeechRecognition;
 var vozRec = null, vozEscuchando = false;
 
 function vozToggleMic() {
-  if (!relCalcState.tipo) {
-    alert('Primero selecciona el tipo de vehiculo.');
-    return;
-  }
-  if (!vozSR) {
-    alert('La deteccion de voz requiere Chrome.');
-    return;
-  }
+  if (!relCalcState.tipo) { alert('Primero seleccioná el tipo de vehículo.'); return; }
+  if (!vozSR) { alert('La detección de voz requiere Chrome.'); return; }
   if (vozEscuchando) vozDetener(); else vozIniciar();
 }
 
 function vozIniciar() {
   var panel = document.getElementById('voz-panel');
-  var btn = document.getElementById('voz-mic-btn');
+  var btn   = document.getElementById('voz-mic-btn');
   vozRec = new vozSR();
   vozRec.lang = 'es-AR';
   vozRec.continuous = true;
   vozRec.interimResults = true;
   vozRec.onstart = function() {
     vozEscuchando = true;
-    btn.classList.add('escuchando');
-    btn.textContent = '⏹';
+    btn.classList.add('escuchando'); btn.textContent = '⏹';
     panel.classList.add('visible');
     vozSetTranscript('Escuchando… hablame de las piezas');
     vozSetFeedback('');
@@ -6768,30 +6863,11 @@ function vozIniciar() {
     }
     vozSetTranscript(final_||interino||'…');
     if (final_) {
-      // Dividir por comas y procesar cada fragmento
-      var frags = final_.split(/,|;|\by también\b|\btambien\b/i).map(function(s){return s.trim();}).filter(Boolean);
-      var msgs = [];
-      frags.forEach(function(f) {
-        var r = vozParsearYAgregar(f);
-        if (r.ok) {
-          var accs = r.acciones.join('+');
-          var nivelStr = r.acciones.indexOf('Reparar')>=0 ? ' ('+r.nivel.charAt(0)+')' : '';
-          var hsStr    = r.hs    != null ? ' · '+r.hs+'hs'    : '';
-          var panosStr = r.panos != null ? ' · '+r.panos+'P'  : '';
-          msgs.push(r.pieza + ' — ' + accs + nivelStr + hsStr + panosStr);
-        } else {
-          msgs.push('⚠ ' + r.msg + ': "' + f + '"');
-        }
-      });
-      var hayOk = msgs.some(function(m){return m.indexOf('⚠')<0;});
-      if (hayOk) { gridRender(); guardarBorrador(); }
-      vozSetFeedback(msgs.join(' | '), hayOk ? 'voz-ok' : 'voz-warn');
+      vozSetFeedback('⏳ Procesando con IA...', '');
+      vozProcesarConGemini(final_);
     }
   };
-  vozRec.onerror = function(e) {
-    vozSetFeedback('Error: ' + e.error, 'voz-err');
-    vozDetener();
-  };
+  vozRec.onerror = function(e) { vozSetFeedback('Error: '+e.error, 'voz-err'); vozDetener(); };
   vozRec.onend = function() { if (vozEscuchando) vozRec.start(); };
   vozRec.start();
 }
@@ -6799,10 +6875,56 @@ function vozIniciar() {
 function vozDetener() {
   vozEscuchando = false;
   if (vozRec) vozRec.stop();
-  var btn = document.getElementById('voz-mic-btn');
+  var btn   = document.getElementById('voz-mic-btn');
   var panel = document.getElementById('voz-panel');
-  if (btn) { btn.classList.remove('escuchando'); btn.textContent = '🎤'; }
+  if (btn)   { btn.classList.remove('escuchando'); btn.textContent = '🎤'; }
   if (panel) panel.classList.remove('visible');
+}
+
+// Consulta de lado (izquierda/derecha)
+var _vozConsultasPendientes = [];
+function vozMostrarConsultaLado(consultas, idx) {
+  _vozConsultasPendientes = consultas;
+  var panel = document.getElementById('voz-consulta-lado');
+  var texto = document.getElementById('voz-consulta-texto');
+  var btns  = document.getElementById('voz-consulta-btns');
+  if (!panel || idx >= consultas.length) { vozOcultarConsultaLado(); return; }
+  var c = consultas[idx];
+  var nombreBase = (c.opciones[0]||'').replace(/ izquierda| derecha/i,'').trim();
+  texto.textContent = 'Lado de: ' + nombreBase;
+  var opciones = c.opciones.slice();
+  opciones.push('Ambas');
+  btns.innerHTML = opciones.map(function(op, i) {
+    var label = op === 'Ambas' ? 'Ambas' : /izquierda/i.test(op) ? 'Izquierda' : /derecha/i.test(op) ? 'Derecha' : op;
+    return '<button onclick="vozConfirmarLado('+idx+','+i+')" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;margin:2px">'+label+'</button>';
+  }).join('');
+  panel.style.display = 'block';
+}
+function vozConfirmarLado(idx, opcionIdx) {
+  var consultas = _vozConsultasPendientes;
+  if (!consultas || idx >= consultas.length) return;
+  var c = consultas[idx];
+  var hs    = (c.horas  != null) ? parseFloat(c.horas)  : null;
+  var panos = (c.panos  != null) ? parseFloat(c.panos)  : null;
+  var nivel = c.nivel && c.nivel !== 'null' ? c.nivel : 'Leve';
+  var seleccionadas = opcionIdx >= c.opciones.length ? c.opciones : [c.opciones[opcionIdx]];
+  seleccionadas.forEach(function(nombre) {
+    var ctx = vozBuscarPiezaPorNombre(nombre, c.zona);
+    if (!ctx) return;
+    vozAgregarTarea(ctx.zona, ctx.pieza, c.tarea, nivel, hs, panos);
+  });
+  gridRender(); guardarBorrador();
+  vozSetFeedback(seleccionadas.join(' + ') + ' agregado', 'voz-ok');
+  if (idx + 1 < consultas.length) {
+    vozMostrarConsultaLado(consultas, idx + 1);
+  } else {
+ConsultaLado, 2000);
+  }
+}
+function vozOcultarConsultaLado() {
+  var panel = document.getElementById("voz-consulta-lado");
+  if (panel) panel.style.display = "none";
+  _vozConsultasPendientes = [];
 }
 
 </script>
