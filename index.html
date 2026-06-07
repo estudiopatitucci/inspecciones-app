@@ -6941,7 +6941,7 @@ function vozConfirmarLado(idx, opcionIdx) {
   if (idx + 1 < consultas.length) {
     vozMostrarConsultaLado(consultas, idx + 1);
   } else {
-ConsultaLado, 2000);
+    setTimeout(vozOcultarConsultaLado, 2000);
   }
 }
 function vozOcultarConsultaLado() {
