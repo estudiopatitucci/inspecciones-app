@@ -1810,6 +1810,7 @@ function renderTablaAdmin(tipo){
         +'<td style="display:flex;gap:6px;flex-wrap:wrap">'
         +'<button class="btn-secondary btn-sm" onclick="abrirModal(\''+esc(i.ID)+'\')">Ver detalle</button>'
         +(i.Estado==='Verif: Pend Repuestos y Turno'?'<button class="btn-sm" style="background:rgba(139,92,246,.12);color:#8b5cf6;border:1px solid rgba(139,92,246,.3)" onclick="abrirPanelOrdenCompra(\''+esc(i.ID)+'\')">📄 Subir orden</button>':'')
+        +(i.Estado==='Verif: En Reparacion'?'<button class="btn-sm" style="background:rgba(139,92,246,.10);color:#8b5cf6;border:1px solid rgba(139,92,246,.3)" onclick="reenviarSolicitudTurno(\''+esc(i.ID)+'\')">✉ Reenviar Solicitud de Turno</button>':'')
         +(i.Estado==='Verif: Pendiente Aprobacion'?'<button class="btn-sm" style="background:rgba(76,175,125,.15);color:#4caf7d;border:1px solid rgba(76,175,125,.3)" onclick="aprobarVerifPanel(\''+esc(i.ID)+'\')">✅ Aprobar</button>':'')
         +(venc?'<button class="btn-sm" style="background:rgba(229,83,83,.12);color:var(--red);border:1px solid rgba(229,83,83,.3)" onclick="enviarRecordatorio(\''+esc(i.ID)+'\')">✉ Recordatorio</button>':'')
         +'</td></tr>';
@@ -4052,6 +4053,18 @@ async function confirmarTurnoVerifPanel(id){
       s('oc-msg').className='msg err';s('oc-msg').textContent='Error: '+(res.msg||'Intente de nuevo');
     }
   } catch(err){s('oc-msg').className='msg err';s('oc-msg').textContent='Error de conexión';}
+}
+
+async function reenviarSolicitudTurno(id){
+  if(!confirm('¿Reenviar la solicitud de turno al taller?'))return;
+  try{
+    var res=await apiCall({action:'reenviarSolicitudTurno',id,usuario:usuarioActual});
+    if(res.ok){
+      toast('✉ Mail reenviado al taller','ok');
+    } else {
+      toast('Error: '+(res.msg||'Intente de nuevo'),'err');
+    }
+  } catch(err){toast('Error de conexión','err');}
 }
 
 async function aprobarVerifPanel(id){
