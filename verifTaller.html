@@ -83,7 +83,7 @@
       </div>
     </div>
 
-    <!-- Etapa 0: Confirmar / Modificar turno -->
+    <!-- Etapa 0a: Confirmar / Modificar turno (turno aún no confirmado) -->
     <div id="etapa-0" style="display:none">
       <div class="card">
         <p class="section-label">Turno de ingreso</p>
@@ -104,62 +104,64 @@
       </div>
     </div>
 
-    <!-- Etapa 1: Fotos del proceso + fecha finalización -->
+    <!-- Etapa 0b: Turno ya confirmado — esperar mail el día del turno -->
+    <div id="etapa-0-espera" style="display:none">
+      <div class="card" style="text-align:center;padding:36px 20px">
+        <div style="font-size:48px;margin-bottom:14px">📅</div>
+        <h2 style="font-size:18px;font-weight:700;margin-bottom:10px">Turno confirmado</h2>
+        <p style="font-size:14px;color:var(--text2);margin-bottom:6px">Tu turno de ingreso quedó registrado para el</p>
+        <p style="font-size:20px;font-weight:700;color:var(--accent);margin-bottom:16px" id="espera-fecha-turno">-</p>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:24px">El día del turno vas a recibir un mail solicitando fotos del proceso de reparación y de los repuestos instalados.</p>
+        <button class="btn btn-primary" onclick="cerrarPestana()">✓ Recibido</button>
+      </div>
+    </div>
+
+    <!-- Etapa 1: Un solo box de fotos + fecha de finalización -->
     <div id="etapa-1" style="display:none">
       <div class="card">
-        <p class="section-label">Etapa 1 — Proceso de reparación</p>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Subí fotos del proceso de reparación y de los repuestos instalados. Indicá también la fecha estimada de finalización.</p>
-
-        <p style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Fotos del proceso de reparación</p>
-        <div class="drop-zone" onclick="s('inp-rep').click()">
+        <p class="section-label">Proceso de reparación</p>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Subí fotos del proceso de reparación y de los repuestos instalados. Podés seleccionar todas las fotos juntas.</p>
+        <div class="drop-zone" onclick="s('inp-proceso').click()">
           <div style="font-size:24px;margin-bottom:8px">🔧</div>
-          <p style="font-size:14px;font-weight:600">Seleccionar fotos del proceso</p>
+          <p style="font-size:14px;font-weight:600">Seleccionar fotos</p>
           <p style="font-size:12px;color:var(--text3);margin-top:4px">JPG, PNG — podés seleccionar varias</p>
-          <input type="file" id="inp-rep" accept="image/*" multiple style="display:none" onchange="agregarFotos(this,'rep')">
+          <input type="file" id="inp-proceso" accept="image/*" multiple style="display:none" onchange="agregarFotos(this,'proceso')">
         </div>
-        <div id="grid-rep" class="foto-grid"></div>
-
-        <p style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 8px">Fotos de repuestos instalados / piezas cambiadas</p>
-        <div class="drop-zone" onclick="s('inp-piezas').click()">
-          <div style="font-size:24px;margin-bottom:8px">⚙️</div>
-          <p style="font-size:14px;font-weight:600">Seleccionar fotos de piezas</p>
-          <input type="file" id="inp-piezas" accept="image/*" multiple style="display:none" onchange="agregarFotos(this,'piezas')">
-        </div>
-        <div id="grid-piezas" class="foto-grid"></div>
-
+        <div id="grid-proceso" class="foto-grid"></div>
         <div class="field" style="margin-top:16px">
-          <label>Fecha estimada de finalización</label>
+          <label>Fecha estimada de finalización del trabajo</label>
           <input type="date" id="inp-fin"/>
         </div>
-
-        <button class="btn btn-green" id="btn-enviar-e1" onclick="enviarEtapa1()">📤 Enviar fotos del proceso</button>
+        <button class="btn btn-green" id="btn-enviar-e1" onclick="enviarEtapa1()">📤 Enviar</button>
         <div id="msg-e1" class="msg"></div>
+      </div>
+    </div>
+
+    <!-- Pantalla post Etapa 1: esperar mail el día de finalización -->
+    <div id="etapa-1-ok" style="display:none">
+      <div class="card" style="text-align:center;padding:36px 20px">
+        <div style="font-size:48px;margin-bottom:14px">✅</div>
+        <h2 style="font-size:18px;font-weight:700;margin-bottom:10px">¡Fotos enviadas!</h2>
+        <p style="font-size:14px;color:var(--text2);margin-bottom:6px">El día estimado de finalización</p>
+        <p style="font-size:20px;font-weight:700;color:var(--accent);margin-bottom:16px" id="e1ok-fecha-fin">-</p>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:24px">vas a recibir un mail solicitando las fotos del vehículo terminado.</p>
+        <button class="btn btn-primary" onclick="cerrarPestana()">✓ Recibido</button>
       </div>
     </div>
 
     <!-- Etapa 2: Fotos del vehículo terminado -->
     <div id="etapa-2" style="display:none">
       <div class="card">
-        <p class="section-label">Etapa 2 — Vehículo terminado</p>
-        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Subí las fotos del vehículo terminado y la orden de conformidad del trabajo realizado.</p>
-
-        <p style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Fotos del vehículo terminado</p>
+        <p class="section-label">Vehículo terminado</p>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Subí las fotos del vehículo terminado.</p>
         <div class="drop-zone" onclick="s('inp-term').click()">
           <div style="font-size:24px;margin-bottom:8px">🚗</div>
           <p style="font-size:14px;font-weight:600">Seleccionar fotos del vehículo terminado</p>
+          <p style="font-size:12px;color:var(--text3);margin-top:4px">JPG, PNG — podés seleccionar varias</p>
           <input type="file" id="inp-term" accept="image/*" multiple style="display:none" onchange="agregarFotos(this,'term')">
         </div>
         <div id="grid-term" class="foto-grid"></div>
-
-        <p style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 8px">Orden de conformidad del trabajo realizado</p>
-        <div class="drop-zone" onclick="s('inp-conf').click()">
-          <div style="font-size:24px;margin-bottom:8px">📋</div>
-          <p style="font-size:14px;font-weight:600">Seleccionar foto / PDF de la orden</p>
-          <input type="file" id="inp-conf" accept="image/*,.pdf" style="display:none" onchange="agregarFotos(this,'conf')">
-        </div>
-        <div id="grid-conf" class="foto-grid"></div>
-
-        <button class="btn btn-green" id="btn-enviar-e2" style="margin-top:16px" onclick="enviarEtapa2()">📤 Enviar fotos del vehículo terminado</button>
+        <button class="btn btn-green" id="btn-enviar-e2" style="margin-top:16px" onclick="enviarEtapa2()">📤 Enviar fotos</button>
         <div id="msg-e2" class="msg"></div>
       </div>
     </div>
@@ -168,8 +170,9 @@
     <div id="etapa-ok" style="display:none">
       <div class="card" style="text-align:center;padding:40px 20px">
         <div style="font-size:52px;margin-bottom:16px">✅</div>
-        <h2 style="font-size:20px;font-weight:700;margin-bottom:10px" id="ok-titulo">¡Listo!</h2>
-        <p style="font-size:14px;color:var(--text2)" id="ok-subtitulo">Los datos fueron enviados correctamente al Estudio Patitucci.</p>
+        <h2 style="font-size:20px;font-weight:700;margin-bottom:10px">¡Todo enviado!</h2>
+        <p style="font-size:14px;color:var(--text2);margin-bottom:24px">Las fotos del vehículo terminado fueron enviadas. El Estudio Patitucci las revisará y cerrará el siniestro. ¡Muchas gracias!</p>
+        <button class="btn btn-primary" onclick="cerrarPestana()">✓ Recibido</button>
       </div>
     </div>
 
@@ -180,7 +183,7 @@
 const API = 'https://script.google.com/macros/s/AKfycbywk-SytIxiH7suDaIjfK9ZhQ6qOlAxxAM6hEoeqr8-PKWuk0-qDMmMMxQkOx3f8HMu/exec';
 var verifToken = new URLSearchParams(location.search).get('token') || '';
 var _inspData  = null;
-var _fotos     = {rep:[], piezas:[], term:[], conf:[]};
+var _fotos     = {proceso:[], term:[]};
 
 function s(id){return document.getElementById(id);}
 
@@ -232,15 +235,24 @@ async function init(){
 }
 
 function mostrarEtapa(etapa, res){
-  ['etapa-0','etapa-1','etapa-2','etapa-ok'].forEach(function(id){s(id).style.display='none';});
+  ['etapa-0','etapa-0-espera','etapa-1','etapa-1-ok','etapa-2','etapa-ok'].forEach(function(id){
+    var el=s(id); if(el) el.style.display='none';
+  });
   if(etapa === 0){
-    s('etapa-0').style.display='block';
-    var turnoActual = res.turnoConfirmadoPorTaller || res.turnoEstimado || '';
-    if(turnoActual) s('inp-turno').value = turnoActual;
-    if(res.tipo==='conRepuestos' && res.proveedor){
-      s('bloque-repuestos').style.display='block';
-      s('d-prov').textContent  = res.proveedor  || '-';
-      s('d-plazo').textContent = res.plazoTexto || '-';
+    if(res.turnoConfirmadoPorTaller){
+      // Turno ya confirmado — mostrar pantalla de espera
+      s('etapa-0-espera').style.display='block';
+      s('espera-fecha-turno').textContent = fmtDate(res.turnoConfirmadoPorTaller);
+    } else {
+      // Turno pendiente de confirmación
+      s('etapa-0').style.display='block';
+      var turnoActual = res.turnoEstimado || '';
+      if(turnoActual) s('inp-turno').value = turnoActual;
+      if(res.tipo==='conRepuestos' && res.proveedor){
+        s('bloque-repuestos').style.display='block';
+        s('d-prov').textContent  = res.proveedor  || '-';
+        s('d-plazo').textContent = res.plazoTexto || '-';
+      }
     }
   } else if(etapa === 1){
     s('etapa-1').style.display='block';
@@ -249,9 +261,17 @@ function mostrarEtapa(etapa, res){
     s('etapa-2').style.display='block';
   } else {
     s('etapa-ok').style.display='block';
-    s('ok-titulo').textContent='¡Todo enviado!';
-    s('ok-subtitulo').textContent='El Estudio Patitucci ya tiene toda la información. Muchas gracias.';
   }
+}
+
+function cerrarPestana(){
+  window.close();
+  // Fallback si el navegador bloquea window.close()
+  setTimeout(function(){
+    s('screen-main').innerHTML='<div style="text-align:center;padding:60px 20px;color:var(--text2)">'
+      +'<div style="font-size:40px;margin-bottom:16px">✅</div>'
+      +'<p style="font-size:15px">Podés cerrar esta pestaña.</p></div>';
+  }, 400);
 }
 
 // ── Confirmar / Modificar turno ──────────────────────
@@ -263,12 +283,8 @@ async function confirmarTurno(){
   try{
     var res = await apiCall({action:'tallerConfirmaTurno', verifToken, turno});
     if(res.ok){
-      showMsg('msg-turno','ok','✓ Turno confirmado para el '+fmtDate(turno)+'. ¡Gracias!');
-      btn.style.display='none';
-      // Pasar a etapa 1 (fotos proceso) después de un momento
-      setTimeout(function(){
-        mostrarEtapa(1, {fechaEstimadaFinalizacion:''});
-      },2000);
+      // Mostrar pantalla de espera — el taller recibirá mail el día del turno
+      mostrarEtapa(0, {turnoConfirmadoPorTaller: turno});
     } else {
       showMsg('msg-turno','err','Error: '+(res.msg||'Intente de nuevo'));
       btn.disabled=false; btn.textContent='✅ Confirmar turno';
@@ -344,41 +360,42 @@ async function subirFotos(tipo){
   return links;
 }
 
-// ── Enviar Etapa 1 (fotos proceso + fecha fin) ───────
+// ── Enviar Etapa 1 (fotos proceso unificadas + fecha fin) ───────
 async function enviarEtapa1(){
   var fechaFin = s('inp-fin').value;
   if(!fechaFin){showMsg('msg-e1','err','Ingresá la fecha estimada de finalización.');return;}
-  if(!_fotos.rep.length && !_fotos.piezas.length){
-    showMsg('msg-e1','err','Subí al menos una foto del proceso o de los repuestos.');return;
+  if(!_fotos.proceso.length){
+    showMsg('msg-e1','err','Subí al menos una foto.');return;
   }
   var btn = s('btn-enviar-e1');
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Subiendo fotos...';
   try{
-    var linksRep    = await subirFotos('rep');
-    var linksPiezas = await subirFotos('piezas');
+    var linksProceso = await subirFotos('proceso');
     var res = await apiCall({
       action:'tallerRegistraEtapa',
       verifToken,
       etapa: 1,
-      fotosReparacion: linksRep,
-      fotosPiezas: linksPiezas,
+      fotosProceso: linksProceso,
       fechaEstimadaFinalizacion: fechaFin
     });
     if(res.ok){
-      showMsg('msg-e1','ok','✓ Fotos enviadas correctamente. Fecha de finalización: '+fmtDate(fechaFin));
-      btn.style.display='none';
-      setTimeout(function(){mostrarEtapa(2,{});},2000);
+      // Mostrar pantalla de espera para Etapa 2
+      ['etapa-0','etapa-0-espera','etapa-1','etapa-2','etapa-ok'].forEach(function(id){
+        var el=s(id); if(el) el.style.display='none';
+      });
+      s('e1ok-fecha-fin').textContent = fmtDate(fechaFin);
+      s('etapa-1-ok').style.display='block';
     } else {
       showMsg('msg-e1','err','Error: '+(res.msg||'Intente de nuevo'));
-      btn.disabled=false; btn.textContent='📤 Enviar fotos del proceso';
+      btn.disabled=false; btn.textContent='📤 Enviar';
     }
   } catch(err){
     showMsg('msg-e1','err','Error de conexión.');
-    btn.disabled=false; btn.textContent='📤 Enviar fotos del proceso';
+    btn.disabled=false; btn.textContent='📤 Enviar';
   }
 }
 
-// ── Enviar Etapa 2 (fotos terminado + conformidad) ───
+// ── Enviar Etapa 2 (fotos vehículo terminado) ───
 async function enviarEtapa2(){
   if(!_fotos.term.length){
     showMsg('msg-e2','err','Subí al menos una foto del vehículo terminado.');return;
@@ -387,26 +404,24 @@ async function enviarEtapa2(){
   btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Subiendo fotos...';
   try{
     var linksTerm = await subirFotos('term');
-    var linksConf = await subirFotos('conf');
     var res = await apiCall({
       action:'tallerRegistraEtapa',
       verifToken,
       etapa: 2,
-      fotosTerminado: linksTerm,
-      ordenConformidad: linksConf[0] || null
+      fotosTerminado: linksTerm
     });
     if(res.ok){
-      mostrarEtapa(99, {});
+      ['etapa-0','etapa-0-espera','etapa-1','etapa-1-ok','etapa-2'].forEach(function(id){
+        var el=s(id); if(el) el.style.display='none';
+      });
       s('etapa-ok').style.display='block';
-      s('ok-titulo').textContent='¡Todo listo!';
-      s('ok-subtitulo').textContent='Las fotos del vehículo terminado fueron enviadas. El Estudio Patitucci las revisará y cerrará el siniestro. ¡Muchas gracias!';
     } else {
       showMsg('msg-e2','err','Error: '+(res.msg||'Intente de nuevo'));
-      btn.disabled=false; btn.textContent='📤 Enviar fotos del vehículo terminado';
+      btn.disabled=false; btn.textContent='📤 Enviar fotos';
     }
   } catch(err){
     showMsg('msg-e2','err','Error de conexión.');
-    btn.disabled=false; btn.textContent='📤 Enviar fotos del vehículo terminado';
+    btn.disabled=false; btn.textContent='📤 Enviar fotos';
   }
 }
 
