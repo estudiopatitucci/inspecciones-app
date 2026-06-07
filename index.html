@@ -204,6 +204,37 @@
       </div>
     </div>
   </section>
+  <!-- NUESTRO PROCESO -->
+  <section class="lp-proceso" id="lp-proceso">
+    <div class="lp-section-header">
+      <div class="lp-section-tag">Cómo trabajamos</div>
+      <h2 class="lp-section-title">Nuestro Proceso</h2>
+      <p class="lp-section-desc">Un flujo previsible y trazable: la aseguradora sabe en todo momento en qué etapa está cada siniestro.</p>
+    </div>
+    <div class="lp-timeline">
+      <div class="lp-step">
+        <div class="lp-step-num">01</div>
+        <h3>Recepción</h3>
+        <p>Recibimos el siniestro y validamos la documentación de la aseguradora en el día.</p>
+      </div>
+      <div class="lp-step">
+        <div class="lp-step-num">02</div>
+        <h3>Inspección</h3>
+        <p>Relevamiento técnico del vehículo, presencial o remoto, con registro fotográfico completo.</p>
+      </div>
+      <div class="lp-step">
+        <div class="lp-step-num">03</div>
+        <h3>Informe CESVI</h3>
+        <p>Auditoría de daños y presupuesto homologado bajo norma CESVI, con respaldo técnico.</p>
+      </div>
+      <div class="lp-step">
+        <div class="lp-step-num">04</div>
+        <h3>Entrega</h3>
+        <p>Informe final cerrado y trazable, con un tiempo de entrega promedio de 24/48 hs.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- POR QUÉ ELEGIRNOS -->
   <section class="lp-porque">
     <div class="lp-section-header">
@@ -217,6 +248,20 @@
       <div class="lp-pq-item"><div class="lp-pq-check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="11" cy="11" r="2.5"/><path d="M13.5 13.5l1.5 1.5"/></svg></div><span class="lp-pq-text">Detección temprana de fraudes</span></div>
       <div class="lp-pq-item"><div class="lp-pq-check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13 8 9 12 2 7"/><polyline points="16 17 22 17 22 11"/></svg></div><span class="lp-pq-text">Reducción de costo por siniestro</span></div>
       <div class="lp-pq-item"><div class="lp-pq-check"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><span class="lp-pq-text">Cumplimiento de plazos establecidos</span></div>
+    </div>
+  </section>
+
+  <!-- SISTEMA -->
+  <section class="lp-sistema">
+    <div class="lp-sistema-inner">
+      <div class="lp-section-tag">Sistema propio</div>
+      <h2>Cada siniestro, bajo control en tiempo real.</h2>
+      <p class="lp-sistema-desc">Cada inspección vive en nuestro sistema con estado actualizado. La aseguradora sabe exactamente en qué etapa está cada caso, sin llamados ni mails de seguimiento.</p>
+      <ul class="lp-sistema-list">
+        <li><div class="lp-sistema-check">✓</div>Estado de cada caso actualizado en tiempo real</li>
+        <li><div class="lp-sistema-check">✓</div>Registro fotográfico y trazabilidad total del siniestro</li>
+        <li><div class="lp-sistema-check">✓</div>Carga directa en los sistemas de la aseguradora</li>
+      </ul>
     </div>
   </section>
 
@@ -390,7 +435,7 @@
             <div id="chart-insp" style="display:flex;flex-direction:column;gap:10px;margin-top:4px"></div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
           <div class="card" style="margin-bottom:0">
             <p class="section-title">🔧 Piezas más dañadas</p>
             <div id="dash-top-piezas"><p style="font-size:13px;color:var(--text2)">Sin datos suficientes.</p></div>
@@ -398,6 +443,10 @@
           <div class="card" style="margin-bottom:0">
             <p class="section-title">📍 Zonas más afectadas</p>
             <div id="dash-top-zonas"><p style="font-size:13px;color:var(--text2)">Sin datos suficientes.</p></div>
+          </div>
+          <div class="card" style="margin-bottom:0">
+            <p class="section-title">💡 Piezas nuevas sugeridas</p>
+            <div id="dash-piezas-sugeridas"><p style="font-size:13px;color:var(--text2)">Sin datos suficientes.</p></div>
           </div>
         </div>
         <div class="card">
@@ -936,10 +985,17 @@
           </div>
           <div id="g-no-tipo" style="font-size:13px;color:var(--text3);padding:4px 0 8px">Seleccioná el tipo de vehículo para ver las zonas.</div>
           <div id="g-main" style="display:none">
-            <div style="position:relative;margin-bottom:14px">
-              <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none;color:var(--text3)">🔍</span>
-              <input type="text" id="g-search" placeholder="Buscar pieza en todas las zonas…" oninput="gridSearch(this.value)" style="padding-left:36px;padding-right:36px;width:100%"/>
-              <button id="g-search-clear" onclick="gridClearSearch()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--bg);border:1px solid var(--border);color:var(--text2);width:24px;height:24px;border-radius:6px;font-size:13px;display:none;align-items:center;justify-content:center;padding:0;cursor:pointer">✕</button>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+              <div style="position:relative;flex:1">
+                <span style="position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none;color:var(--text3)">🔍</span>
+                <input type="text" id="g-search" placeholder="Buscar pieza en todas las zonas…" oninput="gridSearch(this.value)" style="padding-left:36px;padding-right:36px;width:100%"/>
+                <button id="g-search-clear" onclick="gridClearSearch()" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:var(--bg);border:1px solid var(--border);color:var(--text2);width:24px;height:24px;border-radius:6px;font-size:13px;display:none;align-items:center;justify-content:center;padding:0;cursor:pointer">✕</button>
+              </div>
+              <button id="voz-mic-btn" onclick="vozToggleMic()" title="Cargar piezas por voz">🎤</button>
+            </div>
+            <div id="voz-panel">
+              <div id="voz-transcript">Escuchando…</div>
+              <div id="voz-feedback"></div>
             </div>
             <div id="g-search-results" style="display:none"></div>
             <div id="g-acordeones"></div>
@@ -1520,6 +1576,105 @@ function renderDashboard(){
   }
   renderBarras(contPiezas,'dash-top-piezas',8);
   renderBarras(contZonas,'dash-top-zonas',6);
+  // Piezas sugeridas (tipeadas en "Otras piezas", no del listado)
+  // ── Normalización flexible ─────────────────────────────
+  var _ABREV={
+    'del':'delantero','delan':'delantero','delantera':'delantero',
+    'tras':'trasero','tra':'trasero','trasera':'trasero',
+    'izq':'izquierdo','izqdo':'izquierdo','izquierda':'izquierdo',
+    'der':'derecho','dcho':'derecho','derecha':'derecho',
+    'pta':'puerta','ptas':'puerta',
+    'pto':'porton','porton':'porton',
+    'gdp':'guardaplast','gp':'guardaplast',
+    'gbd':'guardabarros','gb':'guardabarros',
+    'parg':'paragolpes','pg':'paragolpes',
+    'sup':'superior','inf':'inferior',
+    'int':'interno','ext':'externo','exter':'externo',
+    'jgo':'juego','cj':'caja',
+    'paragolpe':'paragolpes'
+  };
+  function _normSug(str){
+    var s=(str||'').toLowerCase()
+      .replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i')
+      .replace(/[óòö]/g,'o').replace(/[úùü]/g,'u').replace(/ñ/g,'n')
+      .replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+    return s.split(' ').map(function(w){ return _ABREV[w]||w; }).join(' ');
+  }
+  // ── Similitud por palabras (score 0-1) ─────────────────
+  function _simSug(a,b){
+    var wa=a.split(' ').filter(function(w){return w.length>2;});
+    var wb=b.split(' ').filter(function(w){return w.length>2;});
+    if(!wa.length||!wb.length) return 0;
+    var comunes=wa.filter(function(w){return wb.indexOf(w)!==-1;});
+    return comunes.length/Math.max(wa.length,wb.length);
+  }
+  // ── Agrupar por similitud ──────────────────────────────
+  // grupos: [{canon, normCanon, count, variantes:[]}]
+  var grupos=[];
+  inspecciones.forEach(function(insp){
+    var rel=insp.Relevamiento;
+    if(typeof rel==='string'){try{rel=JSON.parse(rel);}catch(e){rel=null;}}
+    if(!rel||!rel.calculador||!rel.calculador.piezas)return;
+    rel.calculador.piezas.forEach(function(p){
+      if(p.zona==='Otras piezas'&&p.pieza&&p.pieza.trim()){
+        var nombre=p.pieza.trim();
+        var normNombre=_normSug(nombre);
+        // Buscar grupo similar existente
+        var mejorGrupo=null,mejorScore=0;
+        grupos.forEach(function(g){
+          var sc=_simSug(normNombre,g.normCanon);
+          if(sc>mejorScore){mejorScore=sc;mejorGrupo=g;}
+        });
+        if(mejorScore>=0.6){
+          mejorGrupo.count++;
+          // Mantener como canon el nombre más largo (más descriptivo)
+          if(nombre.length>mejorGrupo.canon.length){
+            mejorGrupo.canon=nombre;
+            mejorGrupo.normCanon=normNombre;
+          }
+          if(mejorGrupo.variantes.indexOf(nombre)===-1) mejorGrupo.variantes.push(nombre);
+        } else {
+          grupos.push({canon:nombre,normCanon:normNombre,count:1,variantes:[nombre]});
+        }
+      }
+    });
+  });
+  var sortedSug=grupos.sort(function(a,b){return b.count-a.count;}).slice(0,10)
+    .map(function(g){return [g.canon,g.count,g.variantes];});
+  var UMBRAL=5;
+  if(sortedSug.length){
+    s('dash-piezas-sugeridas').innerHTML=sortedSug.map(function(e){
+      var nombre=e[0],cnt=e[1],variantes=e[2]||[];
+      var esDestacada=cnt>=UMBRAL;
+      var colorNombre=esDestacada?'#f0b429':'var(--text)';
+      var extra=esDestacada?' <span style="font-size:10px;color:#f0b429;font-style:italic">(se agregará al sistema)</span>':'';
+      var tooltip=variantes.length>1?'title="Variantes: '+variantes.map(function(v){return esc(v);}).join(' / ')+'"':'';
+      return '<div style="margin-bottom:10px" '+tooltip+'>'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">'
+        +'<span style="font-size:12px;color:'+colorNombre+';max-width:78%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:'+(esDestacada?'700':'400')+'">'+esc(nombre)+extra+'</span>'
+        +'<span style="font-size:12px;font-weight:600;color:'+(esDestacada?'#f0b429':'var(--accent)')+'">'+cnt+'</span>'
+        +'</div>'
+        +'<div style="background:var(--bg3);border-radius:4px;height:6px;overflow:hidden">'
+        +'<div style="width:'+Math.min(100,Math.round((cnt/UMBRAL)*100))+'%;background:'+(esDestacada?'#f0b429':'var(--accent)')+';height:100%;border-radius:4px;transition:width .4s"></div>'
+        +'</div></div>';
+    }).join('');
+    // Notificar al admin por cada pieza que alcanzó el umbral (una sola vez)
+    sortedSug.forEach(function(e){
+      var nombre=e[0],cnt=e[1];
+      if(cnt>=UMBRAL){
+        var flagKey='sug_notif_'+nombre.toLowerCase().replace(/\s+/g,'_');
+        if(!localStorage.getItem(flagKey)){
+          localStorage.setItem(flagKey,'1');
+          fetch(GAS_URL,{method:'POST',body:JSON.stringify({
+            token:TOKEN,action:'notificarPiezaSugerida',
+            pieza:nombre,contador:cnt
+          })}).catch(function(){});
+        }
+      }
+    });
+  } else {
+    s('dash-piezas-sugeridas').innerHTML='<p style="font-size:13px;color:var(--text2)">Sin datos aún. Aparecerán aquí las piezas tipeadas manualmente por los inspectores.</p>';
+  }
   // Recientes
   const recientes=inspecciones.slice(0,5);
   s('dash-recientes').innerHTML=recientes.length?`
@@ -3815,6 +3970,7 @@ function abrirPanelOrdenCompra(id){
     +'<div><span style="font-size:11px;color:var(--text2);display:block">Proveedor</span><strong id="oc-proveedor">-</strong></div>'
     +'<div><span style="font-size:11px;color:var(--text2);display:block">Plazo de entrega</span><strong id="oc-plazo">-</strong></div>'
     +'</div></div>'
+    +'<div id="oc-sd-banner" style="display:none;background:rgba(220,38,38,.10);border:1.5px solid rgba(220,38,38,.4);border-radius:10px;padding:14px;margin-bottom:14px;color:#dc2626"></div>'
     +'<div class="field" style="margin-bottom:14px">'
     +'<label>Turno estimado (lunes calculado automáticamente) <span style="font-size:11px;color:var(--text3)">— podés modificarlo</span></label>'
     +'<input type="date" id="oc-turno" style="width:100%"/>'
@@ -3850,6 +4006,19 @@ async function procesarOrdenCompra(id){
       s('oc-turno').value=result.turnoEstimado||'';
       s('oc-resultado').style.display='block';
       zona.innerHTML='<p style="font-size:13px;color:var(--green);padding:8px">✓ Archivo subido correctamente</p>';
+      // ── Alerta SD ───────────────────────────────────────────
+      var sdBanner=s('oc-sd-banner');
+      if(sdBanner){
+        if(result.tieneSinDisponibilidad && result.piezasSinDisponibilidad && result.piezasSinDisponibilidad.length){
+          var lista=result.piezasSinDisponibilidad.map(function(p){return '<li style="margin:2px 0">• '+p+'</li>';}).join('');
+          sdBanner.innerHTML='<strong style="display:block;margin-bottom:6px">⚠️ ATENCIÓN — Repuestos sin disponibilidad (SD)</strong>'
+            +'<p style="margin-bottom:6px;font-size:12px">El repuestero marcó los siguientes repuestos como <strong>Sin Disponibilidad</strong>. Verificá la orden antes de confirmar:</p>'
+            +'<ul style="list-style:none;padding:0;margin:0;font-size:13px">'+lista+'</ul>';
+          sdBanner.style.display='block';
+        } else {
+          sdBanner.style.display='none';
+        }
+      }
     } else {
       zona.innerHTML='<p style="font-size:13px;color:var(--red);padding:8px">Error: '+(result.msg||'Intente de nuevo')+'</p>';
     }
@@ -5189,7 +5358,25 @@ async function lpEnviarContacto(e){
 //  CALCULADOR INLINE (dentro del relevamiento)
 // ════════════════════════════════════════════════════════
 
-var SUSTITUIR_16HS = ['Lateral caja pick-up derecho','Lateral caja pick-up izquierdo','Guardabarros trasero derecho','Guardabarros trasero izquierdo'];
+var SUSTITUIR_16HS_GRID = [
+  'Guardabarro trasero izquierdo',
+  'Guardabarro trasero derecho',
+  'Guardabarro trasero izquierdo (Estructural grande)',
+  'Guardabarro trasero derecho (Estructural grande)',
+  'Lateral caja pick-up izquierdo',
+  'Lateral caja pick-up derecho',
+  'Lateral de caja izquierdo',
+  'Lateral de caja derecho',
+  'Panel lateral de carga izquierdo (Chapa ciega o estructural)',
+  'Panel lateral de carga derecho (Tramo fijo)',
+  'Lateral utilitario izquierdo',
+  'Lateral utilitario derecho',
+  'Piso de baúl',
+  'Piso de caja',
+  'Piso de carga de chapa',
+  'Piso de carga de chapa acanalada'
+];
+var SUSTITUIR_16HS = ['Lateral de caja derecho','Lateral de caja izquierdo','Guardabarro trasero derecho','Guardabarro trasero izquierdo'];
 var OP_LISTA = ['Banco de estiraje','Carga de gas aire acondicionado','Alineación y balanceo','Armado de rueda','Escaneo / reseteo de módulos','Desmontaje y montaje de accesorios','Mecánica y/o electricidad','Pegado parabrisas/luneta','Otra'];
 var relCalcState = {tipo:'', piezas:[]};
 var relCalcIdx = 0;
@@ -5287,7 +5474,7 @@ function relGenerarTareas(){
     if(o.operacion==='Desmontaje y montaje de accesorios') return a+(o.horas||0);
     return a;
   },0);
-  var dias = Math.ceil((totalHsChapa + totalOpHs) / 8 * 2) / 2;
+  var dias = Math.ceil((totalHsChapa + totalHsMec + totalOpHs) / 8 * 2) / 2;
   var totalPanos = piezas.reduce(function(a,p){
     if(hasTarea(p,'Pintar'))    return a+(p.panos||0);
     if(hasTarea(p,'Difuminar')) return a+0.5;
@@ -5536,7 +5723,7 @@ function relCalcUpdateField(uid, campo, valor){
   else if(campo==='tarea'){p.tarea=valor;p.nivelDano='';p.hsTrabajo=0;}
   else if(campo==='nivelDano'){p.nivelDano=valor;p.hsTrabajo=0;}
   else if(campo==='hsTrabajo'){p.hsTrabajo=parseFloat(valor)||0;}
-  else if(campo==='panos'){p.panos=parseInt(valor)||0;}
+  else if(campo==='panos'){p.panos=parseFloat(valor)||0;}
   relCalcRender();
 }
 
@@ -5637,7 +5824,7 @@ function gridSetHs(rid,tarea,valor){
 function gridSetPanos(rid, tarea, valor){
   var ctx=_gMap[rid]; if(!ctx) return;
   var e=gFind(ctx.zona,ctx.pieza.nombre,tarea); if(!e) return;
-  e.panos=parseInt(valor)||0; gridUpdateAll(); guardarBorrador();
+  e.panos=parseFloat(valor)||0; gridUpdateAll(); guardarBorrador();
 }
 
 // ── otras piezas ──
@@ -5672,7 +5859,7 @@ function otraSetTarea(id,t){
 }
 function otraSetNivel(id,n){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.nivelDano=n;e.hsTrabajo=0; gridRender(); guardarBorrador(); }
 function otraSetHs(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.hsTrabajo=parseFloat(v)||0; gridUpdateAll(); guardarBorrador(); }
-function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.panos=parseInt(v)||0; gridUpdateAll(); guardarBorrador(); }
+function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.panos=parseFloat(v)||0; gridUpdateAll(); guardarBorrador(); }
 
 // ════════════════════════════════════════════════════════
 //  FEATURE: NUEVA IP CON IA
@@ -6358,105 +6545,251 @@ function gridInitFromState(){
 }
 
 
-// ════════════════════════════════════════════════════════
-//  CALC_DATA_GRID — Estructura v4 con requierePintura
-// ════════════════════════════════════════════════════════
-// Solo estas piezas pueden tener hasta 16 hs. El resto tiene máximo 12.
-var SUSTITUIR_16HS_GRID = [
-  'Guardabarro trasero izquierdo',
-  'Guardabarro trasero derecho',
-  'Guardabarro trasero izquierdo (Estructural grande)',
-  'Guardabarro trasero derecho (Estructural grande)',
-  'Lateral caja pick-up izquierdo',
-  'Lateral caja pick-up derecho',
-  'Lateral de caja izquierdo',
-  'Lateral de caja derecho',
-  'Panel lateral de carga izquierdo (Chapa ciega o estructural)',
-  'Panel lateral de carga derecho (Tramo fijo)',
-  'Lateral utilitario izquierdo',
-  'Lateral utilitario derecho',
-  'Piso de baúl',
-  'Piso de caja',
-  'Piso de carga de chapa',
-  'Piso de carga de chapa acanalada'
+// =============================================
+// VOZ EN CALCULADOR
+// =============================================
+
+// Normalización igual a prueba-voz.html
+function vozNorm(str) {
+  return (str||'').toLowerCase()
+    .replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i')
+    .replace(/ó/g,'o').replace(/ú/g,'u').replace(/ñ/g,'n')
+    .replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
+
+var VOZ_ALIASES = {
+  'paragolpe':'paragolpes','defensa':'paragolpes',
+  'capo':'capot','capos':'capot',
+  'guardabarro':'guardabarros','guarda':'guardabarros','fender':'guardabarros',
+  'optica':'optica principal','opticas':'optica principal',
+  'faro':'optica principal','farol':'optica principal',
+  'calavera':'optica trasera','stop':'optica trasera',
+  'espejo':'espejo retrovisor','retrovisor':'espejo retrovisor',
+  'porton':'porton trasero','baul':'tapa de baul','maletero':'tapa de baul',
+  'luneta':'luneta trasera','zocalo':'zocalo exterior',
+  'techo':'panel de techo','pilar':'parante','columna':'parante'
+};
+
+var VOZ_VERBOS = new Set(['sustituir','cambiar','reemplazar','reemplaza','cambia','sustituye','cambio',
+  'reparar','repara','arreglar','arregla','enderezar','chapear','chapa',
+  'pintar','pinta','pintura','lacar',
+  'leve','medio','fuerte','severo','grave','liviano','moderado',
+  'a','de','el','la','los','las','y','o','e','que']);
+
+var VOZ_ACCIONES = [
+  { keys:['sustituir','cambiar','reemplazar','reemplaza','cambia','sustituye','cambio'], tarea:'Sustituir' },
+  { keys:['reparar','repara','arreglar','arregla','enderezar','chapear','chapa'],        tarea:'Reparar'   },
+  { keys:['pintar','pinta','pintura','lacar'],                                           tarea:'Pintar'    }
 ];
 
-/* datos de piezas -> data-piezas.js */
+var VOZ_NIVELES = [
+  { keys:['leve','liviano','poco','raspon','rayones'],          nivel:'Leve'   },
+  { keys:['medio','moderado','regular'],                        nivel:'Medio'  },
+  { keys:['fuerte','severo','grave','importante','muy'],        nivel:'Fuerte' }
+];
 
-// ─── CALCULADOR STANDALONE (inspector) ────────────────────────────────────────
-var _calcState={tipo:'',piezas:[],idx:0};
-function calcSetTipo(){
-  var tipo=g('calc-tipo')||'';
-  _calcState={tipo:tipo,piezas:[],idx:0};
-  var vacio=s('calc-vacio'),lista=s('calc-lista-piezas'),hdr=s('calc-header');
-  if(vacio)vacio.style.display=tipo?'none':'block';
-  if(lista)lista.innerHTML='';
-  if(hdr)hdr.style.display='none';
-  calcRender();
+function vozExpandirAliases(q) {
+  return q.split(' ').map(function(w){ return VOZ_ALIASES[w]||w; }).join(' ').replace(/\s+/g,' ').trim();
 }
-function calcAddPieza(){
-  if(!_calcState.tipo){toast('Seleccioná el tipo de vehículo primero.','err');return;}
-  _calcState.piezas.push({_id:_calcState.idx++,zona:'',pieza:'',tarea:'Reparar',hsTrabajo:0});
-  calcRender();
+function vozQuitarVerbos(q) {
+  return q.split(' ').filter(function(w){ return !VOZ_VERBOS.has(w); }).join(' ').replace(/\s+/g,' ').trim();
 }
-function calcRemovePieza(uid){
-  _calcState.piezas=_calcState.piezas.filter(function(p){return p._id!==uid;});
-  calcRender();
+function vozDetectarAcciones(n) {
+  return VOZ_ACCIONES.filter(function(a){ return a.keys.some(function(k){ return n.indexOf(k)>=0; }); });
 }
-function calcRender(){
-  var lista=s('calc-lista-piezas');
-  var hdr=s('calc-header');
-  var vacio=s('calc-vacio');
-  var totalEl=s('calc-total');
-  if(!lista)return;
-  var tipo=_calcState.tipo;
-  var grid=window.CALC_DATA_GRID?window.CALC_DATA_GRID[tipo]||{}:{};
-  var zonas=Object.keys(grid);
-  var total=0;
-  _calcState.piezas.forEach(function(p){total+=(p.hsTrabajo||0);});
-  if(totalEl)totalEl.innerHTML=total.toFixed(2)+' <span style="font-size:16px;font-weight:400">hs</span>';
-  if(!_calcState.piezas.length){
-    lista.innerHTML='';
-    if(hdr)hdr.style.display='none';
-    if(vacio)vacio.style.display=tipo?'block':'block';
+function vozDetectarNivel(n) {
+  for (var i=0; i<VOZ_NIVELES.length; i++) {
+    if (VOZ_NIVELES[i].keys.some(function(k){ return n.indexOf(k)>=0; }))
+      return VOZ_NIVELES[i].nivel;
+  }
+  return 'Leve';
+}
+function vozDetectarHoras(n) {
+  // "2 horas", "3 hs", "4h", "2,5 horas", "dos horas"
+  var numeros = {'cero':0,'una':1,'uno':1,'dos':2,'tres':3,'cuatro':4,'cinco':5,'seis':6,'siete':7,'ocho':8,'nueve':9,'diez':10,'doce':12};
+  var m = n.match(/(\d+(?:[.,]\d+)?)\s*(?:horas?|hs?)\b/);
+  if (m) return parseFloat(m[1].replace(',', '.'));
+  // palabras numéricas
+  for (var w in numeros) {
+    if (n.indexOf(w + ' hora') >= 0 || n.indexOf(w + ' hs') >= 0) return numeros[w];
+  }
+  return null;
+}
+function vozDetectarPanos(n) {
+  // "2 paños", "1 paño", "1.5 panos", "2,5 panos"
+  var m = n.match(/(\d+(?:[.,]\d+)?)\s*pan[oa]s?/);
+  if (m) return parseFloat(m[1].replace(',', '.'));
+  return null;
+}
+
+// Buscar pieza en CALC_DATA_GRID del tipo actual, devuelve {zona, pieza} o null
+function vozBuscarPieza(queryRaw) {
+  var tipo = relCalcState.tipo;
+  var gridData = CALC_DATA_GRID[tipo] || {};
+  var q = vozQuitarVerbos(vozExpandirAliases(vozNorm(queryRaw)));
+  var mejor = null, top = 0;
+  Object.keys(gridData).forEach(function(zona) {
+    var piezas = gridData[zona] || [];
+    piezas.forEach(function(p) {
+      var pn = vozNorm(p.nombre);
+      var qn = q;
+      var score = 0;
+      if (pn === qn) score = 1;
+      else if (pn.indexOf(qn)>=0 || qn.indexOf(pn)>=0) score = 0.9;
+      else {
+        var pw=pn.split(' '); var qw=qn.split(' ').filter(function(w){ return w.length>2; });
+        if (qw.length) {
+          var m=qw.filter(function(w){ return pw.some(function(pw2){ return pw2.indexOf(w)>=0||w.indexOf(pw2)>=0; }); });
+          score = m.length/Math.max(pw.length,qw.length);
+        }
+      }
+      if (score > top) { top = score; mejor = {zona:zona, pieza:p}; }
+    });
+  });
+  return (top >= 0.2) ? mejor : null;
+}
+
+// Agregar pieza/tarea a relCalcState replicando la logica de gridToggleTask
+// hs y panos son opcionales (detectados por voz); si null, se usan los defaults de la pieza
+function vozAgregarTarea(zona, pieza, tarea, nivel, hs, panos) {
+  // Verificar si ya existe
+  var existing = gFind(zona, pieza.nombre, tarea);
+  if (existing) return false; // ya estaba
+
+  // Remover incompatibles
+  var incomp = {Reparar:['Sustituir'],Sustituir:['Reparar'],Pintar:[],Difuminar:['Reparar','Sustituir','Pintar']};
+  (incomp[tarea]||[]).forEach(function(t) {
+    var e = gFind(zona, pieza.nombre, t);
+    if (e) relCalcState.piezas = relCalcState.piezas.filter(function(x){ return x._id!==e._id; });
+  });
+
+  var esSustituir = tarea==='Sustituir', esReparar = tarea==='Reparar';
+  // Horas: usa el valor de voz si se detectó, si no el default de la pieza
+  var hsInit = (hs != null) ? hs
+             : esSustituir&&pieza.defaultHs ? pieza.defaultHs
+             : esReparar&&pieza.defaultHsR ? pieza.defaultHsR : 0;
+  // Paños: solo aplica para Pintar y Sustituir
+  var panosInit = tarea==='Pintar' ? (panos!=null ? panos : 1)
+                : esSustituir&&pieza.defaultPanos ? pieza.defaultPanos : 0;
+  var nivelDano = esReparar ? (nivel||'Leve') : '';
+
+  relCalcState.piezas.push({_id:relCalcIdx++, zona:zona, pieza:pieza.nombre, tarea:tarea, nivelDano:nivelDano, hsTrabajo:hsInit, panos:panosInit});
+
+  // Auto-Pintar si la pieza requiere pintura (igual que gridToggleTask)
+  var esZonaMec = ZONAS_MECANICA_COSTO.indexOf(zona) !== -1;
+  if (pieza.requierePintura && !esZonaMec && (esReparar||esSustituir)) {
+    if (!gFind(zona, pieza.nombre, 'Pintar')) {
+      var panosP = (panos!=null) ? panos : esSustituir&&pieza.defaultPanos ? pieza.defaultPanos : 1;
+      relCalcState.piezas.push({_id:relCalcIdx++, zona:zona, pieza:pieza.nombre, tarea:'Pintar', nivelDano:'', hsTrabajo:0, panos:panosP});
+    }
+  }
+  return true;
+}
+
+// Parsear un fragmento de voz y aplicarlo al calculador
+function vozParsearYAgregar(txt) {
+  var n = vozNorm(txt);
+  var acciones = vozDetectarAcciones(n);
+  if (!acciones.length) return {ok:false, msg:'No detecte accion (reparar/sustituir/pintar)'};
+  var ctx = vozBuscarPieza(txt);
+  if (!ctx) return {ok:false, msg:'No reconoci la pieza'};
+  var nivel = vozDetectarNivel(n);
+  var hs    = vozDetectarHoras(n);
+  var panos = vozDetectarPanos(n);
+  var nuevas = 0;
+  acciones.forEach(function(a) {
+    if (vozAgregarTarea(ctx.zona, ctx.pieza, a.tarea, nivel, hs, panos)) nuevas++;
+  });
+  if (!nuevas) return {ok:false, msg:ctx.pieza.nombre+' ya estaba en el calculador'};
+  return {ok:true, pieza:ctx.pieza.nombre, zona:ctx.zona, acciones:acciones.map(function(a){return a.tarea;}), nivel:nivel, hs:hs, panos:panos};
+}
+
+// Panel de feedback
+function vozSetFeedback(msg, tipo) {
+  var el = document.getElementById('voz-feedback'); if(!el) return;
+  el.className = tipo||''; el.textContent = msg||'';
+}
+function vozSetTranscript(txt) {
+  var el = document.getElementById('voz-transcript'); if(!el) return;
+  el.textContent = txt||'';
+}
+
+// SpeechRecognition
+var vozSR = window.SpeechRecognition || window.webkitSpeechRecognition;
+var vozRec = null, vozEscuchando = false;
+
+function vozToggleMic() {
+  if (!relCalcState.tipo) {
+    alert('Primero selecciona el tipo de vehiculo.');
     return;
   }
-  if(hdr)hdr.style.display='grid';
-  if(vacio)vacio.style.display='none';
-  lista.innerHTML=_calcState.piezas.map(function(p){
-    var zonaSel=zonas.map(function(z){return '<option'+(p.zona===z?' selected':'')+'>'+esc(z)+'</option>';}).join('');
-    var piezasZona=p.zona&&grid[p.zona]?grid[p.zona]:[];
-    var piezaSel=piezasZona.map(function(pi){return '<option'+(p.pieza===pi.nombre?' selected':'')+'>'+esc(pi.nombre)+'</option>';}).join('');
-    var defaultHs=p.pieza&&piezasZona.length?((piezasZona.find(function(x){return x.nombre===p.pieza;})||{}).defaultHs||0):0;
-    var tareas=['Reparar','Sustituir','Pintar','Difuminar'].map(function(t){return '<option'+(p.tarea===t?' selected':'')+'>'+t+'</option>';}).join('');
-    return '<div style="display:grid;grid-template-columns:160px 1fr 130px 90px 36px;gap:8px;margin-bottom:8px;align-items:center">'
-      +'<select onchange="calcUpdateZona('+p._id+',this.value)" style="font-size:12px"><option value="">Zona...</option>'+zonaSel+'</select>'
-      +'<select onchange="calcUpdatePieza('+p._id+',this.value,'+defaultHs+')" style="font-size:12px">'+(p.zona?'<option value="">Pieza...</option>'+piezaSel:'<option>Seleccioná zona primero</option>')+'</select>'
-      +'<select onchange="calcUpdateField('+p._id+',\'tarea\',this.value)" style="font-size:12px">'+tareas+'</select>'
-      +'<input type="number" min="0" step="0.5" value="'+( p.hsTrabajo||0)+'" onchange="calcUpdateField('+p._id+',\'hsTrabajo\',+this.value)" style="font-size:12px;width:100%"/>'
-      +'<button onclick="calcRemovePieza('+p._id+')" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:0">✕</button>'
-      +'</div>';
-  }).join('');
+  if (!vozSR) {
+    alert('La deteccion de voz requiere Chrome.');
+    return;
+  }
+  if (vozEscuchando) vozDetener(); else vozIniciar();
 }
-function calcUpdateZona(uid,zona){
-  var p=_calcState.piezas.find(function(x){return x._id===uid;});
-  if(p){p.zona=zona;p.pieza='';p.hsTrabajo=0;}
-  calcRender();
+
+function vozIniciar() {
+  var panel = document.getElementById('voz-panel');
+  var btn = document.getElementById('voz-mic-btn');
+  vozRec = new vozSR();
+  vozRec.lang = 'es-AR';
+  vozRec.continuous = true;
+  vozRec.interimResults = true;
+  vozRec.onstart = function() {
+    vozEscuchando = true;
+    btn.classList.add('escuchando');
+    btn.textContent = '⏹';
+    panel.classList.add('visible');
+    vozSetTranscript('Escuchando… hablame de las piezas');
+    vozSetFeedback('');
+  };
+  vozRec.onresult = function(e) {
+    var interino='', final_='';
+    for (var i=e.resultIndex; i<e.results.length; i++) {
+      if (e.results[i].isFinal) final_ += e.results[i][0].transcript;
+      else interino += e.results[i][0].transcript;
+    }
+    vozSetTranscript(final_||interino||'…');
+    if (final_) {
+      // Dividir por comas y procesar cada fragmento
+      var frags = final_.split(/,|;|\by también\b|\btambien\b/i).map(function(s){return s.trim();}).filter(Boolean);
+      var msgs = [];
+      frags.forEach(function(f) {
+        var r = vozParsearYAgregar(f);
+        if (r.ok) {
+          var accs = r.acciones.join('+');
+          var nivelStr = r.acciones.indexOf('Reparar')>=0 ? ' ('+r.nivel.charAt(0)+')' : '';
+          var hsStr    = r.hs    != null ? ' · '+r.hs+'hs'    : '';
+          var panosStr = r.panos != null ? ' · '+r.panos+'P'  : '';
+          msgs.push(r.pieza + ' — ' + accs + nivelStr + hsStr + panosStr);
+        } else {
+          msgs.push('⚠ ' + r.msg + ': "' + f + '"');
+        }
+      });
+      var hayOk = msgs.some(function(m){return m.indexOf('⚠')<0;});
+      if (hayOk) { gridRender(); guardarBorrador(); }
+      vozSetFeedback(msgs.join(' | '), hayOk ? 'voz-ok' : 'voz-warn');
+    }
+  };
+  vozRec.onerror = function(e) {
+    vozSetFeedback('Error: ' + e.error, 'voz-err');
+    vozDetener();
+  };
+  vozRec.onend = function() { if (vozEscuchando) vozRec.start(); };
+  vozRec.start();
 }
-function calcUpdatePieza(uid,pieza,defaultHs){
-  var p=_calcState.piezas.find(function(x){return x._id===uid;});
-  if(p){p.pieza=pieza;p.hsTrabajo=defaultHs||0;}
-  calcRender();
+
+function vozDetener() {
+  vozEscuchando = false;
+  if (vozRec) vozRec.stop();
+  var btn = document.getElementById('voz-mic-btn');
+  var panel = document.getElementById('voz-panel');
+  if (btn) { btn.classList.remove('escuchando'); btn.textContent = '🎤'; }
+  if (panel) panel.classList.remove('visible');
 }
-function calcUpdateField(uid,campo,valor){
-  var p=_calcState.piezas.find(function(x){return x._id===uid;});
-  if(p)p[campo]=valor;
-  calcRender();
-}
-function calcLimpiar(){
-  _calcState={tipo:_calcState.tipo,piezas:[],idx:0};
-  calcRender();
-}
+
 </script>
 </body>
 </html>
