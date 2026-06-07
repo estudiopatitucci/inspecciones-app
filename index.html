@@ -6769,11 +6769,11 @@ function vozBuscarPiezaPorNombre(nombre, zona) {
   return vozBuscarPieza(nombre);
 }
 
-function vozAplicarRespuestaGemini(res) {
+function vozAplicarRespuestaGemini(res, lista) {
   var nuevas = 0, msgs = [];
   (res.acciones||[]).forEach(function(a) {
-    var ctx = vozBuscarPiezaPorNombre(a.pieza, a.zona);
-    if (!ctx) { msgs.push('⚠ No encontré: "'+a.pieza+'"'); return; }
+    var ctx = _vozResolver(a, lista);
+    if (!ctx) { msgs.push('⚠ No encontré pieza'); return; }
     var hs    = (a.horas  != null && a.horas  !== 'null') ? parseFloat(a.horas)  : null;
     var panos = (a.panos  != null && a.panos  !== 'null') ? parseFloat(a.panos)  : null;
     var nivel = a.nivel && a.nivel !== 'null' ? a.nivel : 'Leve';
@@ -6786,7 +6786,7 @@ function vozAplicarRespuestaGemini(res) {
     }
   });
   (res.eliminar||[]).forEach(function(e) {
-    var ctx = vozBuscarPiezaPorNombre(e.pieza, null);
+    var ctx = _vozResolver(e, lista);
     if (!ctx) return;
     var existing = gFind(ctx.zona, ctx.pieza.nombre, e.tarea);
     if (existing) {
@@ -6797,14 +6797,37 @@ function vozAplicarRespuestaGemini(res) {
   });
   if (nuevas > 0) { gridRender(); guardarBorrador(); }
   vozSetFeedback(msgs.join(' | ')||'Sin cambios', nuevas>0 ? 'voz-ok' : 'voz-warn');
+
+  // Piezas sin lado definido -> preguntar izq/der
+  var consultas = (res.consultar||[]).map(function(c) {
+    var nombres = (c.opciones||[]).map(function(op) {
+      if (typeof op === 'number' && lista && lista[op]) return lista[op].nombre; // idx (nuevo)
+      return op; // nombre (compat)
+    }).filter(Boolean);
+    var primera = (c.opciones||[])[0];
+    var zona = (typeof primera === 'number' && lista && lista[primera]) ? lista[primera].zona : c.zona;
+    return { opciones:nombres, zona:zona, tarea:c.tarea, nivel:c.nivel, horas:c.horas, panos:c.panos };
+  }).filter(function(c) { return c.opciones.length; });
+  if (consultas.length) vozMostrarConsultaLado(consultas, 0);
 }
 
 async function vozProcesarConGemini(transcript) {
   try {
-    var res = await apiCall({action:'interpretarVoz', transcript:transcript, tipo:relCalcState.tipo, piezas:vozGetPiezasList()});
-    if (res.ok) { vozAplicarRespuestaGemini(res); }
+    var lista = vozGetPiezasList();
+    var res = await apiCall({action:'interpretarVoz', transcript:transcript, tipo:relCalcState.tipo, piezas:lista});
+    if (res.ok) { vozAplicarRespuestaGemini(res, lista); }
     else { vozFallbackLocal(transcript); }
   } catch(err) { vozFallbackLocal(transcript); }
+}
+
+// Resuelve una accion devuelta por Gemini: por idx (nuevo) o por pieza/zona (compat).
+function _vozResolver(a, lista) {
+  if (a.idx != null && lista && lista[a.idx]) {
+    var info = lista[a.idx];
+    return vozBuscarPiezaPorNombre(info.nombre, info.zona);
+  }
+  if (a.pieza) return vozBuscarPiezaPorNombre(a.pieza, a.zona || null);
+  return null;
 }
 
 function vozFallbackLocal(transcript) {
@@ -6890,12 +6913,12 @@ function vozMostrarConsultaLado(consultas, idx) {
   var btns  = document.getElementById('voz-consulta-btns');
   if (!panel || idx >= consultas.length) { vozOcultarConsultaLado(); return; }
   var c = consultas[idx];
-  var nombreBase = (c.opciones[0]||'').replace(/ izquierda| derecha/i,'').trim();
+  var nombreBase = (c.opciones[0]||'').replace(/\s*(izquierd[oa]|derech[oa]|izq\.?|der\.?)\b/ig,'').trim();
   texto.textContent = 'Lado de: ' + nombreBase;
   var opciones = c.opciones.slice();
   opciones.push('Ambas');
   btns.innerHTML = opciones.map(function(op, i) {
-    var label = op === 'Ambas' ? 'Ambas' : /izquierda/i.test(op) ? 'Izquierda' : /derecha/i.test(op) ? 'Derecha' : op;
+    var label = op === 'Ambas' ? 'Ambas' : /izquierd|izq/i.test(op) ? 'Izquierda' : /derech|der/i.test(op) ? 'Derecha' : op;
     return '<button onclick="vozConfirmarLado('+idx+','+i+')" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;margin:2px">'+label+'</button>';
   }).join('');
   panel.style.display = 'block';
