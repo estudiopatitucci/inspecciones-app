@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Verificación de Reparación — Estudio Patitucci</title>
+<style>
+  :root{--bg:#0f1117;--bg2:#181c25;--bg3:#1e2330;--border:#2a2f3e;--text:#e8eaf0;--text2:#8b90a0;--text3:#555c70;--accent:#4f7cff;--green:#4caf7d;--red:#e55353;--orange:#f0b429;--purple:#8b5cf6}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;min-height:100vh;padding:0 0 60px}
+  .header{background:var(--bg2);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;gap:14px}
+  .logo{font-size:15px;font-weight:700;color:var(--text)}
+  .logo span{color:var(--accent)}
+  .container{max-width:600px;margin:0 auto;padding:24px 16px}
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+  .section-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:10px}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+  .info-item span{font-size:11px;color:var(--text2);display:block;margin-bottom:2px}
+  .info-item strong{font-size:14px;color:var(--text)}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:opacity .15s;width:100%}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-secondary{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+  .btn-green{background:var(--green);color:#fff}
+  .btn-purple{background:var(--purple);color:#fff}
+  .field label{font-size:12px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+  .field input,.field textarea,.field select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:14px;font-family:inherit}
+  .field{margin-bottom:14px}
+  .msg{font-size:13px;padding:10px 14px;border-radius:8px;margin-top:10px;display:none}
+  .msg.ok{display:block;background:rgba(76,175,125,.12);color:var(--green);border:1px solid rgba(76,175,125,.25)}
+  .msg.err{display:block;background:rgba(229,83,83,.12);color:var(--red);border:1px solid rgba(229,83,83,.25)}
+  .msg.info{display:block;background:rgba(79,124,255,.1);color:var(--accent);border:1px solid rgba(79,124,255,.25)}
+  .step{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:8px;margin-bottom:8px;background:var(--bg3);border:1px solid var(--border)}
+  .step-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+  .step-num.done{background:var(--green);color:#fff}
+  .step-num.active{background:var(--accent);color:#fff}
+  .step-num.pending{background:var(--bg);color:var(--text3);border:1px solid var(--border)}
+  .drop-zone{border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;margin-bottom:12px;transition:border-color .2s}
+  .drop-zone:hover{border-color:var(--accent)}
+  .foto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .foto-thumb{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;border:1px solid var(--border)}
+  .foto-thumb-wrap{position:relative}
+  .foto-thumb-remove{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .pill{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+  .pill-purple{background:rgba(139,92,246,.15);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+  .spinner{width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:16px;color:var(--text2)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect width="28" height="28" rx="7" fill="#4f7cff"/><path d="M7 14h14M14 7v14" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+  <div class="logo">Estudio <span>Patitucci</span> · Verificación de reparación</div>
+</div>
+
+<div class="container">
+  <!-- Loading -->
+  <div id="screen-loading" class="loading-screen">
+    <div class="spinner" style="width:32px;height:32px;border-color:rgba(79,124,255,.3);border-top-color:var(--accent)"></div>
+    <p>Cargando datos...</p>
+  </div>
+
+  <!-- Error -->
+  <div id="screen-error" style="display:none" class="loading-screen">
+    <div style="font-size:40px">⚠️</div>
+    <p id="error-msg" style="font-size:15px;text-align:center;max-width:300px">Link inválido o vencido.</p>
+    <p style="font-size:13px;color:var(--text3)">Contactá al Estudio Patitucci para obtener un nuevo link.</p>
+  </div>
+
+  <!-- Contenido principal -->
+  <div id="screen-main" style="display:none">
+
+    <!-- Datos del siniestro -->
+    <div class="card">
+      <p class="section-label">Datos del siniestro</p>
+      <div class="info-grid">
+        <div class="info-item"><span>N° Siniestro</span><strong id="d-sin">-</strong></div>
+        <div class="info-item"><span>Patente</span><strong id="d-pat">-</strong></div>
+        <div class="info-item"><span>Modelo</span><strong id="d-mod">-</strong></div>
+        <div class="info-item"><span>Asegurado</span><strong id="d-aseg">-</strong></div>
+      </div>
+    </div>
+
+    <!-- Etapa 0: Confirmar / Modificar turno -->
+    <div id="etapa-0" style="display:none">
+      <div class="card">
+        <p class="section-label">Turno de ingreso</p>
+        <div id="bloque-repuestos" style="display:none;background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:12px;margin-bottom:14px">
+          <p style="font-size:12px;font-weight:600;color:var(--purple);margin-bottom:8px">📦 Repuestos en camino</p>
+          <div class="info-grid">
+            <div class="info-item"><span>Proveedor</span><strong id="d-prov">-</strong></div>
+            <div class="info-item"><span>Plazo de entrega</span><strong id="d-plazo">-</strong></div>
+          </div>
+        </div>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:14px">El turno estimado de ingreso es el que figura abajo. Podés confirmarlo o modificarlo.</p>
+        <div class="field">
+          <label>Turno de ingreso</label>
+          <input type="date" id="inp-turno"/>
+        </div>
+        <button class="btn btn-primary" onclick="confirmarTurno()">✅ Confirmar turno</button>
+        <div id="msg-turno" class="msg"></div>
+      </div>
+    </div>
+
+    <!-- Etapa 1: Fotos del proceso + fecha finalización -->
+    <div id="etapa-1" style="display:none">
+      <div class="card">
+        <p class="section-label">Etapa 1 — Proceso de reparación</p>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Subí fotos del proceso de reparación y de los repuestos instalados. Indicá también la fecha estimada de finalización.</p>
+
+        <p style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Fotos del proceso de reparación</p>
+        <div class="drop-zone" onclick="s('inp-rep').click()">
+          <div style="font-size:24px;margin-bottom:8px">🔧</div>
+          <p style="font-size:14px;font-weight:600">Seleccionar fotos del proceso</p>
+          <p style="font-size:12px;color:var(--text3);margin-top:4px">JPG, PNG — podés seleccionar varias</p>
+          <input type="file" id="inp-rep" accept="image/*" multiple style="display:none" onchange="agregarFotos(this,'rep')">
+        </div>
+        <div id="grid-rep" class="foto-grid"></div>
+
+        <p style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 8px">Fotos de repuestos instalados / piezas cambiadas</p>
+        <div class="drop-zone" onclick="s('inp-piezas').click()">
+          <div style="font-size:24px;margin-bottom:8px">⚙️</div>
+          <p style="font-size:14px;font-weight:600">Seleccionar fotos de piezas</p>
+          <input type="file" id="inp-piezas" accept="image/*" multiple style="display:none" onchange="agregarFotos(this,'piezas')">
+        </div>
+        <div id="grid-piezas" class="foto-grid"></div>
+
+        <div class="field" style="margin-top:16px">
+          <label>Fecha estimada de finalización</label>
+          <input type="date" id="inp-fin"/>
+        </div>
+
+        <button class="btn btn-green" id="btn-enviar-e1" onclick="enviarEtapa1()">📤 Enviar fotos del proceso</button>
+        <div id="msg-e1" class="msg"></div>
+      </div>
+    </div>
+
+    <!-- Etapa 2: Fotos del vehículo terminado -->
+    <div id="etapa-2" style="display:none">
+      <div class="card">
+        <p class="section-label">Etapa 2 — Vehículo terminado</p>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Subí las fotos del vehículo terminado y la orden de conformidad del trabajo realizado.</p>
+
+        <p style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">Fotos del vehículo terminado</p>
+        <div class="drop-zone" onclick="s('inp-term').click()">
+          <div style="font-size:24px;margin-bottom:8px">🚗</div>
+          <p style="font-size:14px;font-weight:600">Seleccionar fotos del vehículo terminado</p>
+          <input type="file" id="inp-term" accept="image/*" multiple style="display:none" onchange="agregarFotos(this,'term')">
+        </div>
+        <div id="grid-term" class="foto-grid"></div>
+
+        <p style="font-size:12px;font-weight:600;color:var(--text);margin:14px 0 8px">Orden de conformidad del trabajo realizado</p>
+        <div class="drop-zone" onclick="s('inp-conf').click()">
+          <div style="font-size:24px;margin-bottom:8px">📋</div>
+          <p style="font-size:14px;font-weight:600">Seleccionar foto / PDF de la orden</p>
+          <input type="file" id="inp-conf" accept="image/*,.pdf" style="display:none" onchange="agregarFotos(this,'conf')">
+        </div>
+        <div id="grid-conf" class="foto-grid"></div>
+
+        <button class="btn btn-green" id="btn-enviar-e2" style="margin-top:16px" onclick="enviarEtapa2()">📤 Enviar fotos del vehículo terminado</button>
+        <div id="msg-e2" class="msg"></div>
+      </div>
+    </div>
+
+    <!-- Pantalla final de éxito -->
+    <div id="etapa-ok" style="display:none">
+      <div class="card" style="text-align:center;padding:40px 20px">
+        <div style="font-size:52px;margin-bottom:16px">✅</div>
+        <h2 style="font-size:20px;font-weight:700;margin-bottom:10px" id="ok-titulo">¡Listo!</h2>
+        <p style="font-size:14px;color:var(--text2)" id="ok-subtitulo">Los datos fueron enviados correctamente al Estudio Patitucci.</p>
+      </div>
+    </div>
+
+  </div><!-- /screen-main -->
+</div><!-- /container -->
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbzQFAJaHlBpTmEuHZ7PxuYeIiKxVJRQoiakgL-7JrIqcvkFsovqO44iosPUxqN3OxTf/exec';
+var verifToken = new URLSearchParams(location.search).get('token') || '';
+var _inspData  = null;
+var _fotos     = {rep:[], piezas:[], term:[], conf:[]};
+
+function s(id){return document.getElementById(id);}
+
+async function apiCall(payload){
+  const r = await fetch(API, {method:'POST', body:JSON.stringify(payload)});
+  return r.json();
+}
+
+async function apiGet(params){
+  var url = API + '?' + new URLSearchParams(params).toString();
+  var r = await fetch(url);
+  return r.json();
+}
+
+function showErr(msg){
+  s('screen-loading').style.display='none';
+  s('screen-error').style.display='flex';
+  s('error-msg').textContent = msg || 'Link inválido o vencido.';
+}
+
+function fmtDate(iso){
+  if(!iso)return'-';
+  var p=iso.split('-');
+  return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:iso;
+}
+
+async function init(){
+  if(!verifToken){showErr('Link inválido. Contactá al Estudio Patitucci.');return;}
+  try{
+    var res = await apiGet({action:'getVerifTaller', verifToken});
+    if(!res.ok){showErr(res.msg||'Link inválido o vencido.');return;}
+    _inspData = res;
+
+    // Llenar datos del siniestro
+    s('d-sin').textContent  = res.siniestro  || '-';
+    s('d-pat').textContent  = res.patente     || '-';
+    s('d-mod').textContent  = res.modelo      || '-';
+    s('d-aseg').textContent = res.asegurado   || '-';
+
+    s('screen-loading').style.display='none';
+    s('screen-main').style.display='block';
+
+    var etapa = parseInt(res.etapa) || 0;
+    mostrarEtapa(etapa, res);
+
+  } catch(err){
+    showErr('Error al cargar. Verificá tu conexión.');
+  }
+}
+
+function mostrarEtapa(etapa, res){
+  ['etapa-0','etapa-1','etapa-2','etapa-ok'].forEach(function(id){s(id).style.display='none';});
+  if(etapa === 0){
+    s('etapa-0').style.display='block';
+    var turnoActual = res.turnoConfirmadoPorTaller || res.turnoEstimado || '';
+    if(turnoActual) s('inp-turno').value = turnoActual;
+    if(res.tipo==='conRepuestos' && res.proveedor){
+      s('bloque-repuestos').style.display='block';
+      s('d-prov').textContent  = res.proveedor  || '-';
+      s('d-plazo').textContent = res.plazoTexto || '-';
+    }
+  } else if(etapa === 1){
+    s('etapa-1').style.display='block';
+    if(res.fechaEstimadaFinalizacion) s('inp-fin').value = res.fechaEstimadaFinalizacion;
+  } else if(etapa === 2){
+    s('etapa-2').style.display='block';
+  } else {
+    s('etapa-ok').style.display='block';
+    s('ok-titulo').textContent='¡Todo enviado!';
+    s('ok-subtitulo').textContent='El Estudio Patitucci ya tiene toda la información. Muchas gracias.';
+  }
+}
+
+// ── Confirmar / Modificar turno ──────────────────────
+async function confirmarTurno(){
+  var turno = s('inp-turno').value;
+  if(!turno){showMsg('msg-turno','err','Seleccioná una fecha.');return;}
+  var btn = document.querySelector('#etapa-0 .btn-primary');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Enviando...';
+  try{
+    var res = await apiCall({action:'tallerConfirmaTurno', verifToken, turno});
+    if(res.ok){
+      showMsg('msg-turno','ok','✓ Turno confirmado para el '+fmtDate(turno)+'. ¡Gracias!');
+      btn.style.display='none';
+      // Pasar a etapa 1 (fotos proceso) después de un momento
+      setTimeout(function(){
+        mostrarEtapa(1, {fechaEstimadaFinalizacion:''});
+      },2000);
+    } else {
+      showMsg('msg-turno','err','Error: '+(res.msg||'Intente de nuevo'));
+      btn.disabled=false; btn.textContent='✅ Confirmar turno';
+    }
+  } catch(err){
+    showMsg('msg-turno','err','Error de conexión.');
+    btn.disabled=false; btn.textContent='✅ Confirmar turno';
+  }
+}
+
+// ── Manejo de fotos ──────────────────────────────────
+function agregarFotos(input, tipo){
+  var files = Array.from(input.files);
+  files.forEach(function(file){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      _fotos[tipo].push({file:file, dataUrl:e.target.result, status:'pendiente'});
+      renderGrid(tipo);
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value='';
+}
+
+function renderGrid(tipo){
+  var grid = s('grid-'+tipo);
+  if(!grid)return;
+  if(!_fotos[tipo].length){grid.innerHTML='';return;}
+  grid.innerHTML = _fotos[tipo].map(function(f,idx){
+    var thumb = f.dataUrl;
+    var statusLabel = f.status==='ok'
+      ? '<div style="position:absolute;bottom:4px;left:4px;background:var(--green);color:#fff;font-size:10px;padding:2px 6px;border-radius:4px">✓</div>'
+      : (f.status==='subiendo'?'<div style="position:absolute;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center"><span class="spinner"></span></div>':'');
+    return '<div class="foto-thumb-wrap">'
+      +'<img src="'+thumb+'" class="foto-thumb"/>'
+      +'<button class="foto-thumb-remove" onclick="removeFoto(\''+tipo+'\','+idx+')">✕</button>'
+      +statusLabel
+      +'</div>';
+  }).join('');
+}
+
+function removeFoto(tipo, idx){
+  _fotos[tipo].splice(idx,1);
+  renderGrid(tipo);
+}
+
+async function subirFotos(tipo){
+  var fotos = _fotos[tipo].filter(function(f){return f.status!=='ok';});
+  var links = [];
+  for(var k=0; k<fotos.length; k++){
+    var f = fotos[k];
+    f.status='subiendo'; renderGrid(tipo);
+    try{
+      var res = await apiCall({
+        action:'uploadFotoVerif',
+        id: _inspData.id,
+        foto: f.dataUrl,
+        tipo: tipo,
+        idx: k
+      });
+      if(res.ok){
+        f.status='ok';
+        f.driveLink=res.link;
+        links.push(res.link);
+      } else {
+        f.status='error';
+      }
+    } catch(err){ f.status='error'; }
+    renderGrid(tipo);
+  }
+  // También incluir fotos ya subidas anteriormente
+  _fotos[tipo].forEach(function(f){if(f.driveLink)links.push(f.driveLink);});
+  return links;
+}
+
+// ── Enviar Etapa 1 (fotos proceso + fecha fin) ───────
+async function enviarEtapa1(){
+  var fechaFin = s('inp-fin').value;
+  if(!fechaFin){showMsg('msg-e1','err','Ingresá la fecha estimada de finalización.');return;}
+  if(!_fotos.rep.length && !_fotos.piezas.length){
+    showMsg('msg-e1','err','Subí al menos una foto del proceso o de los repuestos.');return;
+  }
+  var btn = s('btn-enviar-e1');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Subiendo fotos...';
+  try{
+    var linksRep    = await subirFotos('rep');
+    var linksPiezas = await subirFotos('piezas');
+    var res = await apiCall({
+      action:'tallerRegistraEtapa',
+      verifToken,
+      etapa: 1,
+      fotosReparacion: linksRep,
+      fotosPiezas: linksPiezas,
+      fechaEstimadaFinalizacion: fechaFin
+    });
+    if(res.ok){
+      showMsg('msg-e1','ok','✓ Fotos enviadas correctamente. Fecha de finalización: '+fmtDate(fechaFin));
+      btn.style.display='none';
+      setTimeout(function(){mostrarEtapa(2,{});},2000);
+    } else {
+      showMsg('msg-e1','err','Error: '+(res.msg||'Intente de nuevo'));
+      btn.disabled=false; btn.textContent='📤 Enviar fotos del proceso';
+    }
+  } catch(err){
+    showMsg('msg-e1','err','Error de conexión.');
+    btn.disabled=false; btn.textContent='📤 Enviar fotos del proceso';
+  }
+}
+
+// ── Enviar Etapa 2 (fotos terminado + conformidad) ───
+async function enviarEtapa2(){
+  if(!_fotos.term.length){
+    showMsg('msg-e2','err','Subí al menos una foto del vehículo terminado.');return;
+  }
+  var btn = s('btn-enviar-e2');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Subiendo fotos...';
+  try{
+    var linksTerm = await subirFotos('term');
+    var linksConf = await subirFotos('conf');
+    var res = await apiCall({
+      action:'tallerRegistraEtapa',
+      verifToken,
+      etapa: 2,
+      fotosTerminado: linksTerm,
+      ordenConformidad: linksConf[0] || null
+    });
+    if(res.ok){
+      mostrarEtapa(99, {});
+      s('etapa-ok').style.display='block';
+      s('ok-titulo').textContent='¡Todo listo!';
+      s('ok-subtitulo').textContent='Las fotos del vehículo terminado fueron enviadas. El Estudio Patitucci las revisará y cerrará el siniestro. ¡Muchas gracias!';
+    } else {
+      showMsg('msg-e2','err','Error: '+(res.msg||'Intente de nuevo'));
+      btn.disabled=false; btn.textContent='📤 Enviar fotos del vehículo terminado';
+    }
+  } catch(err){
+    showMsg('msg-e2','err','Error de conexión.');
+    btn.disabled=false; btn.textContent='📤 Enviar fotos del vehículo terminado';
+  }
+}
+
+function showMsg(id, tipo, txt){
+  var el=s(id);if(!el)return;
+  el.className='msg '+tipo; el.textContent=txt;
+}
+
+init();
+</script>
+</body>
+</html>
