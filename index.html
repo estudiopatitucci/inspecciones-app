@@ -4073,7 +4073,7 @@ async function aprobarVerifPanel(id){
     var res=await apiCall({action:'aprobarVerif',id,usuario:usuarioActual});
     if(res.ok){
       var i=inspecciones.find(function(x){return x.ID==id;});
-      if(i)i.Estado='Cerrada';
+      if(i)i.Estado='Cerradas';
       actualizarBadgesAdmin();
       cerrarModal();
       adminTab('cerradas');
@@ -5307,6 +5307,8 @@ async function enviarRelTaller(){
   // iOS: mostrar instrucción manual si es Safari en iPhone
   var isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
   var isStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  // PWA instalada: saltar la landing y mostrar login directamente
+  if(isStandalone){ lpShowLogin(); }
   if(isIOS&&!isStandalone&&!dismissed){
     setTimeout(function(){
       toast('En iPhone: tocá Compartir → "Agregar a pantalla de inicio" para instalar la app.','info');
