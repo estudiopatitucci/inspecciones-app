@@ -1,13 +1,19 @@
-const SHEET_ID = '1_socHaF14orZbtqiMxI5SKYMWEEGShw4gY_SEtMNN0w';
-const SHEET_NAME = 'Inspecciones';
-const ARCHIVO_NAME = 'Archivo';
+var SHEET_ID = '1_socHaF14orZbtqiMxI5SKYMWEEGShw4gY_SEtMNN0w';
+var SHEET_NAME = 'Inspecciones';
+var ARCHIVO_NAME = 'Archivo';
+var USUARIOS_NAME = 'Usuarios';
+var TALLERES_NAME = 'Talleres';
+
+// Backup automático: carpeta destino en Drive y cuántos días de copias conservar
+var BACKUP_FOLDER_NAME = 'Backups App Estudio Patitucci';
+var BACKUP_RETENCION_DIAS = 30;
 
 // Token compartido con el frontend — debe coincidir exactamente con el de index.html
 // Cambiarlo acá y en index.html al mismo tiempo si necesitás rotarlo.
-const SECRET_TOKEN = 'ep_9k2mX7vQn4pRjL8wZdA3sYtB6uCfHg0E';
+var SECRET_TOKEN = 'ep_9k2mX7vQn4pRjL8wZdA3sYtB6uCfHg0E';
 
 // Únicos usuarios autorizados a ver fotos y carpetas de inspecciones en Drive
-const DRIVE_VIEWERS = [
+var DRIVE_VIEWERS = [
   'bruno@estudiopatitucci.com',
   'valentinopatitucci5@gmail.com',
   'patitucci.mp@gmail.com',
@@ -23,30 +29,103 @@ function compartirConAutorizados(item) {
   });
 }
 
+// ─── SEGURIDAD — validación de entrada y rate limiting del endpoint ───────────
+
+// Coerce a string, recorta y limita longitud (anti payloads gigantes / basura).
+function _str(v, max) {
+  var s = (v == null ? '' : String(v)).trim();
+  return max ? s.slice(0, max) : s;
+}
+
+// Rate limit simple por clave usando CacheService. Devuelve true si está permitido.
+function _rateLimit(key, maxReqs, windowSec) {
+  try {
+    var cache = CacheService.getScriptCache();
+    var k = 'rl_' + key;
+    var n = Number(cache.get(k) || 0) + 1;
+    cache.put(k, String(n), windowSec);
+    return n <= maxReqs;
+  } catch (e) {
+    return true; // si el cache falla, no bloqueamos al usuario legítimo
+  }
+}
+
+// Validación básica de formato de email.
+function _emailValido(email) {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email);
+}
+
+// ─── CONCURRENCIA — serializa escrituras al Sheet para evitar race conditions ──
+// Ejecuta fn() tomando un lock global. Si el sistema está ocupado, avisa al
+// usuario en vez de pisar datos. Libera siempre el lock al terminar.
+function _withLock(fn) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(20000); // espera hasta 20 s a que se libere
+  } catch (e) {
+    return resp({ok: false, msg: 'El sistema está procesando otra operación. Probá de nuevo en unos segundos.'});
+  }
+  try {
+    return fn();
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
 function doPost(e) {
   try {
-    var data = JSON.parse(e.postData.contents);
+    if (!e || !e.postData || !e.postData.contents) {
+      return resp({ok: false, msg: 'Solicitud inválida.'});
+    }
+    var data;
+    try { data = JSON.parse(e.postData.contents); }
+    catch (parseErr) { return resp({ok: false, msg: 'Solicitud malformada.'}); }
+    if (!data || typeof data !== 'object') return resp({ok: false, msg: 'Solicitud inválida.'});
+
     var action = data.action;
-    // relevamientoTaller usa tallerToken propio, no SECRET_TOKEN
-    if (action === 'relevamientoTaller') return recibirRelTaller(data);
+    // relevamientoTaller usa tallerToken propio, no SECRET_TOKEN. Escribe → lock.
+    if (action === 'relevamientoTaller') return _withLock(function(){ return recibirRelTaller(data); });
     if (action === 'uploadFotoTaller') return uploadFotoTaller(data);
+    // Acciones del taller vía verifTaller.html — autenticadas por verifToken, no SECRET_TOKEN
+    if (action === 'tallerConfirmaTurno')  return _withLock(function(){ return tallerConfirmaTurno(data); });
+    if (action === 'tallerRegistraEtapa')  return _withLock(function(){ return tallerRegistraEtapa(data); });
+    if (action === 'uploadFotoVerif')      return uploadFotoVerif(data);
     // El formulario de contacto público no requiere token
     if (action !== 'contacto' && data.token !== SECRET_TOKEN) {
       return resp({ok: false, msg: 'No autorizado'});
     }
-    if (action === 'guardar') return guardarInspeccion(data);
-    if (action === 'actualizar') return actualizarInspeccion(data);
-    if (action === 'editar') return actualizarInspeccion(data);
-    if (action === 'eliminar') return eliminarInspeccion(data);
+    if (action === 'login') return loginUsuario(data);
+    // Acciones que escriben en el Sheet → serializadas con _withLock
+    if (action === 'cambiarClave') return _withLock(function(){ return cambiarClave(data); });
+    if (action === 'guardar') return _withLock(function(){ return guardarInspeccion(data); });
+    if (action === 'actualizar') return _withLock(function(){ return actualizarInspeccion(data); });
+    if (action === 'editar') return _withLock(function(){ return actualizarInspeccion(data); });
+    if (action === 'eliminar') return _withLock(function(){ return eliminarInspeccion(data); });
     if (action === 'listar') return listarInspecciones();
     if (action === 'recordatorio') return enviarRecordatorio(data);
-    if (action === 'archivar') return archivarInspecciones();
+    if (action === 'archivar') return _withLock(function(){ return archivarInspecciones(data); });
     if (action === 'contacto') return enviarContacto(data);
-    if (action === 'generarTokenTaller') return generarTokenTaller(data);
+    if (action === 'generarTokenTaller') return _withLock(function(){ return generarTokenTaller(data); });
+    if (action === 'revocarTokenTaller') return _withLock(function(){ return revocarTokenTaller(data); });
     if (action === 'uploadFoto') return uploadFotoSingle(data);
+    if (action === 'analizarPresupuesto') return analizarPresupuesto(data);
+    if (action === 'buscarTalleres') return buscarTalleres(data);
+    // Módulo Verificación de Reparaciones
+    if (action === 'iniciarVerifConRepuestos') return _withLock(function(){ return iniciarVerifConRepuestos(data); });
+    if (action === 'iniciarVerifSinRepuestos') return _withLock(function(){ return iniciarVerifSinRepuestos(data); });
+    if (action === 'subirOrdenCompra') return subirOrdenCompra(data);
+    if (action === 'confirmarTurnoVerif') return _withLock(function(){ return confirmarTurnoVerif(data); });
+    if (action === 'tallerConfirmaTurno') return _withLock(function(){ return tallerConfirmaTurno(data); });
+    if (action === 'tallerRegistraEtapa') return _withLock(function(){ return tallerRegistraEtapa(data); });
+    if (action === 'uploadFotoVerif') return uploadFotoVerif(data);
+    if (action === 'aprobarVerif') return _withLock(function(){ return aprobarVerif(data); });
+    if (action === 'reenviarSolicitudTurno') return _withLock(function(){ return reenviarSolicitudTurno(data); });
+    if (action === 'notificarPiezaSugerida') return notificarPiezaSugerida(data);
+    if (action === 'interpretarVoz') return interpretarVoz(data);
     return resp({ok:false, msg:'Accion desconocida'});
   } catch(err) {
-    return resp({ok:false, msg:err.toString()});
+    Logger.log('doPost error: ' + err + ' | ' + (err && err.stack));
+    return resp({ok:false, msg:'Error procesando la solicitud.'});
   }
 }
 
@@ -55,11 +134,28 @@ function doGet(e) {
   var tallerToken = e && e.parameter && e.parameter.tallerToken;
   if (tallerToken) return getTallerInspeccion(tallerToken);
 
+  // getVerifTaller es público — autenticado por verifToken, no SECRET_TOKEN
+  var action = e && e.parameter && e.parameter.action;
+  if (action === 'getVerifTaller') return getVerifTaller(e.parameter.verifToken);
+
   var token = e && e.parameter && e.parameter.token;
   if (token !== SECRET_TOKEN) return resp({ok: false, msg: 'No autorizado'});
-  var action = e.parameter.action;
   if (action === 'getArchivadas') return getArchivadas();
+  if (action === 'getFile') return getFilePorId(e.parameter.fileId);
   return listarInspecciones();
+}
+
+function getFilePorId(fileId) {
+  if (!fileId) return resp({ok: false, msg: 'fileId requerido'});
+  try {
+    var file = DriveApp.getFileById(fileId);
+    var blob = file.getBlob();
+    var bytes = blob.getBytes();
+    var base64 = Utilities.base64Encode(bytes);
+    return resp({ok: true, base64: base64, mimeType: blob.getContentType() || 'image/jpeg', name: file.getName()});
+  } catch(e) {
+    return resp({ok: false, msg: e.message});
+  }
 }
 
 function getSheet() {
@@ -119,13 +215,16 @@ function leerInspecciones(sheet) {
 function guardarInspeccion(data) {
   var sheet = getSheet();
   var id = Date.now().toString();
+  // Si el admin pre-cargó el calculador con IA, guardarlo en la columna Relevamiento
+  var relevamientoInicial = data.relevamiento || '';
+
   sheet.appendRow([
     id, data.sin, data.cia, data.tipo, data.finsp, data.fsin,
     data.pat, data.mod, data.anio, data.chasis, data.motor, data.km,
     data.aseg, data.tel, data.dir, data.localidad, data.danos,
     data.inspector, data.mail, data.estado || 'Asignada',
     data.mailEnviado ? 'Si' : 'No',
-    '', '', new Date().toISOString()
+    relevamientoInicial, '', new Date().toISOString()
   ]);
   // Guardar DanosDen (columna auto-detectada / creada)
   if (data.danosDen) {
@@ -151,7 +250,7 @@ function guardarInspeccion(data) {
 }
 
 // Nombre de la carpeta madre donde se guardan todas las inspecciones
-const CARPETA_MADRE = 'Inspecciones Patitucci - Fotos';
+var CARPETA_MADRE = 'Inspecciones Patitucci - Fotos';
 
 function getCarpetaMadre() {
   var folders = DriveApp.getFoldersByName(CARPETA_MADRE);
@@ -229,6 +328,23 @@ function actualizarInspeccion(data) {
           delete rel.fotos; // Eliminar base64 antes de guardar en Sheets
         }
         sheet.getRange(i+1, 22).setValue(JSON.stringify(rel));
+        // Registrar o actualizar taller en la base de talleres
+        try { registrarTaller({nombre:rel.taller, mail:rel.mailTaller, tel:rel.telTaller, cuit:rel.cuit, dir:rel.dirTaller, loc:rel.locTaller}); } catch(eT) {}
+        // Notificar al estudio que el inspector cargo el relevamiento
+        try {
+          var destinatario = mailPorCompania(rows[i][2]);
+          var asuntoAviso = 'Relevamiento cargado - Siniestro ' + rows[i][1];
+          var cuerpoAviso = 'ESTUDIO PATITUCCI\n\n'
+            + 'El inspector ' + rows[i][17] + ' acaba de cargar el relevamiento del siniestro ' + rows[i][1] + '.\n\n'
+            + 'DATOS DE LA INSPECCION\n'
+            + 'Compania: ' + rows[i][2] + '\n'
+            + 'Patente: ' + rows[i][6] + '\n'
+            + 'Modelo: ' + rows[i][7] + ' (' + rows[i][8] + ')\n'
+            + 'Asegurado/Taller: ' + rows[i][12] + '\n\n'
+            + 'La inspeccion quedo en estado "Pendiente de verificar".\n\n'
+            + 'Ingresa a la app para revisarlo:\nhttps://estudiopatitucci.com.ar\n';
+          GmailApp.sendEmail(destinatario, asuntoAviso, cuerpoAviso);
+        } catch(eMail) {}
         // Devolver links al frontend
         if (rel.fotosLinks) {
           return resp({ok: true, relevamiento: {fotosLinks: rel.fotosLinks, cantFotos: rel.cantFotos, carpetaUrl: rel.carpetaUrl}});
@@ -280,6 +396,7 @@ function actualizarInspeccion(data) {
 }
 
 function eliminarInspeccion(data) {
+  if (data.usuario !== 'Administrador') return resp({ok: false, msg: 'Sin permiso.'});
   var sheet = getSheet();
   var rows = sheet.getDataRange().getValues();
   for (var i = 1; i < rows.length; i++) {
@@ -299,7 +416,8 @@ function getArchivadas() {
   return resp({ok:true, data: leerInspecciones(getArchivoSheet())});
 }
 
-function archivarInspecciones() {
+function archivarInspecciones(data) {
+  if (!data || data.usuario !== 'Administrador') return resp({ok: false, msg: 'Sin permiso.'});
   var sheet = getSheet();
   var archivoSheet = getArchivoSheet();
   var rows = sheet.getDataRange().getValues();
@@ -329,10 +447,18 @@ function archivarInspecciones() {
 
 // Devuelve la casilla remitente según la compañía
 function mailPorCompania(cia) {
+  cia = String(cia == null ? '' : cia);
   if (cia && cia.toLowerCase().indexOf('rivadavia') !== -1) {
     return 'inspeccionespatitucci@gmail.com';
   }
   return 'patitucciestudio@gmail.com';
+}
+
+// Envia con las 'opciones' (incluye from: alias). Si el alias no esta verificado en la
+// cuenta del GAS, el from: lanza error: reintenta sin opciones (sale desde la cuenta del GAS).
+function _sendMail(to, asunto, cuerpo, opciones) {
+  try { GmailApp.sendEmail(to, asunto, cuerpo, opciones); }
+  catch(e) { GmailApp.sendEmail(to, asunto, cuerpo); }
 }
 
 function enviarMail(data) {
@@ -363,9 +489,12 @@ function enviarMail(data) {
     + 'Saludos,\n'
     + 'Estudio Patitucci';
 
-  GmailApp.sendEmail(data.mail, asunto, cuerpo, {
-    from: mailPorCompania(data.cia)
-  });
+  var remitente = mailPorCompania(data.cia);
+  try {
+    GmailApp.sendEmail(data.mail, asunto, cuerpo, {from: remitente});
+  } catch(e) {
+    GmailApp.sendEmail(data.mail, asunto, cuerpo);
+  }
 }
 
 function enviarRecordatorio(data) {
@@ -384,9 +513,12 @@ function enviarRecordatorio(data) {
       + 'Saludos,\n'
       + 'Estudio Patitucci';
 
-    GmailApp.sendEmail(data.mail, asunto, cuerpo, {
-      from: mailPorCompania(data.cia)
-    });
+    var remitente = mailPorCompania(data.cia || data.compania || '');
+    try {
+      GmailApp.sendEmail(data.mail, asunto, cuerpo, {from: remitente});
+    } catch(e) {
+      GmailApp.sendEmail(data.mail, asunto, cuerpo);
+    }
     return resp({ok: true});
   } catch(err) {
     return resp({ok: false, msg: err.toString()});
@@ -395,22 +527,37 @@ function enviarRecordatorio(data) {
 
 function enviarContacto(data) {
   try {
-    var asunto = 'Consulta desde estudiopatitucci.com.ar — ' + data.nombre;
+    var nombre   = _str(data.nombre, 120);
+    var email    = _str(data.email, 200);
+    var mensaje  = _str(data.mensaje, 5000);
+    var empresa  = _str(data.empresa, 150);
+    var telefono = _str(data.telefono, 50);
+
+    if (!nombre || !email || !mensaje) return resp({ok: false, msg: 'Completá nombre, email y mensaje.'});
+    if (!_emailValido(email)) return resp({ok: false, msg: 'Email inválido.'});
+
+    // Anti spam: máx 3 envíos por email cada 10 minutos
+    if (!_rateLimit('contacto_' + email.toLowerCase(), 3, 600)) {
+      return resp({ok: false, msg: 'Recibimos tu consulta hace poco. Aguardá unos minutos antes de reenviar.'});
+    }
+
+    var asunto = 'Consulta desde estudiopatitucci.com.ar — ' + nombre;
     var cuerpo = 'Nueva consulta desde el sitio web:\n\n'
-      + 'Nombre: ' + data.nombre + '\n'
-      + 'Email: ' + data.email + '\n'
-      + (data.empresa ? 'Empresa: ' + data.empresa + '\n' : '')
-      + (data.telefono ? 'Teléfono: ' + data.telefono + '\n' : '')
-      + '\nMensaje:\n' + data.mensaje;
+      + 'Nombre: ' + nombre + '\n'
+      + 'Email: ' + email + '\n'
+      + (empresa ? 'Empresa: ' + empresa + '\n' : '')
+      + (telefono ? 'Teléfono: ' + telefono + '\n' : '')
+      + '\nMensaje:\n' + mensaje;
     MailApp.sendEmail({
       to: 'patitucciestudio@gmail.com',
-      replyTo: data.email,
+      replyTo: email,
       subject: asunto,
       body: cuerpo
     });
     return resp({ok: true});
   } catch(err) {
-    return resp({ok: false, msg: err.toString()});
+    Logger.log('enviarContacto error: ' + err);
+    return resp({ok: false, msg: 'No se pudo enviar la consulta. Intentá de nuevo.'});
   }
 }
 
@@ -522,6 +669,28 @@ function generarTokenTaller(data) {
   return resp({ok: false, msg: 'Inspeccion no encontrada'});
 }
 
+// Revoca un link de taller activo (solo admin). El link actual deja de funcionar
+// y la inspección vuelve a "Pendientes de carga".
+function revocarTokenTaller(data) {
+  if (!data || data.usuario !== 'Administrador') return resp({ok: false, msg: 'Sin permiso.'});
+  if (!data.id) return resp({ok: false, msg: 'ID requerido'});
+  var sheet = getSheet();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == data.id) {
+      var tokenActual = String(rows[i][24] || '');     // col 25 = index 24
+      if (!tokenActual || tokenActual === 'USADO' || tokenActual === 'REVOCADO') {
+        return resp({ok: false, msg: 'No hay un link activo para anular.'});
+      }
+      sheet.getRange(i+1, 25).setValue('REVOCADO');            // col TallerToken
+      sheet.getRange(i+1, 26).setValue('');                    // col TallerTokenExp
+      sheet.getRange(i+1, 20).setValue('Pendientes de carga'); // col Estado
+      return resp({ok: true});
+    }
+  }
+  return resp({ok: false, msg: 'Inspeccion no encontrada'});
+}
+
 function getTallerInspeccion(tallerToken) {
   var sheet = getSheet();
   var rows = sheet.getDataRange().getValues();
@@ -609,6 +778,8 @@ function recibirRelTaller(data) {
       sheet.getRange(i+1, 20).setValue('Pendiente de verificar'); // Estado
       // Invalidar token para que no se pueda usar dos veces
       sheet.getRange(i+1, 25).setValue('USADO');
+      // Registrar o actualizar taller en la base de talleres
+      try { registrarTaller({nombre:rel.taller, mail:rel.mailTaller, tel:rel.telTaller, cuit:rel.cuit, dir:rel.dirTaller, loc:rel.locTaller}); } catch(eT) {}
       sheet.getRange(i+1, 26).setValue('');
       // Notificar al administrador
       try {
@@ -679,4 +850,1378 @@ function uploadFotoTaller(data) {
     }
   }
   return resp({ok: false, msg: 'Token inválido'});
+}
+
+// ════════════════════════════════════════════════════════
+//  FEATURE: NUEVA IP CON IA
+//  Analiza presupuestos de taller con Google Gemini y
+//  mapea las piezas detectadas al CALC_DATA del frontend.
+//
+//  CONFIGURACIÓN REQUERIDA (una sola vez):
+//  GAS Editor → Proyecto → Configuración → Propiedades de secuencia de comandos
+//  Agregar propiedad: GEMINI_KEY = [tu API key de aistudio.google.com]
+// ════════════════════════════════════════════════════════
+
+// Mapa de nombres de piezas (normalizados) → {zona, keyword}
+// zona: debe coincidir EXACTAMENTE con las claves de CALC_DATA_GRID en el frontend
+// keyword: string que el frontend usará para buscar dentro de los nombres de piezas del CALC_DATA_GRID
+// La clave del mapa es el nombre normalizado (sin tildes, minúsculas) para matching robusto.
+var PIEZAS_MAP = {
+  // ── FRONTAL ───────────────────────────────────────────────
+  'capot':                                {zona:'Frontal',           keyword:'Capot'},
+  'capo':                                 {zona:'Frontal',           keyword:'Capot'},
+  'paragolpes delantero':                 {zona:'Frontal',           keyword:'Paragolpes delantero'},
+  'paragolpe delantero':                  {zona:'Frontal',           keyword:'Paragolpes delantero'},
+  'bumper delantero':                     {zona:'Frontal',           keyword:'Paragolpes delantero'},
+  'parachoques delantero':                {zona:'Frontal',           keyword:'Paragolpes delantero'},
+  'guardabarros delantero izquierdo':     {zona:'Frontal',           keyword:'Guardabarros delantero izquierdo'},
+  'guardabarro delantero izquierdo':      {zona:'Frontal',           keyword:'Guardabarros delantero izquierdo'},
+  'aleta delantera izquierda':            {zona:'Frontal',           keyword:'Guardabarros delantero izquierdo'},
+  'guardabarros delantero derecho':       {zona:'Frontal',           keyword:'Guardabarros delantero derecho'},
+  'guardabarro delantero derecho':        {zona:'Frontal',           keyword:'Guardabarros delantero derecho'},
+  'aleta delantera derecha':              {zona:'Frontal',           keyword:'Guardabarros delantero derecho'},
+  'optica delantera izquierda':           {zona:'Frontal',           keyword:'Óptica principal izquierda'},
+  'faro delantero izquierdo':             {zona:'Frontal',           keyword:'Óptica principal izquierda'},
+  'optica delantera derecha':             {zona:'Frontal',           keyword:'Óptica principal derecha'},
+  'faro delantero derecho':               {zona:'Frontal',           keyword:'Óptica principal derecha'},
+  'alma del paragolpe delantero':         {zona:'Frontal',           keyword:'Alma metálica de paragolpes delantero'},
+  'alma paragolpe delantero':             {zona:'Frontal',           keyword:'Alma metálica de paragolpes delantero'},
+  'alma delantera':                       {zona:'Frontal',           keyword:'Alma metálica de paragolpes delantero'},
+  'soporte paragolpe delantero izquierdo':{zona:'Frontal',           keyword:'Soporte de paragolpes delantero izquierdo'},
+  'soporte paragolpe delantero derecho':  {zona:'Frontal',           keyword:'Soporte de paragolpes delantero derecho'},
+  'panel frontal':                        {zona:'Frontal',           keyword:'Panel frontal'},
+  'radiador':                             {zona:'Mecánica / Vano Motor', keyword:'Radiador de agua'},
+  'condensador':                          {zona:'Mecánica / Vano Motor', keyword:'Condensador de aire'},
+
+  // ── LATERAL IZQUIERDA ─────────────────────────────────────
+  'puerta delantera izquierda':           {zona:'Lateral Izquierda', keyword:'Puerta delantera izquierda'},
+  'puerta del izquierda':                 {zona:'Lateral Izquierda', keyword:'Puerta delantera izquierda'},
+  'puerta trasera izquierda':             {zona:'Lateral Izquierda', keyword:'Puerta trasera izquierda'},
+  'puerta tras izquierda':                {zona:'Lateral Izquierda', keyword:'Puerta trasera izquierda'},
+  'guardabarro trasero izquierdo':        {zona:'Lateral Izquierda', keyword:'Guardabarro trasero izquierdo'},
+  'guardabarros trasero izquierdo':       {zona:'Lateral Izquierda', keyword:'Guardabarro trasero izquierdo'},
+  'aleta trasera izquierda':              {zona:'Lateral Izquierda', keyword:'Guardabarro trasero izquierdo'},
+  'zocalo izquierdo':                     {zona:'Lateral Izquierda', keyword:'Zócalo exterior izquierdo'},
+  'espejo izquierdo':                     {zona:'Lateral Izquierda', keyword:'Espejo retrovisor izquierdo'},
+  'retrovisor izquierdo':                 {zona:'Lateral Izquierda', keyword:'Espejo retrovisor izquierdo'},
+  'carcasa espejo izquierdo':             {zona:'Lateral Izquierda', keyword:'Carcasa de espejo retrovisor izquierdo'},
+  'parante a izquierdo':                  {zona:'Lateral Izquierda', keyword:'Parante A (Delantero) izquierdo'},
+  'parante b izquierdo':                  {zona:'Lateral Izquierda', keyword:'Parante B (Central) izquierdo'},
+  'parante c izquierdo':                  {zona:'Lateral Izquierda', keyword:'Parante C (Trasero) izquierdo'},
+  'manija delantera izquierda':           {zona:'Lateral Izquierda', keyword:'Manija exterior de puerta delantera izquierda'},
+  'manija trasera izquierda':             {zona:'Lateral Izquierda', keyword:'Manija exterior de puerta trasera izquierda'},
+  'bisagra puerta delantera izquierda':   {zona:'Lateral Izquierda', keyword:'Bisagra de puerta delantera izquierda'},
+  'bisagra puerta trasera izquierda':     {zona:'Lateral Izquierda', keyword:'Bisagra de puerta trasera izquierda'},
+
+  // ── LATERAL DERECHA ───────────────────────────────────────
+  'puerta delantera derecha':             {zona:'Lateral Derecha',   keyword:'Puerta delantera derecha'},
+  'puerta del derecha':                   {zona:'Lateral Derecha',   keyword:'Puerta delantera derecha'},
+  'puerta trasera derecha':               {zona:'Lateral Derecha',   keyword:'Puerta trasera derecha'},
+  'puerta tras derecha':                  {zona:'Lateral Derecha',   keyword:'Puerta trasera derecha'},
+  'guardabarro trasero derecho':          {zona:'Lateral Derecha',   keyword:'Guardabarro trasero derecho'},
+  'guardabarros trasero derecho':         {zona:'Lateral Derecha',   keyword:'Guardabarro trasero derecho'},
+  'aleta trasera derecha':                {zona:'Lateral Derecha',   keyword:'Guardabarro trasero derecho'},
+  'zocalo derecho':                       {zona:'Lateral Derecha',   keyword:'Zócalo exterior derecho'},
+  'espejo derecho':                       {zona:'Lateral Derecha',   keyword:'Espejo retrovisor derecho'},
+  'retrovisor derecho':                   {zona:'Lateral Derecha',   keyword:'Espejo retrovisor derecho'},
+  'carcasa espejo derecho':               {zona:'Lateral Derecha',   keyword:'Carcasa de espejo retrovisor derecho'},
+  'parante a derecho':                    {zona:'Lateral Derecha',   keyword:'Parante A (Delantero) derecho'},
+  'parante b derecho':                    {zona:'Lateral Derecha',   keyword:'Parante B (Central) derecho'},
+  'parante c derecho':                    {zona:'Lateral Derecha',   keyword:'Parante C (Trasero) derecho'},
+  'manija delantera derecha':             {zona:'Lateral Derecha',   keyword:'Manija exterior de puerta delantera derecha'},
+  'manija trasera derecha':               {zona:'Lateral Derecha',   keyword:'Manija exterior de puerta trasera derecha'},
+  'bisagra puerta delantera derecha':     {zona:'Lateral Derecha',   keyword:'Bisagra de puerta delantera derecha'},
+  'bisagra puerta trasera derecha':       {zona:'Lateral Derecha',   keyword:'Bisagra de puerta trasera derecha'},
+
+  // ── TRASERA ───────────────────────────────────────────────
+  'paragolpes trasero':                   {zona:'Trasera',           keyword:'Paragolpes trasero'},
+  'paragolpe trasero':                    {zona:'Trasera',           keyword:'Paragolpes trasero'},
+  'bumper trasero':                       {zona:'Trasera',           keyword:'Paragolpes trasero'},
+  'parachoques trasero':                  {zona:'Trasera',           keyword:'Paragolpes trasero'},
+  'alma paragolpe trasero':               {zona:'Trasera',           keyword:'Alma metálica de paragolpes trasero'},
+  'alma del paragolpe trasero':           {zona:'Trasera',           keyword:'Alma metálica de paragolpes trasero'},
+  'soporte paragolpe trasero izquierdo':  {zona:'Trasera',           keyword:'Soporte de paragolpes trasero izquierdo'},
+  'soporte paragolpe trasero derecho':    {zona:'Trasera',           keyword:'Soporte de paragolpes trasero derecho'},
+  'tapa de baul':                         {zona:'Trasera',           keyword:'Tapa de baúl'},
+  'tapa baul':                            {zona:'Trasera',           keyword:'Tapa de baúl'},
+  'baul':                                 {zona:'Trasera',           keyword:'Tapa de baúl'},
+  'porton trasero':                       {zona:'Trasera',           keyword:'Portón trasero'},
+  'panel de cola':                        {zona:'Trasera',           keyword:'Panel de cola'},
+  'optica trasera izquierda':             {zona:'Trasera',           keyword:'Óptica trasera izquierda'},
+  'faro trasero izquierdo':               {zona:'Trasera',           keyword:'Óptica trasera izquierda'},
+  'optica trasera derecha':               {zona:'Trasera',           keyword:'Óptica trasera derecha'},
+  'faro trasero derecho':                 {zona:'Trasera',           keyword:'Óptica trasera derecha'},
+  'piso de baul':                         {zona:'Trasera',           keyword:'Piso de baúl'},
+  'larguero trasero izquierdo':           {zona:'Trasera',           keyword:'Larguero estructural trasero izquierdo'},
+  'larguero trasero derecho':             {zona:'Trasera',           keyword:'Larguero estructural trasero derecho'},
+
+  // ── TECHO ─────────────────────────────────────────────────
+  'techo':                                {zona:'Techo',             keyword:'Panel de chapa de techo'},
+  'panel de techo':                       {zona:'Techo',             keyword:'Panel de chapa de techo'},
+
+  // ── CRISTALES ─────────────────────────────────────────────
+  'parabrisas':                           {zona:'Cristales',         keyword:'Parabrisas delantero'},
+  'luneta':                               {zona:'Cristales',         keyword:'Luneta trasera'},
+  'luneta trasera':                       {zona:'Cristales',         keyword:'Luneta trasera'},
+  'cristal puerta delantera izquierda':   {zona:'Cristales',         keyword:'Cristal de puerta delantera izquierda'},
+  'vidrio puerta delantera izquierda':    {zona:'Cristales',         keyword:'Cristal de puerta delantera izquierda'},
+  'cristal puerta delantera derecha':     {zona:'Cristales',         keyword:'Cristal de puerta delantera derecha'},
+  'vidrio puerta delantera derecha':      {zona:'Cristales',         keyword:'Cristal de puerta delantera derecha'},
+  'cristal puerta trasera izquierda':     {zona:'Cristales',         keyword:'Cristal de puerta trasera izquierda'},
+  'cristal puerta trasera derecha':       {zona:'Cristales',         keyword:'Cristal de puerta trasera derecha'},
+
+  // ── CAJA DE CARGA (solo pickups) ──────────────────────────
+  'caja de carga':                        {zona:'Trasera / Caja de Carga', keyword:'Caja de carga'},
+  'piso de caja':                         {zona:'Trasera / Caja de Carga', keyword:'Piso de caja'},
+  'porton caja de carga':                 {zona:'Trasera / Caja de Carga', keyword:'Portón de caja'},
+  'lateral caja izquierdo':               {zona:'Trasera / Caja de Carga', keyword:'Lateral de caja izquierdo'},
+  'lateral caja derecho':                 {zona:'Trasera / Caja de Carga', keyword:'Lateral de caja derecho'}
+};
+
+// ════════════════════════════════════════════════════════
+//  CARGA INICIAL DE TALLERES (ejecutar una sola vez desde el editor GAS)
+// ════════════════════════════════════════════════════════
+function cargarTalleresIniciales() {
+  var sheet = getTalleresSheet();
+  var ahora = new Date().toISOString();
+
+  // [Nombre, Mail, Dirección, Localidad, Teléfono, CUIT]
+  var talleres = [
+    ['Taller JHD',              'jhdtaller@hotmail.com',             'Jean Jaures 2179',            'Valentín Alsina',      '1149733059',   '20265679359'],
+    ['Taller Integral MLG',     'tallerintegralmlg@gmail.com',       'Aristobulo del Valle 4409',   'Claypole',             '1158955076',   '23326637424'],
+    ['Taller MJM',              'taller.mjm@hotmail.com',            'Gob. Felipe Llavallol 1680',  'Lanús',                '1138978699',   '30717004260'],
+    ['Taller MB Monte Grande',  'mbtalleresmontegrande@hotmail.com', 'Mariano Acosta 1077',         'Monte Grande',         '1124063369',   '20928187145'],
+    ['Taller MB Lomas',         'mbtalleres@hotmail.com',            'Av. Santa Fe 955',            'Lomas de Zamora',      '1136319575',   '20928187145'],
+    ['Taller Tony',             'tonybusto@hotmail.com',             '',                            'Banfield',             '1154661061',   '20253143828'],
+    ['Taller Turco',            'sertoumas@hotmail.com',             'Venezuela 139',               'Ezeiza',               '1160987543',   '20208674711'],
+    ['Taller Klein Turbo',      'kleinturbos@hotmail.com',           'Estanislao del Campo 1419',   'Crucecita',            '1163814224',   '20249102246'],
+    ['Taller Gustavo',          'arias_emiliano@hotmail.com',        'Av. Hipólito Yrigoyen 17115', 'Longchamps',           '1168137821',   '20365560499'],
+    ['Taller Bruzza e Hijos',   'a.bruzza@hotmail.com',              'Schiaffino 2460',             'Lomas de Zamora',      '1158401524',   '20368204251'],
+    ['Taller Borrom',           'gsborro@gmail.com',                 'Av. Hipólito Yrigoyen 17741', 'Longchamps',           '1141895641',   '20254877205'],
+    ['Taller El Especialista',  '',                                  '',                            '',                     '',             '20335909136'],
+    ['Taller GR Performance',   '',                                  '',                            '',                     '',             '20375365244'],
+    ['Taller Alberto Rojas',    'rafaelcaitano221@gmail.com',        'Villa de Luján 2360',         'Remedios de Escalada', '1132020814',   '20314616058'],
+    ['Taller Special Paint',    'specialpaint_22@hotmail.com',       'Tres Sargentos 1650',         'Gerli',                '1133655328',   '20330837765'],
+    ['Taller Paes',             'gestionesfinish@gmail.com',         'Liniers 2848',                'Lanús',                '1140516516',   '30717984346'],
+    ['Taller El Churrinche',    'tallerelchurrinche@yahoo.com.ar',   'Benteveo 297',                'Temperley',            '1159277047',   '20922234168'],
+    ['Taller Guillermo',        'guillermopierlas@gmail.com',        '',                            '',                     '01163079288',  '20267484717'],
+    ['Taller F&F',              'roman-07rodas@hotmail.com',         'Colpayo 764',                 'Valentín Alsina',      '1140636866',   '23944113959'],
+    ['Taller Miguel',           'motorolascardulla@gmail.com',       'Güemes 1025',                 'Temperley',            '1154265781',   '20183625765'],
+    ['Taller Antov',            'eredgarantonopulos@hotmail.com',    'Av. Frías 2920',              'Temperley',            '1162442365',   '20229022696'],
+    ['Taller Novacar',          'tallernovacar2023@gmail.com',       'Pte. Perón 2026',             'Lomas de Zamora',      '1159136904',   '27268551676'],
+    ['Taller GRC',              'gabrielrcea@hotmail.com',           'Calle 5 757',                 'Guernica',             '01128859593',  '20304813580'],
+    ['Taller Fucci',            'danielfucci@hotmail.es',            'Godoy Cruz 1079',             'Banfield',             '1140805942',   '20382006942'],
+    ['Taller Maximiliano',      'taller.maximiliano@hotmail.com',    'Av. Oliver 777',              'Monte Grande',         '',             '20921161728'],
+    ['Taller Servicar Sur',     'mcasco@live.com.ar',                'Rivadavia 3781',              'Rafael Calzada',       '1127950048',   '30711882487'],
+    ['Taller Soria',            'tallersoria2016@hotmail.com',       'Juan XXIII 436',              'Lomas de Zamora',      '1140728497',   '20262307663'],
+    ['Taller LyL',              'jonatanleonardolopez1065@gmail.com','Moreno 1640',                 'Luis Guillón',         '1158843848',   '20350661566'],
+    ['Taller MAS',              'miguelsalazarmas@hotmail.com',      '',                            '',                     '',             '23120020919'],
+    ['Taller Avenida',          'morettijl@hotmail.com',             'Laprida 1843',                'Quilmes',              '1152408688',   '30711452024'],
+    ['Taller Argénpar',         'argenpar@hotmail.com',              'Alta Gracia 961',             'Florencio Varela',     '1169924074',   ''],
+    ['Taller Fernando',         '',                                  '',                            '',                     '',             '23230171564'],
+    ['Taller Andrés',           '',                                  '',                            '',                     '',             '20223499954'],
+    ['Taller ARC Pintura',      '',                                  '',                            '',                     '',             '20261062969'],
+    ['Taller Giovanni',         '',                                  '',                            '',                     '',             '20280527107'],
+    ['Taller Alpini',           '',                                  '',                            '',                     '',             '20083504022'],
+    ['Taller Vazquez',          '',                                  '',                            '',                     '',             '20519850454'],
+    ['Taller Carrera',          '',                                  '',                            'City Bell',            '',             '20084630366'],
+    ['Taller Manuel',           'imanuele@hotmail.com',              '',                            '',                     '',             '20315387192'],
+    ['Taller Elias',            'sebam.russi@gmail.com',             'Av. Nicolás Bruzzone 2047',   'Luis Guillón',         '1125972422',   '20250109505'],
+    ['Taller GM',               'sacabollosgm34@gmail.com',          'Serrano 2104',                'Adrogué',              '1128722632',   '20343070420'],
+  ];
+
+  var filas = talleres.map(function(t, i) {
+    return [
+      (Date.now() + i).toString(), // ID único
+      t[0], // Nombre
+      t[1], // Mail
+      t[2], // Dirección
+      t[3], // Localidad
+      t[4], // Teléfono
+      t[5], // CUIT
+      ahora, // FechaAlta
+      0      // CantUsos
+    ];
+  });
+
+  var ultimaFila = sheet.getLastRow();
+  sheet.getRange(ultimaFila + 1, 1, filas.length, 9).setValues(filas);
+  Logger.log('✓ ' + filas.length + ' talleres cargados correctamente.');
+}
+
+// ── Punto de entrada ──────────────────────────────────────
+// ════════════════════════════════════════════════════════
+//  BASE DE TALLERES
+// ════════════════════════════════════════════════════════
+
+function getTalleresSheet() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(TALLERES_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(TALLERES_NAME);
+    sheet.appendRow(['ID','Nombre','Mail','Dirección','Localidad','Teléfono','CUIT','FechaAlta','CantUsos']);
+    sheet.getRange(1,1,1,9).setFontWeight('bold');
+  }
+  return sheet;
+}
+
+// Normaliza strings para comparación tolerante (sin tildes, minúsculas)
+function _normTaller(str) {
+  return String(str||'').toLowerCase()
+    .replace(/[áàâä]/g,'a').replace(/[éèêë]/g,'e')
+    .replace(/[íìîï]/g,'i').replace(/[óòôö]/g,'o')
+    .replace(/[úùûü]/g,'u').replace(/ñ/g,'n')
+    .replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim();
+}
+
+// Busca talleres por nombre (mínimo 2 caracteres). Retorna hasta 6 matches ordenados por CantUsos.
+function buscarTalleres(data) {
+  if (!data.query || data.query.trim().length < 3) return resp({ok:true, talleres:[]});
+  var sheet = getTalleresSheet();
+  var rows = sheet.getDataRange().getValues();
+  var q = _normTaller(data.query);
+  var matches = [];
+  for (var i = 1; i < rows.length; i++) {
+    if (_normTaller(String(rows[i][1]||'')).indexOf(q) !== -1) {
+      matches.push({
+        nombre:   String(rows[i][1]||''),
+        mail:     String(rows[i][2]||''),
+        dir:      String(rows[i][3]||''),
+        loc:      String(rows[i][4]||''),
+        tel:      String(rows[i][5]||''),
+        cuit:     String(rows[i][6]||''),
+        cantUsos: Number(rows[i][8]||0)
+      });
+    }
+  }
+  matches.sort(function(a,b){ return b.cantUsos - a.cantUsos; });
+  return resp({ok:true, talleres: matches.slice(0,6)});
+}
+
+// Agrega el taller si no existe, o actualiza campos vacíos y suma un uso.
+// Deduplicación: CUIT (prioritario) → Nombre+Mail (fallback).
+function registrarTaller(t) {
+  if (!t || !t.nombre) return;
+  try {
+    var sheet = getTalleresSheet();
+    var rows = sheet.getDataRange().getValues();
+    var cuit = String(t.cuit||'').replace(/[^0-9]/g,'');
+    // Buscar por CUIT  (col 7 = índice 6)
+    if (cuit && cuit.length === 11) {
+      for (var i = 1; i < rows.length; i++) {
+        if (String(rows[i][6]||'').replace(/[^0-9]/g,'') === cuit) {
+          if (!rows[i][2] && t.mail) sheet.getRange(i+1,3).setValue(t.mail);
+          if (!rows[i][3] && t.dir)  sheet.getRange(i+1,4).setValue(t.dir);
+          if (!rows[i][4] && t.loc)  sheet.getRange(i+1,5).setValue(t.loc);
+          if (!rows[i][5] && t.tel)  sheet.getRange(i+1,6).setValue(t.tel);
+          sheet.getRange(i+1,9).setValue((Number(rows[i][8])||0)+1);
+          return;
+        }
+      }
+    }
+    // Fallback: Nombre + Mail
+    var nn = _normTaller(t.nombre);
+    var nm = String(t.mail||'').toLowerCase().trim();
+    for (var j = 1; j < rows.length; j++) {
+      if (_normTaller(String(rows[j][1]||'')) === nn &&
+          String(rows[j][2]||'').toLowerCase().trim() === nm) {
+        if (!rows[j][3] && t.dir)  sheet.getRange(j+1,4).setValue(t.dir);
+        if (!rows[j][4] && t.loc)  sheet.getRange(j+1,5).setValue(t.loc);
+        if (!rows[j][5] && t.tel)  sheet.getRange(j+1,6).setValue(t.tel);
+        if (!rows[j][6] && cuit)   sheet.getRange(j+1,7).setValue(cuit);
+        sheet.getRange(j+1,9).setValue((Number(rows[j][8])||0)+1);
+        return;
+      }
+    }
+    // Nuevo taller
+    sheet.appendRow([
+      Date.now().toString(),
+      t.nombre,
+      t.mail  || '',
+      t.dir   || '',
+      t.loc   || '',
+      t.tel   || '',
+      cuit    || '',
+      new Date().toISOString(),
+      1
+    ]);
+  } catch(e) {
+    Logger.log('registrarTaller error: ' + e);
+  }
+}
+
+function analizarPresupuesto(data) {
+  try {
+    var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
+    if (!apiKey) {
+      return resp({ok: false, msg: 'API key de Gemini no configurada. Ir a GAS Editor → Proyecto → Configuración → Propiedades de secuencia de comandos → agregar GEMINI_KEY con tu key de aistudio.google.com'});
+    }
+    if (!data.fileBase64 || !data.mimeType) {
+      return resp({ok: false, msg: 'Se requiere fileBase64 y mimeType'});
+    }
+
+    // Quitar el prefijo "data:...;base64," si viene del frontend
+    var base64 = data.fileBase64.replace(/^data:[^;]+;base64,/, '');
+
+    // Llamar a Gemini Vision
+    var geminiResult = callGeminiAPI(base64, data.mimeType);
+    if (!geminiResult.ok) return resp({ok: false, msg: geminiResult.error});
+
+    // Parsear la respuesta JSON de Gemini
+    var piezas = parsearRespuestaGemini(geminiResult.text);
+    if (!piezas || piezas.length === 0) {
+      return resp({ok: false, msg: 'Gemini no encontró piezas en el documento. Verificá que la imagen sea un presupuesto de taller legible.'});
+    }
+
+    // Mapear a zonas y piezas del calculador
+    var resultado = mapPiezasToCalc(piezas);
+    return resp({ok: true, mapeadas: resultado.mapeadas, sinMapear: resultado.sinMapear});
+
+  } catch(err) {
+    return resp({ok: false, msg: 'Error al analizar presupuesto: ' + err.toString()});
+  }
+}
+
+// ── Llamada a Gemini 1.5 Flash ────────────────────────────
+function callGeminiAPI(base64, mimeType) {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
+  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
+
+  var prompt =
+    'Sos un asistente especializado en presupuestos de talleres de chapa y pintura automotor de Argentina.\n\n' +
+    'Analizá el documento adjunto. Puede ser:\n' +
+    '- Un formulario impreso con columnas marcadas con X (A, B, P u otras letras)\n' +
+    '- Texto manuscrito o impreso describiendo los trabajos\n\n' +
+    'PASO 1 — Interpretá las columnas o términos:\n' +
+    '  · "A", "Cambiar", "Reemplazar", "Sustituir", "CH" → sustituir\n' +
+    '  · "B", "Reparar", "Rep.", "Chapear", "Enderezar" → reparar\n' +
+    '  · "P", "Pintar", "Pintura", "Pint." → pintura\n' +
+    '  · "D", "Desabollar", "Abolladura", "Sacabollo" → desabolladura\n' +
+    '  · Si el formulario usa otras letras, inferí su significado por el contexto del propio documento.\n\n' +
+    'PASO 2 — Para cada pieza con al menos un trabajo marcado, construí un objeto JSON.\n\n' +
+    'PASO 3 — Devolvé ÚNICAMENTE el array JSON, sin texto adicional, sin markdown:\n' +
+    '[{"pieza":"nombre de la pieza en español","reparar":true/false,"sustituir":true/false,"pintura":true/false,"desabolladura":true/false}]\n\n' +
+    'Reglas:\n' +
+    '- Incluí solo piezas con al menos un campo en true\n' +
+    '- Usá nombres descriptivos en español (ej: "guardabarros delantero derecho", "paragolpes trasero")\n' +
+    '- Si la pieza requiere sustitución más pintura, marcá ambos como true en el mismo objeto\n' +
+    '- No incluyas precios, montos ni comentarios en el JSON';
+
+  var payload = {
+    contents: [{
+      parts: [
+        { inlineData: { mimeType: mimeType, data: base64 } },
+        { text: prompt }
+      ]
+    }],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 2048,
+      thinkingConfig: { thinkingBudget: 0 }
+    }
+  };
+
+  var options = {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  var response = UrlFetchApp.fetch(url, options);
+  var code = response.getResponseCode();
+  var body;
+  try { body = JSON.parse(response.getContentText()); }
+  catch(e) { return {ok: false, error: 'Respuesta inválida de Gemini (HTTP ' + code + ')'}; }
+
+  if (code !== 200) {
+    var errMsg = (body.error && body.error.message) ? body.error.message : 'Error HTTP ' + code;
+    return {ok: false, error: 'Gemini API: ' + errMsg};
+  }
+
+  try {
+    var text = body.candidates[0].content.parts[0].text;
+    return {ok: true, text: text};
+  } catch(e) {
+    return {ok: false, error: 'No se pudo leer la respuesta de Gemini'};
+  }
+}
+
+// ── Parsear el JSON devuelto por Gemini ───────────────────
+function parsearRespuestaGemini(text) {
+  try {
+    // Limpiar posibles restos de markdown que Gemini a veces agrega igual
+    var clean = text.trim()
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '');
+
+    var arr = JSON.parse(clean);
+    if (!Array.isArray(arr)) return null;
+
+    return arr
+      .map(function(item) {
+        return {
+          pieza:         (item.pieza || '').trim(),
+          reparar:       item.reparar === true,
+          sustituir:     item.sustituir === true,
+          pintura:       item.pintura === true,
+          desabolladura: item.desabolladura === true
+        };
+      })
+      .filter(function(item) {
+        return item.pieza && (item.reparar || item.sustituir || item.pintura || item.desabolladura);
+      });
+
+  } catch(e) {
+    return null;
+  }
+}
+
+// ── Normalizar texto para matching (sin tildes, minúsculas) ─
+function normalizarPieza(str) {
+  return String(str || '').toLowerCase()
+    .replace(/[áàâä]/g,'a').replace(/[éèêë]/g,'e')
+    .replace(/[íìîï]/g,'i').replace(/[óòôö]/g,'o')
+    .replace(/[úùûü]/g,'u').replace(/ñ/g,'n')
+    .replace(/[^a-z0-9\s\-\/]/g,'')
+    .replace(/\s+/g,' ').trim();
+}
+
+// ── Mapear piezas de Gemini → zonas y piezas del calculador ─
+// Cada pieza con múltiples tareas genera una fila por tarea,
+// porque así trabaja relCalcState.piezas en el frontend.
+// Nivel de daño para Reparar y Desabolladura: siempre 'leve'
+// (el admin lo ajusta en el Panel de Revisión si corresponde).
+function mapPiezasToCalc(piezas) {
+  var mapeadas = [];
+  var sinMapear = [];
+
+  piezas.forEach(function(item) {
+    var keyNorm = normalizarPieza(item.pieza);
+    var match = PIEZAS_MAP[keyNorm] || null;
+
+    // Si no hay match exacto, intentar match parcial buscando la clave que más se parezca
+    if (!match) {
+      var mejorScore = 0;
+      var mejorKey = null;
+      Object.keys(PIEZAS_MAP).forEach(function(k) {
+        // Score simple: cuántas palabras de la clave están en el texto buscado
+        var wordsK = k.split(' ');
+        var wordsN = keyNorm.split(' ');
+        var comunes = wordsK.filter(function(w){ return w.length > 3 && wordsN.indexOf(w) !== -1; });
+        var score = comunes.length / Math.max(wordsK.length, 1);
+        if (score > mejorScore) { mejorScore = score; mejorKey = k; }
+      });
+      if (mejorScore >= 0.6) match = PIEZAS_MAP[mejorKey];
+    }
+
+    // Generar una fila por cada tarea que tenga la pieza
+    var tareas = [];
+    if (item.sustituir)     tareas.push({tarea:'Sustituir',  nivelDano: null});
+    if (item.reparar)       tareas.push({tarea:'Reparar',    nivelDano: 'leve'});
+    if (item.desabolladura) tareas.push({tarea:'Reparar',    nivelDano: 'leve'});  // desabolladura → Reparar leve
+    if (item.pintura)       tareas.push({tarea:'Pintar',     nivelDano: null});
+
+    // Deduplicar si reparar+desabolladura generaron dos filas iguales
+    var tareasSeen = {};
+    tareas = tareas.filter(function(t) {
+      var k = t.tarea + (t.nivelDano || '');
+      if (tareasSeen[k]) return false;
+      tareasSeen[k] = true;
+      return true;
+    });
+
+    tareas.forEach(function(t) {
+      if (match) {
+        mapeadas.push({
+          piezaOriginal: item.pieza,
+          zona:          match.zona,
+          keyword:       match.keyword,  // el frontend lo usa para buscar en CALC_DATA_GRID
+          tarea:         t.tarea,
+          nivelDano:     t.nivelDano
+        });
+      } else {
+        sinMapear.push({
+          piezaOriginal: item.pieza,
+          tarea:         t.tarea,
+          nivelDano:     t.nivelDano
+        });
+      }
+    });
+  });
+
+  return {mapeadas: mapeadas, sinMapear: sinMapear};
+}
+
+
+// ─── USUARIOS — Login y cambio de clave ──────────────────────────────────────
+
+// ─── Hash de contraseñas (SHA-256 + salt) ────────────────────────────────────
+// Formato almacenado en la columna Clave: "v1$<saltHex>$<hashHex>"
+// Las claves en texto plano (legacy) se siguen aceptando y se re-hashean al usarse.
+var HASH_PREFIX = 'v1$';
+
+function _generarSalt() {
+  // 32 caracteres hex (UUID sin guiones) — único por usuario
+  return Utilities.getUuid().replace(/-/g, '');
+}
+
+function _hashClave(clave, saltHex) {
+  var raw = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    saltHex + '|' + clave,
+    Utilities.Charset.UTF_8
+  );
+  var hex = '';
+  for (var i = 0; i < raw.length; i++) {
+    hex += ('0' + (raw[i] & 0xFF).toString(16)).slice(-2);
+  }
+  return hex;
+}
+
+function _formatoHash(clave) {
+  var salt = _generarSalt();
+  return HASH_PREFIX + salt + '$' + _hashClave(clave, salt);
+}
+
+// Devuelve true si la clave coincide con lo almacenado (hasheado o legacy en plano).
+function _verificarClave(clave, almacenado) {
+  almacenado = String(almacenado);
+  if (almacenado.indexOf(HASH_PREFIX) === 0) {
+    var parts = almacenado.split('$'); // ['v1', salt, hash]
+    if (parts.length !== 3) return false;
+    return _hashClave(clave, parts[1]) === parts[2];
+  }
+  // Legacy: comparación directa con texto plano
+  return almacenado === clave;
+}
+
+function _esHasheada(almacenado) {
+  return String(almacenado).indexOf(HASH_PREFIX) === 0;
+}
+
+function getUsuariosSheet() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(USUARIOS_NAME);
+  if (!sheet) {
+    // Crear hoja con usuarios por defecto si no existe
+    sheet = ss.insertSheet(USUARIOS_NAME);
+    sheet.appendRow(['Nombre', 'Clave']);
+    var defaults = [
+      ['Administrador', '123456'],
+      ['Ignacio',       '123456'],
+      ['Matías',        '123456'],
+      ['Valentino',     '123456'],
+      ['Sebastián',     '123456'],
+      ['Mariano',       '123456'],
+      ['Bruno',         '123456'],
+      ['Majo',          '123456'],
+      ['Ivan',          '123456']
+    ];
+    defaults.forEach(function(row) { sheet.appendRow([row[0], _formatoHash(row[1])]); });
+    // Proteger la hoja para que no se edite manualmente por error
+    var protection = sheet.protect().setDescription('Usuarios — solo editar via app');
+    protection.setWarningOnly(true);
+  }
+  return sheet;
+}
+
+function loginUsuario(data) {
+  var nombre = (data.nombre || '').trim();
+  var clave  = (data.clave  || '').trim();
+  if (!nombre || !clave) return resp({ok: false, msg: 'Datos incompletos.'});
+
+  // Anti fuerza bruta: máx 10 intentos por usuario cada 5 minutos
+  if (!_rateLimit('login_' + nombre.toLowerCase(), 10, 300)) {
+    return resp({ok: false, msg: 'Demasiados intentos. Esperá unos minutos e intentá de nuevo.'});
+  }
+
+  var sheet = getUsuariosSheet();
+  var rows  = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] === nombre) {
+      if (_verificarClave(clave, rows[i][1])) {
+        // Migración lazy: si entró con una clave en texto plano, la re-guardamos hasheada
+        if (!_esHasheada(rows[i][1])) {
+          try { sheet.getRange(i + 1, 2).setValue(_formatoHash(clave)); } catch (e) {}
+        }
+        return resp({ok: true, nombre: nombre});
+      } else {
+        return resp({ok: false, msg: 'Contraseña incorrecta.'});
+      }
+    }
+  }
+  return resp({ok: false, msg: 'Usuario no encontrado.'});
+}
+
+function cambiarClave(data) {
+  var nombre      = (data.nombre      || '').trim();
+  var claveActual = (data.claveActual || '').trim();
+  var claveNueva  = (data.claveNueva  || '').trim();
+
+  if (!nombre || !claveActual || !claveNueva) return resp({ok: false, msg: 'Datos incompletos.'});
+  if (claveNueva.length < 4) return resp({ok: false, msg: 'Mínimo 4 caracteres.'});
+
+  var sheet = getUsuariosSheet();
+  var rows  = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] === nombre) {
+      if (!_verificarClave(claveActual, rows[i][1])) return resp({ok: false, msg: 'Contraseña actual incorrecta.'});
+      sheet.getRange(i + 1, 2).setValue(_formatoHash(claveNueva));
+      // Notificación de seguridad al administrador
+      try {
+        var tz  = Session.getScriptTimeZone() || 'America/Argentina/Buenos_Aires';
+        var cuando = Utilities.formatDate(new Date(), tz, 'dd/MM/yyyy HH:mm:ss');
+        var esAdmin = (nombre === 'Administrador');
+        var asunto = esAdmin
+          ? '⚠ Cambio de contraseña del ADMINISTRADOR — Estudio Patitucci'
+          : 'ℹ ' + nombre + ' cambió su contraseña — Estudio Patitucci';
+        var cuerpo = 'ESTUDIO PATITUCCI — ' + (esAdmin ? 'Alerta de seguridad' : 'Aviso del sistema') + '\n\n'
+          + (esAdmin
+              ? 'Se acaba de cambiar la contraseña del usuario ADMINISTRADOR.\n\n'
+              + 'Fecha y hora: ' + cuando + '\n\n'
+              + 'Si fuiste vos, podés ignorar este mensaje.\n\n'
+              + 'Si no reconocés este cambio, ingresá a la app de inmediato y restablecé la contraseña.'
+              : 'El usuario "' + nombre + '" acaba de cambiar su contraseña.\n\n'
+              + 'Fecha y hora: ' + cuando + '\n\n'
+              + 'Es solo un aviso. No se requiere ninguna acción de tu parte.')
+          + '\n\n— Sistema automático de seguridad\nApp Estudio Patitucci';
+        MailApp.sendEmail({ to: 'patitucciestudio@gmail.com', subject: asunto, body: cuerpo });
+      } catch(eMail) {
+        Logger.log('cambiarClave — error al enviar mail de seguridad: ' + eMail);
+      }
+      return resp({ok: true, msg: 'Contraseña actualizada.'});
+    }
+  }
+  return resp({ok: false, msg: 'Usuario no encontrado.'});
+}
+
+// ─── Utilidad: agregar usuarios faltantes sin pisar claves existentes ─────────
+function sincronizarUsuarios() {
+  var sheet = getUsuariosSheet();
+  var rows  = sheet.getDataRange().getValues();
+  var existentes = rows.slice(1).map(function(r){ return r[0]; });
+
+  var todos = [
+    ['Administrador','123456'],
+    ['Ignacio',      '123456'],
+    ['Matías',       '123456'],
+    ['Valentino',    '123456'],
+    ['Sebastián',    '123456'],
+    ['Mariano',      '123456'],
+    ['Bruno',        '123456'],
+    ['Majo',         '123456'],
+    ['Ivan',         '123456']
+  ];
+
+  var agregados = 0;
+  todos.forEach(function(u){
+    if(existentes.indexOf(u[0]) === -1){
+      sheet.appendRow([u[0], _formatoHash(u[1])]);
+      agregados++;
+    }
+  });
+  Logger.log('Usuarios agregados: ' + agregados);
+}
+
+// ─── Migración: convierte todas las claves en texto plano a hash SHA-256+salt ──
+// Correr UNA vez desde el editor de Apps Script. Idempotente: ignora las ya hasheadas.
+function migrarClavesAHash() {
+  var sheet = getUsuariosSheet();
+  var rows  = sheet.getDataRange().getValues();
+  var migrados = 0;
+  for (var i = 1; i < rows.length; i++) {
+    var val = String(rows[i][1]);
+    if (val && !_esHasheada(val)) {
+      sheet.getRange(i + 1, 2).setValue(_formatoHash(val));
+      migrados++;
+    }
+  }
+  Logger.log('Claves migradas a hash: ' + migrados);
+  return migrados;
+}
+
+// ─── BACKUP DIARIO AUTOMÁTICO DEL SHEET ───────────────────────────────────────
+// Copia la planilla a una carpeta aparte en Drive todos los días y borra las
+// copias más viejas que BACKUP_RETENCION_DIAS. Red de seguridad ante borrados.
+
+// Devuelve (creándola si hace falta) la carpeta donde se guardan los backups.
+function _getCarpetaBackups() {
+  var it = DriveApp.getFoldersByName(BACKUP_FOLDER_NAME);
+  if (it.hasNext()) return it.next();
+  var carpeta = DriveApp.createFolder(BACKUP_FOLDER_NAME);
+  try { compartirConAutorizados(carpeta); } catch (e) {}
+  return carpeta;
+}
+
+// Función que ejecuta el trigger diario. También se puede correr a mano.
+function backupDiario() {
+  var carpeta = _getCarpetaBackups();
+  var tz = Session.getScriptTimeZone() || 'America/Argentina/Buenos_Aires';
+  var sello = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd_HH-mm');
+  var nombre = 'Backup Inspecciones — ' + sello;
+
+  var copia = DriveApp.getFileById(SHEET_ID).makeCopy(nombre, carpeta);
+  try { compartirConAutorizados(copia); } catch (e) {}
+
+  _limpiarBackupsViejos(carpeta);
+  Logger.log('Backup creado: ' + nombre + ' (' + copia.getId() + ')');
+  return copia.getId();
+}
+
+// Borra de la carpeta de backups las copias más viejas que BACKUP_RETENCION_DIAS.
+function _limpiarBackupsViejos(carpeta) {
+  carpeta = carpeta || _getCarpetaBackups();
+  var limite = new Date().getTime() - BACKUP_RETENCION_DIAS * 24 * 60 * 60 * 1000;
+  var archivos = carpeta.getFiles();
+  var borrados = 0;
+  while (archivos.hasNext()) {
+    var f = archivos.next();
+    if (f.getName().indexOf('Backup Inspecciones') === 0 &&
+        f.getDateCreated().getTime() < limite) {
+      f.setTrashed(true); // a la papelera, recuperable 30 días
+      borrados++;
+    }
+  }
+  Logger.log('Backups viejos enviados a papelera: ' + borrados);
+  return borrados;
+}
+
+// Instala el trigger diario (corre 1 vez desde el editor). Evita duplicados.
+function instalarTriggerBackup() {
+  eliminarTriggerBackup();
+  ScriptApp.newTrigger('backupDiario')
+    .timeBased()
+    .everyDays(1)
+    .atHour(3) // ~3 AM hora del script
+    .create();
+  Logger.log('Trigger de backup diario instalado (≈03:00).');
+}
+
+// Elimina cualquier trigger existente de backupDiario (para reinstalar sin duplicar).
+function eliminarTriggerBackup() {
+  var triggers = ScriptApp.getProjectTriggers();
+  var n = 0;
+  triggers.forEach(function (t) {
+    if (t.getHandlerFunction() === 'backupDiario') {
+      ScriptApp.deleteTrigger(t);
+      n++;
+    }
+  });
+  if (n) Logger.log('Triggers de backup eliminados: ' + n);
+}
+
+// ════════════════════════════════════════════════════════
+//  MÓDULO VERIFICACIÓN DE REPARACIONES
+// ════════════════════════════════════════════════════════
+
+var APP_VERIF_URL = 'https://estudiopatitucci.com.ar/verifTaller.html';
+
+// ── Helpers de columnas dinámicas ──────────────────────
+function _verifCol(sheet, nombre) {
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var idx = headers.indexOf(nombre);
+  if (idx !== -1) return idx + 1;
+  var col = sheet.getLastColumn() + 1;
+  sheet.getRange(1, col).setValue(nombre);
+  return col;
+}
+
+function _getVD(rows, i, sheet) {
+  var col = _verifCol(sheet, 'VerifData');
+  var raw = rows[i][col - 1];
+  if (!raw) return {};
+  try { return JSON.parse(raw); } catch(e) { return {}; }
+}
+
+function _setVD(sheet, rowNum, vd) {
+  var col = _verifCol(sheet, 'VerifData');
+  sheet.getRange(rowNum, col).setValue(JSON.stringify(vd));
+}
+
+// ── Calcula el lunes siguiente a N días desde hoy ──────
+function calcularLunesSiguiente(diasExtra) {
+  var hoy = new Date();
+  var fecha = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + parseInt(diasExtra || 0));
+  var dow = fecha.getDay(); // 0=Dom, 1=Lun, …, 6=Sab
+  var diff = dow === 0 ? 1 : (dow === 1 ? 0 : 8 - dow);
+  var lunes = new Date(fecha.getTime() + diff * 86400000);
+  return Utilities.formatDate(lunes, 'America/Argentina/Buenos_Aires', 'yyyy-MM-dd');
+}
+
+// ── Formatea fecha ISO a DD/MM/YYYY ────────────────────
+function _fmtFecha(iso) {
+  if (!iso) return '-';
+  var p = iso.split('-');
+  return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso;
+}
+
+// ── Obtiene el mail del taller desde VerifData o relevamiento ──
+function _mailTallerDe(vd, rows, i) {
+  if (vd.mailTaller) return vd.mailTaller;
+  try {
+    var rel = JSON.parse(rows[i][21] || '{}');
+    return rel.mailTaller || '';
+  } catch(e) { return ''; }
+}
+
+// ── Inicia flujo CON repuestos ─────────────────────────
+function iniciarVerifConRepuestos(data) {
+  if (!data.id) return resp({ok: false, msg: 'ID requerido'});
+  var sheet = getSheet();
+  var rows  = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == data.id) {
+      var mailTaller = data.mailTaller || _mailTallerDe({}, rows, i);
+      var vd = { tipo: 'conRepuestos', etapa: 0, mailTaller: mailTaller };
+      sheet.getRange(i+1, 20).setValue('Verif: Pend Repuestos y Turno');
+      _setVD(sheet, i+1, vd);
+      return resp({ok: true});
+    }
+  }
+  return resp({ok: false, msg: 'Inspección no encontrada'});
+}
+
+// ── Inicia flujo SIN repuestos ─────────────────────────
+function iniciarVerifSinRepuestos(data) {
+  if (!data.id) return resp({ok: false, msg: 'ID requerido'});
+  var sheet = getSheet();
+  var rows  = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == data.id) {
+      var mailTaller = data.mailTaller || _mailTallerDe({}, rows, i);
+      if (!mailTaller) return resp({ok: false, msg: 'Sin mail del taller. Ingresá el mail para continuar.'});
+
+      var token = generarToken32();
+      var exp = new Date(); exp.setDate(exp.getDate() + 60);
+
+      var vd = {
+        tipo: 'sinRepuestos', etapa: 0, mailTaller: mailTaller,
+        mailOrdenEnviado: false, mailIngresoEnviado: false,
+        mailFotoProcesoEnviado: false, mailFotoTerminadoEnviado: false,
+        turnoEstimado: null, turnoConfirmadoPorTaller: null,
+        fechaEstimadaFinalizacion: null,
+        fotosReparacion: [], fotosPiezas: [], fotosTerminado: []
+      };
+
+      sheet.getRange(i+1, 20).setValue('Verif: En Reparacion');
+      sheet.getRange(i+1, _verifCol(sheet, 'VerifToken')).setValue(token);
+      sheet.getRange(i+1, _verifCol(sheet, 'VerifTokenExp')).setValue(exp.toISOString());
+      _setVD(sheet, i+1, vd);
+
+      var link = APP_VERIF_URL + '?token=' + token;
+      var sin  = String(rows[i][1] || '');
+      var pat  = String(rows[i][6] || '');
+      var mod  = (String(rows[i][7]||'') + ' ' + String(rows[i][8]||'')).trim();
+      try {
+        _sendMail(mailTaller,
+          'Asignacion de turno estimado - Siniestro ' + sin + ' | ' + pat,
+          'ESTUDIO PATITUCCI\nPericias - Daños Materiales - Homologación CESVI\n\n'
+          + 'Estimado taller:\n\n'
+          + 'Le informamos que tiene asignado el siguiente vehículo para reparación:\n\n'
+          + 'N° Siniestro: ' + sin + '\nPatente: ' + pat + '\nModelo: ' + mod + '\n\n'
+          + 'Por favor confirme un turno estimado de ingreso desde el siguiente link:\n' + link
+          + '\n\nSaludos,\nEstudio Patitucci',
+          { from: 'patitucciestudio@gmail.com' }
+        );
+        vd.mailOrdenEnviado = true;
+        _setVD(sheet, i+1, vd);
+      } catch(eM) { Logger.log('Mail sin-repuestos error: ' + eM); }
+
+      return resp({ok: true, link: link});
+    }
+  }
+  return resp({ok: false, msg: 'Inspección no encontrada'});
+}
+
+// ── Pablo sube la orden de compra ──────────────────────
+// Gemini extrae proveedor + plazo, sistema calcula turno automático
+function subirOrdenCompra(data) {
+  if (!data.id || !data.fileBase64 || !data.mimeType)
+    return resp({ok: false, msg: 'Se requieren id, fileBase64 y mimeType'});
+  try {
+    // Subir archivo a Drive
+    var folder = getOrCreateFolder('Inspeccion_' + data.id);
+    var b64    = data.fileBase64.replace(/^data:[^;]+;base64,/, '');
+    var ext    = data.mimeType === 'application/pdf' ? '.pdf' : '.jpg';
+    var file   = folder.createFile(
+      Utilities.newBlob(Utilities.base64Decode(b64), data.mimeType, 'OrdenCompra' + ext)
+    );
+    try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e) {}
+    var ordenUrl = file.getUrl();
+    var ordenId  = file.getId();
+
+    // Gemini extrae proveedor y plazo
+    var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
+    if (!apiKey) return resp({ok: false, msg: 'GEMINI_KEY no configurada'});
+    var prompt =
+      'Analizá esta Orden de Compra de repuestos automotores del sistema ORION CESVICOM.\n'
+      + 'La tabla de repuestos tiene estas columnas: Marca | Código | Descripción | Precio | Calidad | Vto. | Sugerido | Cal. Sug. | Fec. Entrega | Disp.\n'
+      + 'La columna "Disp." indica disponibilidad: "I" = Inmediata (sin fecha de entrega específica), "SD" = Sin Disponibilidad.\n'
+      + 'La columna "Fec. Entrega" tiene la fecha real de entrega cuando no es inmediata (formato DD/MM/AAAA).\n'
+      + 'La "Fecha de la compra" está en el encabezado del documento.\n'
+      + '\n'
+      + 'Calculá plazoMaxDias = máximo de días entre la fecha de compra y la Fec. Entrega más lejana de todos los repuestos.\n'
+      + 'Si todos los repuestos tienen Disp.="I" (Inmediata), plazoMaxDias=0 y plazoTexto="Inmediata".\n'
+      + '\n'
+      + 'Devolvé ÚNICAMENTE este JSON sin markdown:\n'
+      + '{\n'
+      + '  "proveedor": "nombre del proveedor",\n'
+      + '  "plazoTexto": "Inmediata | X dias | descripción del plazo más largo",\n'
+      + '  "plazoMaxDias": número_entero,\n'
+      + '  "piezasSinDisponibilidad": ["descripción pieza 1", "descripción pieza 2"]\n'
+      + '}\n'
+      + 'piezasSinDisponibilidad: listá CADA repuesto cuya columna "Disp." sea "SD". Si ninguno tiene SD, devolvé [].';
+    var gRes = UrlFetchApp.fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey,
+      { method:'post', contentType:'application/json', muteHttpExceptions:true,
+        payload: JSON.stringify({ contents:[{ parts:[
+          { inlineData:{ mimeType: data.mimeType, data: b64 } },
+          { text: prompt }
+        ]}], generationConfig:{ temperature:0.1, maxOutputTokens:2048, thinkingConfig:{ thinkingBudget:0 } } })
+      }
+    );
+    // Validación defensiva: Gemini puede devolver error HTTP o respuesta sin candidates
+    var gCode = gRes.getResponseCode();
+    var gBody;
+    try { gBody = JSON.parse(gRes.getContentText()); }
+    catch(e) { return resp({ok: false, msg: 'Respuesta inválida de Gemini (HTTP ' + gCode + ')'}); }
+    if (gCode !== 200) {
+      var gErr = (gBody.error && gBody.error.message) ? gBody.error.message : 'HTTP ' + gCode;
+      return resp({ok: false, msg: 'Gemini API: ' + gErr});
+    }
+    var gCand = gBody.candidates && gBody.candidates[0];
+    var gParts = gCand && gCand.content && gCand.content.parts;
+    if (!gParts || !gParts[0] || typeof gParts[0].text !== 'string') {
+      var fr = gCand && gCand.finishReason ? ' (finishReason: ' + gCand.finishReason + ')' : '';
+      return resp({ok: false, msg: 'Gemini no devolvió texto legible' + fr + '. Probá de nuevo o verificá que la orden sea legible.'});
+    }
+    var gRaw  = gParts[0].text.trim();
+    // Extraer el primer bloque JSON {...} de la respuesta (Gemini a veces agrega texto extra)
+    var jsonMatch = gRaw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return resp({ok: false, msg: 'Gemini no devolvió JSON válido. Respuesta: ' + gRaw.substring(0, 200)});
+    // Reemplazar saltos de línea literales dentro del JSON (JSON.parse no los tolera en strings)
+    var cleanJson = jsonMatch[0].replace(/[\r\n\t]/g, ' ').replace(/\s{2,}/g, ' ');
+    var gData = JSON.parse(cleanJson);
+    var proveedor              = gData.proveedor              || 'Sin datos';
+    var plazoTexto             = gData.plazoTexto             || 'a confirmar';
+    var plazoMaxDias           = parseInt(gData.plazoMaxDias) || 10;
+    var piezasSinDisponibilidad = Array.isArray(gData.piezasSinDisponibilidad) ? gData.piezasSinDisponibilidad : [];
+    var tieneSinDisponibilidad  = piezasSinDisponibilidad.length > 0;
+    var turnoEstimado = calcularLunesSiguiente(plazoMaxDias);
+
+    // Guardar en VerifData
+    var sheet = getSheet();
+    var rows  = sheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      if (rows[i][0] == data.id) {
+        var vd = _getVD(rows, i, sheet);
+        vd.ordenCompraId  = ordenId;
+        vd.ordenCompraUrl = ordenUrl;
+        vd.proveedor               = proveedor;
+        vd.plazoTexto              = plazoTexto;
+        vd.plazoMaxDias            = plazoMaxDias;
+        vd.piezasSinDisponibilidad = piezasSinDisponibilidad;
+        vd.tieneSinDisponibilidad  = tieneSinDisponibilidad;
+        vd.turnoEstimado           = turnoEstimado;
+        _setVD(sheet, i+1, vd);
+        return resp({ok:true, proveedor:proveedor, plazoTexto:plazoTexto,
+                     plazoMaxDias:plazoMaxDias, turnoEstimado:turnoEstimado,
+                     piezasSinDisponibilidad:piezasSinDisponibilidad,
+                     tieneSinDisponibilidad:tieneSinDisponibilidad,
+                     ordenCompraUrl:ordenUrl});
+      }
+    }
+    return resp({ok: false, msg: 'Inspección no encontrada'});
+  } catch(err) {
+    return resp({ok: false, msg: 'Error: ' + err.toString()});
+  }
+}
+
+// ── Pablo confirma el turno → mail al taller ─────────────
+function confirmarTurnoVerif(data) {
+  if (!data.id) return resp({ok: false, msg: 'ID requerido'});
+  var sheet = getSheet();
+  var rows  = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == data.id) {
+      var vd = _getVD(rows, i, sheet);
+      vd.turnoEstimado = data.turnoEstimado || vd.turnoEstimado;
+      var mailTaller = data.mailTaller || _mailTallerDe(vd, rows, i);
+      if (!mailTaller) return resp({ok: false, msg: 'Sin mail del taller'});
+      vd.mailTaller = mailTaller;
+      var token = generarToken32();
+      var exp = new Date(); exp.setDate(exp.getDate() + 60);
+      sheet.getRange(i+1, _verifCol(sheet, 'VerifToken')).setValue(token);
+      sheet.getRange(i+1, _verifCol(sheet, 'VerifTokenExp')).setValue(exp.toISOString());
+      vd.etapa = 0; vd.mailOrdenEnviado = false; vd.mailIngresoEnviado = false;
+      vd.mailFotoProcesoEnviado = false; vd.mailFotoTerminadoEnviado = false;
+      vd.turnoConfirmadoPorTaller = null; vd.fechaEstimadaFinalizacion = null;
+      vd.fotosReparacion = vd.fotosReparacion || [];
+      vd.fotosPiezas     = vd.fotosPiezas     || [];
+      vd.fotosTerminado  = vd.fotosTerminado  || [];
+      sheet.getRange(i+1, 20).setValue('Verif: En Reparacion');
+      _setVD(sheet, i+1, vd);
+      var link = APP_VERIF_URL + '?token=' + token;
+      var sin  = String(rows[i][1] || '');
+      var pat  = String(rows[i][6] || '');
+      var mod  = (String(rows[i][7]||'') + ' ' + String(rows[i][8]||'')).trim();
+      var turnoFmt = _fmtFecha(vd.turnoEstimado);
+      try {
+        _sendMail(mailTaller,
+          'Asignacion de turno estimado - Siniestro ' + sin + ' | ' + pat,
+          'ESTUDIO PATITUCCI\nPericias - Danos Materiales - Homologacion CESVI\n\n'
+          + 'Estimado taller:\n\nLos repuestos fueron adquiridos y estan en camino:\n\n'
+          + 'N Siniestro: ' + sin + '\nPatente: ' + pat + '\nModelo: ' + mod + '\n\n'
+          + 'DETALLE DE COMPRA\nProveedor: ' + (vd.proveedor||'-') + '\n'
+          + 'Plazo de entrega: ' + (vd.plazoTexto||'-') + '\n\n'
+          + 'TURNO ESTIMADO DE INGRESO: ' + turnoFmt + '\n\n'
+          + 'Ingrese al siguiente link para CONFIRMAR o MODIFICAR el turno:\n' + link
+          + '\n\nSaludos,\nEstudio Patitucci',
+          { from: 'patitucciestudio@gmail.com' });
+        vd.mailOrdenEnviado = true; _setVD(sheet, i+1, vd);
+      } catch(eM) { Logger.log('Mail confirmarTurnoVerif: ' + eM); }
+      return resp({ok: true, link: link, turnoEstimado: vd.turnoEstimado});
+    }
+  }
+  return resp({ok: false, msg: 'Inspeccion no encontrada'});
+}
+
+// ── Taller obtiene sus datos por token ─────────────────
+function getVerifTaller(verifToken) {
+  if (!verifToken) return resp({ok: false, msg: 'Token requerido'});
+  var sheet  = getSheet();
+  var rows   = sheet.getDataRange().getValues();
+  var tokCol = _verifCol(sheet, 'VerifToken');
+  var expCol = _verifCol(sheet, 'VerifTokenExp');
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][tokCol-1] === verifToken) {
+      var expVal = rows[i][expCol-1];
+      if (expVal && new Date() > new Date(expVal))
+        return resp({ok: false, msg: 'Link vencido. Contacta al estudio.'});
+      var vd = _getVD(rows, i, sheet);
+      return resp({ok: true,
+        id: rows[i][0], siniestro: rows[i][1], patente: rows[i][6],
+        modelo: (String(rows[i][7]||'') + ' ' + String(rows[i][8]||'')).trim(),
+        asegurado: rows[i][12], etapa: vd.etapa || 0, tipo: vd.tipo || 'sinRepuestos',
+        proveedor: vd.proveedor || '', plazoTexto: vd.plazoTexto || '',
+        turnoEstimado: vd.turnoEstimado || '',
+        turnoConfirmadoPorTaller: vd.turnoConfirmadoPorTaller || '',
+        fechaEstimadaFinalizacion: vd.fechaEstimadaFinalizacion || ''
+      });
+    }
+  }
+  return resp({ok: false, msg: 'Link invalido o vencido.'});
+}
+
+// ── Taller confirma o modifica el turno ────────────────
+function tallerConfirmaTurno(data) {
+  if (!data.verifToken) return resp({ok: false, msg: 'Token requerido'});
+  var sheet  = getSheet();
+  var rows   = sheet.getDataRange().getValues();
+  var tokCol = _verifCol(sheet, 'VerifToken');
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][tokCol-1] === data.verifToken) {
+      var vd = _getVD(rows, i, sheet);
+      var turnoNuevo = data.turno || vd.turnoEstimado;
+      vd.turnoConfirmadoPorTaller = turnoNuevo;
+      if (data.turno) vd.turnoEstimado = data.turno;
+      _setVD(sheet, i+1, vd);
+      try {
+        var accion = data.turno
+          ? 'modifico el turno al ' + _fmtFecha(data.turno)
+          : 'confirmo el turno del ' + _fmtFecha(vd.turnoEstimado);
+        MailApp.sendEmail({ to: 'patitucciestudio@gmail.com',
+          subject: 'Taller ' + accion + ' - Siniestro ' + rows[i][1],
+          body: 'El taller ' + accion + ' para el siniestro ' + rows[i][1]
+                + ' (Patente: ' + rows[i][6] + ').\n\nIngresa al panel para verlo.'
+        });
+      } catch(eM) {}
+      return resp({ok: true});
+    }
+  }
+  return resp({ok: false, msg: 'Token invalido'});
+}
+
+// ── Sube foto de verificacion a Drive ────────────────
+function uploadFotoVerif(data) {
+  if (!data.id || !data.foto) return resp({ok: false, msg: 'id y foto requeridos'});
+  try {
+    var folder = getOrCreateFolder('Verificacion_' + data.id);
+    try { compartirConAutorizados(folder); } catch(e) {}
+    var b64    = data.foto.replace(/^data:image\/\w+;base64,/, '');
+    var nombre = (data.tipo||'foto') + '_' + (data.idx !== undefined ? data.idx+1 : Date.now()) + '.jpg';
+    var file   = folder.createFile(Utilities.newBlob(Utilities.base64Decode(b64), 'image/jpeg', nombre));
+    try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch(e) {}
+    try { compartirConAutorizados(file); } catch(e) {}
+    var fid = file.getId();
+    return resp({ok: true, link: {viewUrl: file.getUrl(), id: fid,
+      thumbUrl: 'https://lh3.googleusercontent.com/d/' + fid + '=w400'}});
+  } catch(err) {
+    return resp({ok: false, msg: 'Error: ' + err.toString()});
+  }
+}
+
+// ── Taller registra fotos y datos por etapa ──────────────
+function tallerRegistraEtapa(data) {
+  if (!data.verifToken) return resp({ok: false, msg: 'Token requerido'});
+  var sheet  = getSheet();
+  var rows   = sheet.getDataRange().getValues();
+  var tokCol = _verifCol(sheet, 'VerifToken');
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][tokCol-1] === data.verifToken) {
+      var vd = _getVD(rows, i, sheet);
+      if (data.etapa === 1) {
+        vd.fotosProceso              = data.fotosProceso || [];
+        vd.fechaEstimadaFinalizacion = data.fechaEstimadaFinalizacion || '';
+        vd.etapa = 1;
+        // Estado sigue en "Verif: En Reparacion"
+      } else if (data.etapa === 2) {
+        vd.fotosTerminado = data.fotosTerminado || [];
+        vd.etapa = 2;
+        sheet.getRange(i+1, 20).setValue('Verif: Pendiente Aprobacion');
+      }
+      _setVD(sheet, i+1, vd);
+      try {
+        var lbl = data.etapa === 1
+          ? 'Fotos de proceso cargadas'
+          : 'Vehiculo terminado - listo para aprobacion';
+        MailApp.sendEmail({ to: 'patitucciestudio@gmail.com',
+          from: 'patitucciestudio@gmail.com',
+          subject: lbl + ' - Siniestro ' + rows[i][1],
+          body: lbl + '\nSiniestro: ' + rows[i][1] + '\nPatente: ' + rows[i][6]
+                + '\n\nIngresa al panel para revisarlo.'
+        });
+      } catch(eM) {}
+      return resp({ok: true});
+    }
+  }
+  return resp({ok: false, msg: 'Token invalido'});
+}
+
+
+function reenviarSolicitudTurno(data) {
+  if (!data.id) return resp({ok: false, msg: 'ID requerido'});
+  var sheet = getSheet();
+  var rows  = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == data.id) {
+      var vd = _getVD(rows, i, sheet);
+      var mailTaller = data.mailTaller || _mailTallerDe(vd, rows, i);
+      if (!mailTaller) return resp({ok: false, msg: 'No hay mail del taller registrado'});
+      var token = rows[i][_verifCol(sheet, 'VerifToken') - 1];
+      if (!token) return resp({ok: false, msg: 'No hay token de verificacion para este siniestro'});
+      var link     = APP_VERIF_URL + '?token=' + token;
+      var sin      = String(rows[i][1] || '');
+      var pat      = String(rows[i][6] || '');
+      var mod      = (String(rows[i][7]||'') + ' ' + String(rows[i][8]||'')).trim();
+      var turnoFmt = _fmtFecha(vd.turnoEstimado);
+      try {
+        _sendMail(mailTaller,
+          'Asignacion de turno estimado - Siniestro ' + sin + ' | ' + pat,
+          'ESTUDIO PATITUCCI\nPericias - Danos Materiales - Homologacion CESVI\n\n'
+          + 'Estimado taller:\n\nLos repuestos fueron adquiridos y estan en camino:\n\n'
+          + 'N Siniestro: ' + sin + '\nPatente: ' + pat + '\nModelo: ' + mod + '\n\n'
+          + (vd.proveedor ? 'DETALLE DE COMPRA\nProveedor: ' + vd.proveedor + '\nPlazo de entrega: ' + (vd.plazoTexto||'-') + '\n\n' : '')
+          + (turnoFmt ? 'TURNO ESTIMADO DE INGRESO: ' + turnoFmt + '\n\n' : '')
+          + 'Ingrese al siguiente link para CONFIRMAR o MODIFICAR el turno:\n' + link
+          + '\n\nSaludos,\nEstudio Patitucci',
+          { from: 'patitucciestudio@gmail.com' });
+        return resp({ok: true});
+      } catch(eM) {
+        return resp({ok: false, msg: 'Error al enviar mail: ' + eM.toString()});
+      }
+    }
+  }
+  return resp({ok: false, msg: 'Inspeccion no encontrada'});
+}
+
+function aprobarVerif(data) {
+  if (!data.id || data.usuario !== 'Administrador') return resp({ok: false, msg: 'Sin permiso'});
+  var sheet = getSheet();
+  var rows  = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] == data.id) {
+      var vd = _getVD(rows, i, sheet);
+      vd.fechaAprobacion = new Date().toISOString(); vd.etapa = 3;
+      sheet.getRange(i+1, 20).setValue('Cerradas');
+      _setVD(sheet, i+1, vd);
+      return resp({ok: true});
+    }
+  }
+  return resp({ok: false, msg: 'Inspeccion no encontrada'});
+}
+
+function setupDailyTrigger() {
+  ScriptApp.getProjectTriggers().forEach(function(t) {
+    if (t.getHandlerFunction() === 'checkVerifEmails') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('checkVerifEmails').timeBased().everyDays(1).atHour(8).create();
+  Logger.log('Trigger diario configurado.');
+}
+
+function checkVerifEmails() {
+  var sheet  = getSheet();
+  var rows   = sheet.getDataRange().getValues();
+  var tokCol = _verifCol(sheet, 'VerifToken');
+  var hoy    = _fechaHoy();
+  for (var i = 1; i < rows.length; i++) {
+    var estado = String(rows[i][19] || '');
+    if (estado !== 'Verif: En Reparacion') continue;
+    var vd    = _getVD(rows, i, sheet);
+    var token = rows[i][tokCol - 1];
+    if (!token) continue;
+    var link  = APP_VERIF_URL + '?token=' + token;
+    var sin   = String(rows[i][1] || '');
+    var pat   = String(rows[i][6] || '');
+    var mod   = (String(rows[i][7]||'') + ' ' + String(rows[i][8]||'')).trim();
+    var mailT = _mailTallerDe(vd, rows, i);
+    if (!mailT) continue;
+    var turnoFecha = _soloFecha(vd.turnoConfirmadoPorTaller || vd.turnoEstimado || '');
+    if (vd.etapa === 0 && turnoFecha === hoy && !vd.mailEtapa1Enviado) {
+      try {
+        _sendMail(mailT,
+          'Fotos de reparacion solicitadas - Siniestro ' + sin + ' | ' + pat,
+          'ESTUDIO PATITUCCI\nPericias - Danos Materiales - Homologacion CESVI\n\n'
+          + 'Estimado taller:\n\nEs el dia del turno de ingreso.\n\n'
+          + 'N Siniestro: ' + sin + '\nPatente: ' + pat + '\nModelo: ' + mod + '\n\n'
+          + 'Ingrese al link para subir las fotos del proceso:\n' + link
+          + '\n\nSaludos,\nEstudio Patitucci',
+          { from: 'patitucciestudio@gmail.com' });
+        vd.mailEtapa1Enviado = true; vd.etapa = 1;
+        _setVD(sheet, i+1, vd);
+      } catch(e) { Logger.log('Error Etapa1: ' + e); }
+    }
+    var finFecha = _soloFecha(vd.fechaEstimadaFinalizacion || '');
+    if (vd.etapa === 1 && finFecha === hoy && !vd.mailEtapa2Enviado) {
+      try {
+        _sendMail(mailT,
+          'Fotos de unidad terminada - Siniestro ' + sin + ' | ' + pat,
+          'ESTUDIO PATITUCCI\nPericias - Danos Materiales - Homologacion CESVI\n\n'
+          + 'Estimado taller:\n\nEs el dia estimado de finalizacion.\n\n'
+          + 'N Siniestro: ' + sin + '\nPatente: ' + pat + '\nModelo: ' + mod + '\n\n'
+          + 'Ingrese al link para subir las fotos del vehiculo terminado:\n' + link
+          + '\n\nSaludos,\nEstudio Patitucci',
+          { from: 'patitucciestudio@gmail.com' });
+        vd.mailEtapa2Enviado = true; vd.etapa = 2;
+        _setVD(sheet, i+1, vd);
+      } catch(e) { Logger.log('Error Etapa2: ' + e); }
+    }
+  }
+}
+
+function _fechaHoy() {
+  var d = new Date();
+  return d.getFullYear() + '-'
+    + String(d.getMonth()+1).padStart(2,'0') + '-'
+    + String(d.getDate()).padStart(2,'0');
+}
+function _soloFecha(isoStr) {
+  return String(isoStr||'').substring(0, 10);
+}
+
+// ── STUB de recuperación ──────────────────────────────────────────────
+// 'notificarPiezaSugerida' se enruta en doPost pero su definición se perdió
+// en el truncado del archivo. Este stub evita el ReferenceError y deja el
+// flujo funcionando. REEMPLAZAR por la lógica real de notificación cuando
+// se recupere (envío de mail al estudio avisando la pieza sugerida).
+function notificarPiezaSugerida(data) {
+  try {
+    var dest = (typeof mailPorCompania === 'function' && data && data.cia)
+      ? mailPorCompania(data.cia) : 'inspeccionespatitucci@gmail.com';
+    var cuerpo = 'ESTUDIO PATITUCCI\n\nUn inspector sugirió una pieza nueva.\n\n'
+      + 'Pieza: ' + ((data && data.pieza) || '-') + '\n'
+      + 'Zona: ' + ((data && data.zona) || '-') + '\n'
+      + 'Tipo vehículo: ' + ((data && data.tipo) || '-') + '\n'
+      + 'Siniestro: ' + ((data && data.sin) || '-') + '\n';
+    GmailApp.sendEmail(dest, 'Pieza sugerida por inspector', cuerpo);
+  } catch (e) {}
+  return resp({ok: true});
+}
+
+function interpretarVoz(data) {
+  if (!data.transcript || !data.piezas) return resp({ok: false, msg: 'transcript y piezas requeridos'});
+  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
+  if (!apiKey) return resp({ok: false, msg: 'GEMINI_KEY no configurada'});
+
+  var listaStr = '';
+  try {
+    listaStr = data.piezas.map(function(p, i) {
+      return i + ': ' + p.nombre + ' [' + p.zona + ']';
+    }).join('\n');
+  } catch(e) {
+    listaStr = data.piezas.map(function(p, i){ return i + ': ' + p.nombre; }).join('\n');
+  }
+
+  var prompt =
+    'Sos un asistente de peritaje automotor argentino. El inspector dicto por voz y el '
+    + 'texto puede traer ERRORES de transcripcion fonetica; interpretalo por como SUENA '
+    + '(ej: "para golpe"/"para golpes"=paragolpes, "guarda barro"=guardabarros, '
+    + '"capo"=capot, "optica"/"faro"=optica, "baul"=tapa de baul, "porton"=porton trasero).\n\n'
+    + 'TRANSCRIPCION:\n"' + data.transcript + '"\n\n'
+    + 'Tipo de vehiculo: ' + (data.tipo||'') + '\n\n'
+    + 'PIEZAS DISPONIBLES (devolve el numero "idx", NUNCA el texto):\n' + listaStr + '\n\n'
+    + 'Tareas: Reparar, Sustituir, Pintar, Difuminar. Niveles (solo Reparar): Leve, Medio, Fuerte.\n\n'
+    + 'REGLAS:\n'
+    + '1. Elegi SIEMPRE el idx de la pieza de la lista mas parecida fonetica y semanticamente. Nunca inventes.\n'
+    + '2. Componentes especificos ("moldura","soporte","bisagra","guia","absorbedor") NO son el panel '
+    +    'principal: "bisagra de capot"->la bisagra, no el capot; "soporte de paragolpes"->el soporte.\n'
+    + '3. Si no especifica lado y la pieza existe en izquierda y derecha, no la pongas en "acciones": '
+    +    'agregala a "consultar" con los idx de ambos lados en "opciones".\n'
+    + '4. "eliminar/borrar/sacar/quitar" va al array "eliminar".\n'
+    + '5. Sin nivel especificado usar "Leve". Extrae horas ("2 horas","3 hs") y panos ("2 panos") si los menciona.\n'
+    + '6. Procesa TODAS las piezas mencionadas (separadas por "y", coma, "tambien").\n'
+    + '7. Si una mencion no matchea con NINGUNA pieza de la lista, omitila (no la fuerces).\n\n'
+    + 'EJEMPLO (lista de ejemplo: "0: Capot [Frente], 1: Guardabarros del. izq. [Lat Izq], '
+    + '2: Paragolpes tras. [Trasero], 3: Puerta del. izq. [Lat Izq], 4: Puerta del. der. [Lat Der]"):\n'
+    + 'Dictado "sustituir capot y reparar fuerte el guardabarros delantero izquierdo 3 horas" -> '
+    + '{"acciones":[{"idx":0,"tarea":"Sustituir","nivel":null,"horas":null,"panos":null},'
+    + '{"idx":1,"tarea":"Reparar","nivel":"Fuerte","horas":3,"panos":null}],"consultar":[],"eliminar":[]}\n'
+    + 'Dictado "pintar la puerta delantera, 2 panos" -> '
+    + '{"acciones":[],"consultar":[{"opciones":[3,4],"tarea":"Pintar","nivel":null,"horas":null,"panos":2}],"eliminar":[]}\n'
+    + 'Dictado "sacar el paragolpes trasero" -> '
+    + '{"acciones":[],"consultar":[],"eliminar":[{"idx":2,"tarea":"Sustituir"}]}';
+
+  try {
+    var gRes = UrlFetchApp.fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey,
+      { method:'post', contentType:'application/json', muteHttpExceptions:true,
+        payload: JSON.stringify({
+          contents:[{ parts:[{ text: prompt }] }],
+          generationConfig:{
+            temperature: 0.1,
+            responseMimeType: 'application/json',
+            thinkingConfig: { thinkingBudget: 0 }
+          }
+        })
+      }
+    );
+    if (gRes.getResponseCode() !== 200) {
+      return resp({ok: false, msg: 'Gemini HTTP ' + gRes.getResponseCode()});
+    }
+    var json = JSON.parse(gRes.getContentText());
+    var texto = '';
+    try {
+      texto = json.candidates[0].content.parts[0].text || '';
+    } catch(e) {
+      return resp({ok: false, msg: 'Respuesta de Gemini sin contenido'});
+    }
+    // Limpiar posibles fences de markdown por las dudas
+    texto = texto.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/, '').trim();
+    var parsed;
+    try {
+      parsed = JSON.parse(texto);
+    } catch(e) {
+      return resp({ok: false, msg: 'No se pudo interpretar la respuesta de voz'});
+    }
+    return resp({
+      ok: true,
+      acciones: parsed.acciones || [],
+      consultar: parsed.consultar || [],
+      eliminar: parsed.eliminar || []
+    });
+  } catch(err) {
+    return resp({ok: false, msg: 'Error al consultar Gemini: ' + err});
+  }
 }
