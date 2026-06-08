@@ -941,9 +941,10 @@
       <!-- ═══ FIN CALCULADOR ═══ -->
 
       <div id="panel-rel" style="display:none">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
           <button class="btn-secondary btn-sm" onclick="cerrarRel()">← Volver</button>
-          <h3 style="font-size:15px;font-weight:600" id="rel-titulo">Relevamiento</h3>
+          <h3 style="font-size:15px;font-weight:600;flex:1" id="rel-titulo">Relevamiento</h3>
+          <button id="btn-modo-campo" class="btn-secondary btn-sm" onclick="toggleModoCampo()" title="Alto contraste para uso al sol" style="flex-shrink:0">☀ Modo campo</button>
         </div>
         <div id="rel-devs" style="display:none"></div>
 
@@ -1029,7 +1030,7 @@
           <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
             <div style="display:flex;flex-direction:column;gap:3px">
               <span style="font-size:12px;color:var(--text2)">Total horas estimadas</span>
-              <span id="calc-guardado" style="font-size:11px;color:var(--green);opacity:0;transition:opacity .4s">✓ Guardado</span>
+              <span id="calc-guardado" style="font-size:11px;color:var(--green);transition:color .3s">…</span>
             </div>
             <span id="rel-calc-total" style="font-size:20px;font-weight:600;color:var(--accent);font-family:'DM Mono',monospace">0 hs</span>
           </div>
@@ -1612,7 +1613,7 @@ function renderDashboard(){
     'paragolpe':'paragolpes'
   };
   function _normSug(str){
-    var s=(str||'').toLowerCase()
+    var s=String(str||'').toLowerCase()
       .replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i')
       .replace(/[óòö]/g,'o').replace(/[úùü]/g,'u').replace(/ñ/g,'n')
       .replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
@@ -2393,7 +2394,7 @@ function renderStats(){
     if(porEstado[i.Estado]!==undefined)porEstado[i.Estado]++;
     porInsp[i.Inspector]=(porInsp[i.Inspector]||0)+1;
     if(i.Compania)porCia[i.Compania]=(porCia[i.Compania]||0)+1;
-    var t=(i.Tipo||'').toLowerCase();
+    var t=String(i.Tipo||'').toLowerCase();
     if(t.includes('total'))porTipo['Daño Total']++;
     else if(t.includes('parcial'))porTipo['Daño Parcial']++;
     else porTipo['Otros']++;
@@ -2867,7 +2868,7 @@ function _checkDuplicado(sin,pat){
   var dups=[];
   inspecciones.forEach(function(i){
     var sinMatch=sin&&String(i.Siniestro||'').trim()===String(sin).trim();
-    var patMatch=pat&&(i.Patente||'').toUpperCase().trim()===pat.toUpperCase().trim();
+    var patMatch=pat&&String(i.Patente||'').toUpperCase().trim()===String(pat).toUpperCase().trim();
     if((sinMatch||patMatch)&&!dups.find(function(d){return d.insp.ID===i.ID;}))
       dups.push({insp:i,campo:sinMatch?'siniestro':'patente'});
   });
@@ -3524,9 +3525,8 @@ function guardarBorrador(){
     cuit:s('rel-cuit').value,dirTaller:s('rel-dir-taller')?s('rel-dir-taller').value:'',locTaller:s('rel-loc-taller')?s('rel-loc-taller').value:'',
     costoDiaChapa:relCostoDiaChapa,costoHoraMecánica:relCostoHoraMecánica,costoPanoPintura:relCostoPanoPintura,ts:Date.now()};
   try{localStorage.setItem('bdr_'+relId,JSON.stringify(bd));}catch(e){}
-  // R5 — indicador de guardado
-  var ind=s('calc-guardado');
-  if(ind){ind.style.opacity='1';clearTimeout(ind._t);ind._t=setTimeout(function(){ind.style.opacity='0';},2500);}
+  _r5LastSaveTs = Date.now();
+  _r5ActualizarIndicador();
 }
 
 ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit','rel-dir-taller','rel-loc-taller'].forEach(function(id){
@@ -3629,7 +3629,12 @@ function abrirRel(id){
   }).catch(function(){});
 }
 
-function cerrarRel(){hide('panel-rel');inspTab('abiertas');actualizarBadgesInspector();}
+function cerrarRel(){
+  // R4 — limpiar modo campo al salir del relevamiento
+  var pr=s('panel-rel');if(pr)pr.classList.remove('modo-campo');
+  var btn=s('btn-modo-campo');if(btn)btn.classList.remove('activo');
+  hide('panel-rel');inspTab('abiertas');actualizarBadgesInspector();
+}
 
 // ─── INFO AUTO (card de solo lectura en panel-rel) ────────────────────────────
 function relLlenarInfoAuto(insp){
@@ -3666,7 +3671,7 @@ function relLlenarInfoAuto(insp){
 // ─── AUTO-ASIGNACIÓN DE TIPO DE VEHÍCULO ─────────────────────────────────────
 function autoAsignarTipoVehiculo(modelo){
   var sel=s('rel-calc-tipo');if(!sel||!modelo)return;
-  var m=modelo.toLowerCase();
+  var m=String(modelo).toLowerCase();
   var tipo='';
 
   // ── Pickups (primero para que no caigan en sedan) ──────────────────────────
@@ -4701,8 +4706,8 @@ function generarPDFCompleto(id){
     +'<footer>Estudio Patitucci · estudiopatitucci.com.ar · Homologado CESVI Argentina · '+fecha+'</footer>'
     +'</body></html>';
 
-  var sinNum=(i.Siniestro||'siniestro').replace(/[^a-zA-Z0-9]/g,'_');
-  var patNum=(i.Patente||'').replace(/\s/g,'');
+  var sinNum=String(i.Siniestro||'siniestro').replace(/[^a-zA-Z0-9]/g,'_');
+  var patNum=String(i.Patente||'').replace(/\s/g,'');
   var filename='Pericial_'+sinNum+(patNum?'_'+patNum:'')+'_'+new Date().toISOString().slice(0,10)+'.pdf';
   mostrarVistaPrevia(html,filename);
 }
@@ -6610,7 +6615,7 @@ function gridInitFromState(){
 
 // Normalización igual a prueba-voz.html
 function vozNorm(str) {
-  return (str||'').toLowerCase()
+  return String(str||'').toLowerCase()
     .replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i')
     .replace(/ó/g,'o').replace(/ú/g,'u').replace(/ñ/g,'n')
     .replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
@@ -6919,37 +6924,71 @@ function vozMostrarConsultaLado(consultas, idx) {
   opciones.push('Ambas');
   btns.innerHTML = opciones.map(function(op, i) {
     var label = op === 'Ambas' ? 'Ambas' : /izquierd|izq/i.test(op) ? 'Izquierda' : /derech|der/i.test(op) ? 'Derecha' : op;
-    return '<button onclick="vozConfirmarLado('+idx+','+i+')" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;margin:2px">'+label+'</button>';
+    return '<button class="btn-sm btn-secondary" data-op="'+esc(op)+'" onclick="vozConfirmarLado('+idx+', this.getAttribute(\'data-op\'))">'+esc(label)+'</button>';
   }).join('');
   panel.style.display = 'block';
 }
-function vozConfirmarLado(idx, opcionIdx) {
-  var consultas = _vozConsultasPendientes;
-  if (!consultas || idx >= consultas.length) return;
+
+function vozConfirmarLado(idx, opcion) {
+  var consultas = _vozConsultasPendientes || [];
   var c = consultas[idx];
-  var hs    = (c.horas  != null) ? parseFloat(c.horas)  : null;
-  var panos = (c.panos  != null) ? parseFloat(c.panos)  : null;
-  var nivel = c.nivel && c.nivel !== 'null' ? c.nivel : 'Leve';
-  var seleccionadas = opcionIdx >= c.opciones.length ? c.opciones : [c.opciones[opcionIdx]];
-  seleccionadas.forEach(function(nombre) {
-    var ctx = vozBuscarPiezaPorNombre(nombre, c.zona);
-    if (!ctx) return;
-    vozAgregarTarea(ctx.zona, ctx.pieza, c.tarea, nivel, hs, panos);
-  });
-  gridRender(); guardarBorrador();
-  vozSetFeedback(seleccionadas.join(' + ') + ' agregado', 'voz-ok');
-  if (idx + 1 < consultas.length) {
-    vozMostrarConsultaLado(consultas, idx + 1);
-  } else {
-    setTimeout(vozOcultarConsultaLado, 2000);
+  if (c) {
+    var objetivos = opcion === 'Ambas' ? c.opciones.slice() : [opcion];
+    var nuevas = 0;
+    objetivos.forEach(function(nombre) {
+      var ctx = vozBuscarPiezaPorNombre(nombre, c.zona);
+      if (!ctx) return;
+      var hs    = (c.horas != null && c.horas !== 'null') ? parseFloat(c.horas) : null;
+      var panos = (c.panos != null && c.panos !== 'null') ? parseFloat(c.panos) : null;
+      var nivel = c.nivel && c.nivel !== 'null' ? c.nivel : 'Leve';
+      if (vozAgregarTarea(ctx.zona, ctx.pieza, c.tarea || 'Reparar', nivel, hs, panos)) nuevas++;
+    });
+    if (nuevas > 0) { gridRender(); guardarBorrador(); }
   }
+  vozMostrarConsultaLado(consultas, idx + 1);
 }
+
 function vozOcultarConsultaLado() {
-  var panel = document.getElementById("voz-consulta-lado");
-  if (panel) panel.style.display = "none";
+  var panel = document.getElementById('voz-consulta-lado');
+  if (panel) panel.style.display = 'none';
   _vozConsultasPendientes = [];
 }
 
+
+// -- R4: Modo campo --
+function toggleModoCampo() {
+  var panel = document.getElementById('panel-rel');
+  var btn   = document.getElementById('btn-modo-campo');
+  if (!panel) return;
+  var activo = panel.classList.toggle('modo-campo');
+  if (btn) {
+    btn.textContent = activo ? 'Modo campo ON' : '☀ Modo campo';
+    btn.classList.toggle('activo', activo);
+  }
+}
+
+// -- R5: Indicador de guardado siempre visible --
+var _r5LastSaveTs = null;
+
+function _r5ActualizarIndicador() {
+  var ind = document.getElementById('calc-guardado');
+  if (!ind) return;
+  if (!_r5LastSaveTs) { ind.textContent = ''; return; }
+  if (!navigator.onLine) {
+    ind.textContent = '⚠ Sin conexion - guardado local';
+    ind.style.color = 'var(--yellow)';
+    return;
+  }
+  var seg = Math.round((Date.now() - _r5LastSaveTs) / 1000);
+  ind.style.color = seg < 60 ? 'var(--green)' : 'var(--text2)';
+  if (seg < 5)       ind.textContent = '✓ Guardado';
+  else if (seg < 60) ind.textContent = '✓ Guardado hace ' + seg + ' seg';
+  else               ind.textContent = '✓ Guardado hace ' + Math.floor(seg/60) + ' min';
+}
+
+setInterval(_r5ActualizarIndicador, 10000);
+window.addEventListener('online',  _r5ActualizarIndicador);
+window.addEventListener('offline', _r5ActualizarIndicador);
 </script>
 </body>
 </html>
