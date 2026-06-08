@@ -317,6 +317,11 @@ tr:hover td{background:rgba(255,255,255,.02)}
 /* ── R4: Modo campo (alto contraste para uso al sol) ── */
 #panel-rel.modo-campo{background:#fff !important;color:#111 !important}
 #panel-rel.modo-campo .card{background:#f5f5f5 !important;border-color:#ccc !important;color:#111 !important}
+#panel-rel.modo-campo #rel-info-auto{background:#f0f0f0 !important;border-color:#ccc !important}
+#panel-rel.modo-campo #rel-info-grid > div{background:#fff !important;border-color:#bbb !important}
+#panel-rel.modo-campo #rel-info-grid span{color:#111 !important}
+#panel-rel.modo-campo .btn-secondary{background:#e5e7eb !important;color:#111 !important;border-color:#9ca3af !important}
+#panel-rel.modo-campo .btn-primary{background:#2563eb !important;color:#fff !important}
 #panel-rel.modo-campo .section-title,
 #panel-rel.modo-campo label,
 #panel-rel.modo-campo p,
