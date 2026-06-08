@@ -322,6 +322,10 @@ tr:hover td{background:rgba(255,255,255,.02)}
 #panel-rel.modo-campo #rel-info-grid span{color:#111 !important}
 #panel-rel.modo-campo .btn-secondary{background:#e5e7eb !important;color:#111 !important;border-color:#9ca3af !important}
 #panel-rel.modo-campo .btn-primary{background:#2563eb !important;color:#fff !important}
+#panel-rel.modo-campo #taller-dropdown{background:#fff !important;border-color:#ccc !important;box-shadow:0 4px 16px rgba(0,0,0,.1) !important}
+#panel-rel.modo-campo #taller-dropdown > div{border-color:#ddd !important;color:#111 !important}
+#panel-rel.modo-campo #taller-dropdown strong{color:#111 !important}
+#panel-rel.modo-campo #taller-dropdown span{color:#555 !important}
 #panel-rel.modo-campo .section-title,
 #panel-rel.modo-campo label,
 #panel-rel.modo-campo p,
