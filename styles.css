@@ -313,3 +313,30 @@ tr:hover td{background:rgba(255,255,255,.02)}
 #voz-transcript{font-size:12px;color:var(--text2);font-style:italic;min-height:16px;margin-bottom:4px}
 #voz-feedback{font-size:12px;min-height:16px}
 .voz-ok{color:#4ade80}.voz-warn{color:#fbbf24}.voz-err{color:#f87171}
+
+/* ── R4: Modo campo (alto contraste para uso al sol) ── */
+#panel-rel.modo-campo{background:#fff !important;color:#111 !important}
+#panel-rel.modo-campo .card{background:#f5f5f5 !important;border-color:#ccc !important;color:#111 !important}
+#panel-rel.modo-campo .section-title,
+#panel-rel.modo-campo label,
+#panel-rel.modo-campo p,
+#panel-rel.modo-campo span:not(.pill):not(.badge):not(#calc-guardado),
+#panel-rel.modo-campo h3,
+#panel-rel.modo-campo td,
+#panel-rel.modo-campo th{color:#111 !important}
+#panel-rel.modo-campo input,
+#panel-rel.modo-campo select,
+#panel-rel.modo-campo textarea{background:#fff !important;border-color:#999 !important;color:#111 !important;font-size:16px !important;padding:12px 14px !important}
+#panel-rel.modo-campo button{font-size:15px !important;padding:12px 20px !important;min-height:46px}
+#panel-rel.modo-campo .btn-sm{font-size:13px !important;padding:9px 14px !important;min-height:36px}
+#panel-rel.modo-campo .acc-header{background:#e8e8e8 !important;color:#111 !important}
+#panel-rel.modo-campo .acc-header:hover{background:#ddd !important}
+#panel-rel.modo-campo .acc-body{background:#f5f5f5 !important}
+#panel-rel.modo-campo .acc-zona-nombre{color:#111 !important}
+#panel-rel.modo-campo .piece-name{color:#111 !important;font-size:15px !important}
+#panel-rel.modo-campo .nivel-btn{background:#fff !important;border-color:#999 !important;color:#333 !important}
+#panel-rel.modo-campo .nivel-btn.on{border-color:#2563eb !important;color:#2563eb !important;background:rgba(37,99,235,.1) !important}
+#panel-rel.modo-campo .task-btn{font-size:13px !important;width:38px !important;height:36px !important}
+#panel-rel.modo-campo #voz-panel{background:#eee !important;border-color:#ccc !important;color:#111 !important}
+#panel-rel.modo-campo #rel-devs .dev-burbuja{background:#e8f0fe !important;color:#1a3a7c !important;border-color:#b0c8f5 !important}
+#btn-modo-campo.activo{background:#f59e0b !important;color:#111 !important;border-color:#d97706 !important}
