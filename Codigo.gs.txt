@@ -3,6 +3,7 @@ var SHEET_NAME = 'Inspecciones';
 var ARCHIVO_NAME = 'Archivo';
 var USUARIOS_NAME = 'Usuarios';
 var TALLERES_NAME = 'Talleres';
+var MAILCONFIG_NAME = 'MailConfig';
 
 // Backup automático: carpeta destino en Drive y cuántos días de copias conservar
 var BACKUP_FOLDER_NAME = 'Backups App Estudio Patitucci';
@@ -72,6 +73,139 @@ function _withLock(fn) {
   }
 }
 
+// ════════════════════════════════════════════════════════
+//  TEMPLATES DE MAILS — MailConfig Sheet
+// ════════════════════════════════════════════════════════
+
+// Textos por defecto para cada template (fallback si la Sheet está vacía)
+var MAIL_DEFAULTS = {
+  inspeccion_asignada: {
+    label: 'Inspección asignada al inspector',
+    asunto: 'Inspeccion asignada - Siniestro {{sin}}',
+    cuerpo: 'ESTUDIO PATITUCCI\nPericias - Danos Materiales - Homologacion CESVI\n\nHola {{inspector}},\n\nTe asignamos la siguiente inspeccion para el {{finsp}}:\n\nSINIESTRO\nN Siniestro: {{sin}}\nCompania: {{cia}}\nTipo: {{tipo}}\nFecha siniestro: {{fsin}}\n\nVEHICULO\nPatente: {{pat}}\nMarca/Modelo: {{mod}} ({{anio}})\nN Chasis: {{chasis}}\nN Motor: {{motor}}\nKilometraje: {{km}}\n\nLUGAR\nAsegurado/Taller: {{aseg}}\nTelefono: {{tel}}\nDireccion: {{dir}}, {{localidad}}\n\nDANOS DECLARADOS\n{{danos}}\n\nRecorda que el plazo maximo para registrar el resultado es de 48 hs.\n\nTene en cuenta que realizar correctamente la carga sera condicion indispensable para cobrar la totalidad de tus honorarios.\n\nSaludos,\nEstudio Patitucci'
+  },
+  recordatorio: {
+    label: 'Recordatorio inspección pendiente',
+    asunto: 'Recordatorio: Inspeccion pendiente - Siniestro {{siniestro}}',
+    cuerpo: 'ESTUDIO PATITUCCI\nPericias - Danos Materiales - Homologacion CESVI\n\nHola {{inspector}},\n\nTe recordamos que tenes una inspeccion pendiente de carga:\n\nN Siniestro: {{siniestro}}\nPatente: {{patente}}\nDireccion: {{direccion}}\nFecha de inspeccion: {{finsp}}\n\nPor favor, completa la carga del relevamiento a la brevedad.\n\nRecorda que el plazo maximo para registrar el resultado es de 48 hs.\n\nSaludos,\nEstudio Patitucci'
+  },
+  relevamiento_cargado: {
+    label: 'Aviso: relevamiento cargado (admin)',
+    asunto: 'Relevamiento cargado - Siniestro {{sin}}',
+    cuerpo: 'ESTUDIO PATITUCCI\n\nEl inspector {{inspector}} acaba de cargar el relevamiento del siniestro {{sin}}.\n\nDATOS DE LA INSPECCION\nCompania: {{cia}}\nPatente: {{pat}}\nModelo: {{mod}} ({{anio}})\nAsegurado/Taller: {{aseg}}\n\nLa inspeccion quedo en estado "Pendiente de verificar".\n\nIngresa a la app para revisarlo:\nhttps://estudiopatitucci.com.ar'
+  },
+  relevamiento_taller: {
+    label: 'Aviso: relevamiento de taller recibido (admin)',
+    asunto: 'Relevamiento de taller recibido — Siniestro {{sin}}',
+    cuerpo: 'ESTUDIO PATITUCCI\nPericias - Daños Materiales - Homologación CESVI\n\nEl taller cargó el relevamiento de la siguiente inspección:\n\nN° Siniestro: {{sin}}\nPatente: {{pat}}\nModelo: {{mod}}\nTaller: {{taller}}\n\nLa inspección fue movida a "Pendiente de verificar".\nIngresá al panel para revisarla.\n\nSaludos,\nEstudio Patitucci'
+  },
+  taller_turno: {
+    label: 'Aviso: taller confirmó/modificó turno (admin)',
+    asunto: 'Taller {{accion}} - Siniestro {{sin}}',
+    cuerpo: 'El taller {{accion}} para el siniestro {{sin}} (Patente: {{pat}}).\n\nIngresa al panel para verlo.'
+  },
+  taller_etapa: {
+    label: 'Aviso: taller subió fotos de etapa (admin)',
+    asunto: '{{lbl}} - Siniestro {{sin}}',
+    cuerpo: '{{lbl}}\nSiniestro: {{sin}}\nPatente: {{pat}}\n\nIngresa al panel para revisarlo.'
+  }
+};
+
+function _getMailConfigSheet() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName(MAILCONFIG_NAME);
+  if (!sh) {
+    sh = ss.insertSheet(MAILCONFIG_NAME);
+    sh.appendRow(['key', 'asunto', 'cuerpo', 'fechaMod']);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+// Lee todos los templates de la Sheet. Devuelve objeto {key: {asunto, cuerpo}}
+function _leerMailConfig() {
+  var sh = _getMailConfigSheet();
+  var rows = sh.getDataRange().getValues();
+  var cfg = {};
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0]) cfg[rows[i][0]] = { asunto: rows[i][1] || '', cuerpo: rows[i][2] || '' };
+  }
+  return cfg;
+}
+
+// Obtiene asunto y cuerpo para una key, con fallback a MAIL_DEFAULTS
+function _getTpl(key) {
+  var cfg = _leerMailConfig();
+  var def = MAIL_DEFAULTS[key] || { asunto: '', cuerpo: '' };
+  return {
+    asunto: (cfg[key] && cfg[key].asunto) ? cfg[key].asunto : def.asunto,
+    cuerpo: (cfg[key] && cfg[key].cuerpo) ? cfg[key].cuerpo : def.cuerpo
+  };
+}
+
+// Reemplaza variables {{var}} en un string
+function _tplReplace(str, vars) {
+  return str.replace(/\{\{(\w+)\}\}/g, function(_, k) {
+    return (vars[k] !== undefined && vars[k] !== null) ? String(vars[k]) : '';
+  });
+}
+
+// Endpoint: devuelve todos los templates (defaults + overrides de la Sheet)
+function getMailTemplates() {
+  var cfg = _leerMailConfig();
+  var result = [];
+  Object.keys(MAIL_DEFAULTS).forEach(function(key) {
+    var def = MAIL_DEFAULTS[key];
+    var override = cfg[key] || {};
+    result.push({
+      key: key,
+      label: def.label,
+      asunto: override.asunto || def.asunto,
+      cuerpo: override.cuerpo || def.cuerpo,
+      modificado: !!(override.asunto || override.cuerpo)
+    });
+  });
+  return resp({ ok: true, templates: result });
+}
+
+// Endpoint: guarda un template en la Sheet
+function saveMailTemplate(data) {
+  if (data.usuario !== 'Administrador') return resp({ ok: false, msg: 'Sin permiso.' });
+  var key    = _str(data.key, 60);
+  var asunto = _str(data.asunto, 500);
+  var cuerpo = _str(data.cuerpo, 5000);
+  if (!key || !MAIL_DEFAULTS[key]) return resp({ ok: false, msg: 'Template inválido.' });
+  var sh   = _getMailConfigSheet();
+  var rows = sh.getDataRange().getValues();
+  var ahora = new Date().toISOString();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] === key) {
+      sh.getRange(i+1, 2).setValue(asunto);
+      sh.getRange(i+1, 3).setValue(cuerpo);
+      sh.getRange(i+1, 4).setValue(ahora);
+      return resp({ ok: true });
+    }
+  }
+  sh.appendRow([key, asunto, cuerpo, ahora]);
+  return resp({ ok: true });
+}
+
+// Endpoint: restaura un template a su valor por defecto
+function resetMailTemplate(data) {
+  if (data.usuario !== 'Administrador') return resp({ ok: false, msg: 'Sin permiso.' });
+  var key = _str(data.key, 60);
+  if (!key || !MAIL_DEFAULTS[key]) return resp({ ok: false, msg: 'Template inválido.' });
+  var sh   = _getMailConfigSheet();
+  var rows = sh.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] === key) {
+      sh.deleteRow(i+1);
+      return resp({ ok: true });
+    }
+  }
+  return resp({ ok: true }); // no existía override, ya estaba en default
+}
+
 function doPost(e) {
   try {
     if (!e || !e.postData || !e.postData.contents) {
@@ -122,6 +256,12 @@ function doPost(e) {
     if (action === 'reenviarSolicitudTurno') return _withLock(function(){ return reenviarSolicitudTurno(data); });
     if (action === 'notificarPiezaSugerida') return notificarPiezaSugerida(data);
     if (action === 'interpretarVoz') return interpretarVoz(data);
+    // Templates de mails
+    if (action === 'getMailTemplates')    return getMailTemplates();
+    if (action === 'saveMailTemplate')    return _withLock(function(){ return saveMailTemplate(data); });
+    if (action === 'resetMailTemplate')   return _withLock(function(){ return resetMailTemplate(data); });
+    if (action === 'getResumenHonorarios')  return getResumenHonorarios(data);
+    if (action === 'enviarResumenHonorario') return enviarResumenHonorarioManual(data);
     return resp({ok:false, msg:'Accion desconocida'});
   } catch(err) {
     Logger.log('doPost error: ' + err + ' | ' + (err && err.stack));
@@ -333,17 +473,10 @@ function actualizarInspeccion(data) {
         // Notificar al estudio que el inspector cargo el relevamiento
         try {
           var destinatario = mailPorCompania(rows[i][2]);
-          var asuntoAviso = 'Relevamiento cargado - Siniestro ' + rows[i][1];
-          var cuerpoAviso = 'ESTUDIO PATITUCCI\n\n'
-            + 'El inspector ' + rows[i][17] + ' acaba de cargar el relevamiento del siniestro ' + rows[i][1] + '.\n\n'
-            + 'DATOS DE LA INSPECCION\n'
-            + 'Compania: ' + rows[i][2] + '\n'
-            + 'Patente: ' + rows[i][6] + '\n'
-            + 'Modelo: ' + rows[i][7] + ' (' + rows[i][8] + ')\n'
-            + 'Asegurado/Taller: ' + rows[i][12] + '\n\n'
-            + 'La inspeccion quedo en estado "Pendiente de verificar".\n\n'
-            + 'Ingresa a la app para revisarlo:\nhttps://estudiopatitucci.com.ar\n';
-          GmailApp.sendEmail(destinatario, asuntoAviso, cuerpoAviso);
+          var tplRC = _getTpl('relevamiento_cargado');
+          var varsRC = { sin: rows[i][1], inspector: rows[i][17], cia: rows[i][2],
+            pat: rows[i][6], mod: rows[i][7], anio: rows[i][8], aseg: rows[i][12] };
+          GmailApp.sendEmail(destinatario, _tplReplace(tplRC.asunto, varsRC), _tplReplace(tplRC.cuerpo, varsRC));
         } catch(eMail) {}
         // Devolver links al frontend
         if (rel.fotosLinks) {
@@ -462,33 +595,17 @@ function _sendMail(to, asunto, cuerpo, opciones) {
 }
 
 function enviarMail(data) {
-  var asunto = 'Inspeccion asignada - Siniestro ' + data.sin;
-  var cuerpo = 'ESTUDIO PATITUCCI\n'
-    + 'Pericias - Danos Materiales - Homologacion CESVI\n\n'
-    + 'Hola ' + data.inspector + ',\n\n'
-    + 'Te asignamos la siguiente inspeccion para el ' + data.finsp + ':\n\n'
-    + 'SINIESTRO\n'
-    + 'N Siniestro: ' + data.sin + '\n'
-    + 'Compania: ' + data.cia + '\n'
-    + 'Tipo: ' + data.tipo + '\n'
-    + 'Fecha siniestro: ' + data.fsin + '\n\n'
-    + 'VEHICULO\n'
-    + 'Patente: ' + data.pat + '\n'
-    + 'Marca/Modelo: ' + data.mod + ' (' + data.anio + ')\n'
-    + 'N Chasis: ' + data.chasis + '\n'
-    + 'N Motor: ' + data.motor + '\n'
-    + 'Kilometraje: ' + data.km + '\n\n'
-    + 'LUGAR\n'
-    + 'Asegurado/Taller: ' + data.aseg + '\n'
-    + 'Telefono: ' + data.tel + '\n'
-    + 'Direccion: ' + data.dir + ', ' + data.localidad + '\n\n'
-    + 'DANOS DECLARADOS\n'
-    + data.danos + '\n\n'
-    + 'Recorda que el plazo maximo para registrar el resultado es de 48 hs.\n\n'
-    + 'Tene en cuenta que realizar correctamente la carga sera condicion indispensable para cobrar la totalidad de tus honorarios.\n\n'
-    + 'Saludos,\n'
-    + 'Estudio Patitucci';
-
+  var tpl = _getTpl('inspeccion_asignada');
+  var vars = { sin: data.sin, inspector: data.inspector, finsp: data.finsp,
+    cia: data.cia, tipo: data.tipo, fsin: data.fsin, pat: data.pat,
+    mod: data.mod, anio: data.anio, chasis: data.chasis, motor: data.motor,
+    km: data.km, aseg: data.aseg, tel: data.tel, dir: data.dir, localidad: data.localidad,
+    danos: data.danos };
+  var asunto = _tplReplace(tpl.asunto, vars);
+  // Si el admin editó la vista previa, usar ese texto; si no, generar desde template.
+  var cuerpo = (data.mailBody && String(data.mailBody).trim())
+    ? String(data.mailBody).trim()
+    : _tplReplace(tpl.cuerpo, vars);
   var remitente = mailPorCompania(data.cia);
   try {
     GmailApp.sendEmail(data.mail, asunto, cuerpo, {from: remitente});
@@ -499,20 +616,11 @@ function enviarMail(data) {
 
 function enviarRecordatorio(data) {
   try {
-    var asunto = 'Recordatorio: Inspeccion pendiente - Siniestro ' + data.siniestro;
-    var cuerpo = 'ESTUDIO PATITUCCI\n'
-      + 'Pericias - Danos Materiales - Homologacion CESVI\n\n'
-      + 'Hola ' + data.inspector + ',\n\n'
-      + 'Te recordamos que tenes una inspeccion pendiente de carga:\n\n'
-      + 'N Siniestro: ' + data.siniestro + '\n'
-      + 'Patente: ' + data.patente + '\n'
-      + 'Direccion: ' + data.direccion + '\n'
-      + 'Fecha de inspeccion: ' + data.finsp + '\n\n'
-      + 'Por favor, completa la carga del relevamiento a la brevedad.\n\n'
-      + 'Recorda que el plazo maximo para registrar el resultado es de 48 hs.\n\n'
-      + 'Saludos,\n'
-      + 'Estudio Patitucci';
-
+    var tpl = _getTpl('recordatorio');
+    var vars = { siniestro: data.siniestro, inspector: data.inspector,
+      patente: data.patente, direccion: data.direccion, finsp: data.finsp };
+    var asunto = _tplReplace(tpl.asunto, vars);
+    var cuerpo = _tplReplace(tpl.cuerpo, vars);
     var remitente = mailPorCompania(data.cia || data.compania || '');
     try {
       GmailApp.sendEmail(data.mail, asunto, cuerpo, {from: remitente});
@@ -783,24 +891,11 @@ function recibirRelTaller(data) {
       sheet.getRange(i+1, 26).setValue('');
       // Notificar al administrador
       try {
-        var siniestro = rows[i][1] || '-';
-        var patente   = rows[i][6] || '-';
-        var modelo    = rows[i][7] || '-';
-        var tallerNombre = rel.taller || 'Sin nombre';
-        MailApp.sendEmail({
-          to: 'patitucciestudio@gmail.com',
-          subject: 'Relevamiento de taller recibido — Siniestro ' + siniestro,
-          body: 'ESTUDIO PATITUCCI\n'
-            + 'Pericias - Daños Materiales - Homologación CESVI\n\n'
-            + 'El taller cargó el relevamiento de la siguiente inspección:\n\n'
-            + 'N° Siniestro: ' + siniestro + '\n'
-            + 'Patente: ' + patente + '\n'
-            + 'Modelo: ' + modelo + '\n'
-            + 'Taller: ' + tallerNombre + '\n\n'
-            + 'La inspección fue movida a "Pendiente de verificar".\n'
-            + 'Ingresá al panel para revisarla.\n\n'
-            + 'Saludos,\nEstudio Patitucci'
-        });
+        var tplRT = _getTpl('relevamiento_taller');
+        var varsRT = { sin: rows[i][1]||'-', pat: rows[i][6]||'-', mod: rows[i][7]||'-', taller: rel.taller||'Sin nombre' };
+        MailApp.sendEmail({ to: 'patitucciestudio@gmail.com',
+          subject: _tplReplace(tplRT.asunto, varsRT),
+          body:    _tplReplace(tplRT.cuerpo, varsRT) });
       } catch(eM) {}
       return resp({ok: true});
     }
@@ -1252,9 +1347,9 @@ function parsearRespuestaGemini(text) {
   try {
     // Limpiar posibles restos de markdown que Gemini a veces agrega igual
     var clean = text.trim()
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/\s*```$/i, '');
+      .replace(new RegExp('^```json\\s*', 'i'), '')
+      .replace(new RegExp('^```\\s*', 'i'), '')
+      .replace(new RegExp('\\s*```$', 'i'), '');
 
     var arr = JSON.parse(clean);
     if (!Array.isArray(arr)) return null;
@@ -1932,11 +2027,11 @@ function tallerConfirmaTurno(data) {
         var accion = data.turno
           ? 'modifico el turno al ' + _fmtFecha(data.turno)
           : 'confirmo el turno del ' + _fmtFecha(vd.turnoEstimado);
+        var tplTT = _getTpl('taller_turno');
+        var varsTT = { sin: String(rows[i][1]||'-'), pat: String(rows[i][6]||'-'), accion: accion };
         MailApp.sendEmail({ to: 'patitucciestudio@gmail.com',
-          subject: 'Taller ' + accion + ' - Siniestro ' + rows[i][1],
-          body: 'El taller ' + accion + ' para el siniestro ' + rows[i][1]
-                + ' (Patente: ' + rows[i][6] + ').\n\nIngresa al panel para verlo.'
-        });
+          subject: _tplReplace(tplTT.asunto, varsTT),
+          body:    _tplReplace(tplTT.cuerpo, varsTT) });
       } catch(eM) {}
       return resp({ok: true});
     }
@@ -1987,12 +2082,12 @@ function tallerRegistraEtapa(data) {
         var lbl = data.etapa === 1
           ? 'Fotos de proceso cargadas'
           : 'Vehiculo terminado - listo para aprobacion';
+        var tplTE = _getTpl('taller_etapa');
+        var varsTE = { sin: String(rows[i][1]||'-'), pat: String(rows[i][6]||'-'), lbl: lbl };
         MailApp.sendEmail({ to: 'patitucciestudio@gmail.com',
           from: 'patitucciestudio@gmail.com',
-          subject: lbl + ' - Siniestro ' + rows[i][1],
-          body: lbl + '\nSiniestro: ' + rows[i][1] + '\nPatente: ' + rows[i][6]
-                + '\n\nIngresa al panel para revisarlo.'
-        });
+          subject: _tplReplace(tplTE.asunto, varsTE),
+          body:    _tplReplace(tplTE.cuerpo, varsTE) });
       } catch(eM) {}
       return resp({ok: true});
     }
@@ -2121,6 +2216,119 @@ function _soloFecha(isoStr) {
   return String(isoStr||'').substring(0, 10);
 }
 
+// ════════════════════════════════════════════════════════
+//  MÓDULO HONORARIOS DEL PERITO
+// ════════════════════════════════════════════════════════
+
+var HONORARIOS_TARIFA = {
+  'Remota':               4000,
+  'Por fotos':            4000,
+  'Ampliaciones de calle':8000,
+  'Inspecciones Calle':   10000,
+  'Posible DT':           12000
+};
+
+// Formatea número como moneda argentina: $10.000
+function _fmtPesos(n) {
+  return '$' + Number(n).toLocaleString('es-AR', {minimumFractionDigits:0, maximumFractionDigits:0});
+}
+
+// Devuelve YYYY-MM del mes anterior al actual
+function _mesAnterior() {
+  var d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() - 1);
+  var mes  = String(d.getMonth() + 1).padStart(2, '0');
+  var anio = String(d.getFullYear());
+  return anio + '-' + mes;
+}
+
+// Parsea "YYYY-MM" → {anio, mes} (números)
+function _parseMesAnio(ym) {
+  var p = String(ym || '').split('-');
+  return { anio: parseInt(p[0]), mes: parseInt(p[1]) };
+}
+
+// Calcula el resumen de honorarios para un período dado.
+// mesAnio: "YYYY-MM". Si no se pasa, usa el mes anterior.
+// Devuelve array de {inspector, mail, inspecciones:[{...}], total}
+function _calcularHonorarios(mesAnio) {
+  mesAnio = mesAnio || _mesAnterior();
+  var ma = _parseMesAnio(mesAnio);
+  var sheet = getSheet();
+  var rows  = sheet.getDataRange().getValues();
+  var headers = rows[0];
+
+  // Agrupar por inspector
+  var porInspector = {};
+  for (var i = 1; i < rows.length; i++) {
+    var fechaInsp = String(rows[i][4] || ''); // FechaInsp
+    if (!fechaInsp) continue;
+    // Comparar año y mes de FechaInsp
+    var d;
+    try { d = new Date(fechaInsp); } catch(e) { continue; }
+    if (isNaN(d.getTime())) continue;
+    if (d.getFullYear() !== ma.anio || (d.getMonth() + 1) !== ma.mes) continue;
+
+    var inspector = String(rows[i][17] || '').trim(); // Inspector
+    var mailInsp  = String(rows[i][18] || '').trim(); // MailInspector
+    if (!inspector) continue;
+
+    // Leer tipoHonorario del Relevamiento JSON
+    var tipoHonorario = '';
+    var rawRel = rows[i][21] || ''; // Relevamiento
+    if (rawRel) {
+      try {
+        var rel = JSON.parse(rawRel);
+        tipoHonorario = rel.tipoHonorario || '';
+      } catch(e) {}
+    }
+    var monto = tipoHonorario ? (HONORARIOS_TARIFA[tipoHonorario] || 0) : 0;
+
+    if (!porInspector[inspector]) {
+      porInspector[inspector] = { inspector: inspector, mail: mailInsp, inspecciones: [], total: 0 };
+    }
+    porInspector[inspector].inspecciones.push({
+      siniestro:     String(rows[i][1] || ''),
+      compania:      String(rows[i][2] || ''),
+      patente:       String(rows[i][6] || ''),
+      fechaInsp:     fechaInsp,
+      tipoHonorario: tipoHonorario,
+      monto:         monto
+    });
+    porInspector[inspector].total += monto;
+  }
+
+  return Object.keys(porInspector).map(function(k) { return porInspector[k]; });
+}
+
+// Endpoint: devuelve resumen de honorarios.
+// Admin → todos los inspectores. Inspector → solo los suyos.
+function getResumenHonorarios(data) {
+  var mesAnio = data.mesAnio || _mesAnterior();
+  var resumenes = _calcularHonorarios(mesAnio);
+  if (data.usuario === 'Administrador') {
+    return resp({ok: true, mesAnio: mesAnio, resumenes: resumenes});
+  }
+  // Inspector: filtra solo sus propias inspecciones
+  var propio = resumenes.find(function(r) { return r.inspector === data.usuario; });
+  if (!propio) {
+    return resp({ok: true, mesAnio: mesAnio, resumenes: []});
+  }
+  return resp({ok: true, mesAnio: mesAnio, resumenes: [propio]});
+}
+
+// Placeholder para compatibilidad con doPost (ya no envía mails)
+function enviarResumenHonorarioManual(data) {
+  return resp({ok: false, msg: 'Función no disponible — los honorarios se consultan desde el panel.'});
+}
+
+// Conservado para uso futuro desde GAS editor si se reactiva
+function _enviarResumenesMensuales_DISABLED() {
+  return resp({ok: false, msg: 'Desactivado — honorarios gestionados desde el panel.'});
+}
+
+
 // ── STUB de recuperación ──────────────────────────────────────────────
 // 'notificarPiezaSugerida' se enruta en doPost pero su definición se perdió
 // en el truncado del archivo. Este stub evita el ReferenceError y deja el
@@ -2151,77 +2359,52 @@ function interpretarVoz(data) {
       return i + ': ' + p.nombre + ' [' + p.zona + ']';
     }).join('\n');
   } catch(e) {
-    listaStr = data.piezas.map(function(p, i){ return i + ': ' + p.nombre; }).join('\n');
+    return resp({ok: false, msg: 'Error en lista de piezas: ' + e.toString()});
   }
 
-  var prompt =
-    'Sos un asistente de peritaje automotor argentino. El inspector dicto por voz y el '
-    + 'texto puede traer ERRORES de transcripcion fonetica; interpretalo por como SUENA '
-    + '(ej: "para golpe"/"para golpes"=paragolpes, "guarda barro"=guardabarros, '
-    + '"capo"=capot, "optica"/"faro"=optica, "baul"=tapa de baul, "porton"=porton trasero).\n\n'
-    + 'TRANSCRIPCION:\n"' + data.transcript + '"\n\n'
-    + 'Tipo de vehiculo: ' + (data.tipo||'') + '\n\n'
-    + 'PIEZAS DISPONIBLES (devolve el numero "idx", NUNCA el texto):\n' + listaStr + '\n\n'
-    + 'Tareas: Reparar, Sustituir, Pintar, Difuminar. Niveles (solo Reparar): Leve, Medio, Fuerte.\n\n'
-    + 'REGLAS:\n'
-    + '1. Elegi SIEMPRE el idx de la pieza de la lista mas parecida fonetica y semanticamente. Nunca inventes.\n'
-    + '2. Componentes especificos ("moldura","soporte","bisagra","guia","absorbedor") NO son el panel '
-    +    'principal: "bisagra de capot"->la bisagra, no el capot; "soporte de paragolpes"->el soporte.\n'
-    + '3. Si no especifica lado y la pieza existe en izquierda y derecha, no la pongas en "acciones": '
-    +    'agregala a "consultar" con los idx de ambos lados en "opciones".\n'
-    + '4. "eliminar/borrar/sacar/quitar" va al array "eliminar".\n'
-    + '5. Sin nivel especificado usar "Leve". Extrae horas ("2 horas","3 hs") y panos ("2 panos") si los menciona.\n'
-    + '6. Procesa TODAS las piezas mencionadas (separadas por "y", coma, "tambien").\n'
-    + '7. Si una mencion no matchea con NINGUNA pieza de la lista, omitila (no la fuerces).\n\n'
-    + 'EJEMPLO (lista de ejemplo: "0: Capot [Frente], 1: Guardabarros del. izq. [Lat Izq], '
-    + '2: Paragolpes tras. [Trasero], 3: Puerta del. izq. [Lat Izq], 4: Puerta del. der. [Lat Der]"):\n'
-    + 'Dictado "sustituir capot y reparar fuerte el guardabarros delantero izquierdo 3 horas" -> '
-    + '{"acciones":[{"idx":0,"tarea":"Sustituir","nivel":null,"horas":null,"panos":null},'
-    + '{"idx":1,"tarea":"Reparar","nivel":"Fuerte","horas":3,"panos":null}],"consultar":[],"eliminar":[]}\n'
-    + 'Dictado "pintar la puerta delantera, 2 panos" -> '
-    + '{"acciones":[],"consultar":[{"opciones":[3,4],"tarea":"Pintar","nivel":null,"horas":null,"panos":2}],"eliminar":[]}\n'
-    + 'Dictado "sacar el paragolpes trasero" -> '
-    + '{"acciones":[],"consultar":[],"eliminar":[{"idx":2,"tarea":"Sustituir"}]}';
+  var prompt = 'Sos un asistente para perito de autos. El inspector dico lo siguiente por voz:\n'
+    + '"' + data.transcript + '"\n\n'
+    + 'Lista de piezas disponibles (formato: indice: nombre [zona]):\n'
+    + listaStr + '\n\n'
+    + 'Identificá qué piezas mencionó el inspector y qué acción corresponde a cada una. '
+    + 'Las acciones posibles son: Reparar, Sustituir, Pintar, OK. '
+    + 'Si mencionó roto, dañado, golpeado sin especificar = Reparar. '
+    + 'Si mencionó cambiar, reemplazar, nuevo = Sustituir. '
+    + 'Si mencionó rayado, pintado = Pintar. '
+    + 'Para Reparar, indica nivel: leve, medio, grave. '
+    + 'Respondé SOLO con JSON valido, sin texto adicional, con este formato:\n'
+    + '[{"idx": 0, "pieza": "nombre", "acciones": ["Reparar"], "nivel": "medio"}]\n'
+    + 'Si no reconocés piezas, respondé con array vacío: []';
+
+  var payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0 },
+    thinkingConfig: { thinkingBudget: 0 }
+  };
 
   try {
-    var gRes = UrlFetchApp.fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey,
-      { method:'post', contentType:'application/json', muteHttpExceptions:true,
-        payload: JSON.stringify({
-          contents:[{ parts:[{ text: prompt }] }],
-          generationConfig:{
-            temperature: 0.1,
-            responseMimeType: 'application/json',
-            thinkingConfig: { thinkingBudget: 0 }
-          }
-        })
-      }
-    );
-    if (gRes.getResponseCode() !== 200) {
-      return resp({ok: false, msg: 'Gemini HTTP ' + gRes.getResponseCode()});
-    }
-    var json = JSON.parse(gRes.getContentText());
-    var texto = '';
-    try {
-      texto = json.candidates[0].content.parts[0].text || '';
-    } catch(e) {
-      return resp({ok: false, msg: 'Respuesta de Gemini sin contenido'});
-    }
-    // Limpiar posibles fences de markdown por las dudas
-    texto = texto.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/, '').trim();
-    var parsed;
-    try {
-      parsed = JSON.parse(texto);
-    } catch(e) {
-      return resp({ok: false, msg: 'No se pudo interpretar la respuesta de voz'});
-    }
-    return resp({
-      ok: true,
-      acciones: parsed.acciones || [],
-      consultar: parsed.consultar || [],
-      eliminar: parsed.eliminar || []
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
+    var res = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
     });
-  } catch(err) {
-    return resp({ok: false, msg: 'Error al consultar Gemini: ' + err});
+    var json = JSON.parse(res.getContentText());
+    if (!json.candidates || !json.candidates[0] || !json.candidates[0].content ||
+        !json.candidates[0].content.parts || !json.candidates[0].content.parts[0]) {
+      return resp({ok: false, msg: 'Respuesta vacia de Gemini'});
+    }
+    var texto = json.candidates[0].content.parts[0].text || '';
+    texto = texto
+      .replace(new RegExp('^```json\\s*', 'i'), '')
+      .replace(new RegExp('^```\\s*', 'i'), '')
+      .replace(new RegExp('```\\s*$'), '')
+      .trim();
+    var resultado = JSON.parse(texto);
+    if (!Array.isArray(resultado)) return resp({ok: false, msg: 'Formato inesperado de Gemini'});
+    return resp({ok: true, resultado: resultado});
+  } catch(e) {
+    return resp({ok: false, msg: 'Error interpretarVoz: ' + e.toString()});
   }
 }

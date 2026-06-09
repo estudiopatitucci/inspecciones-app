@@ -413,6 +413,8 @@
       <button class="sidebar-item" id="amenu-archivo" onclick="adminTab('archivo')">📦 Archivo</button>
       <div class="sidebar-section">Ayuda</div>
       <button class="sidebar-item" onclick="window.open('https://estudiopatitucci.com.ar/manual-de-uso.html','_blank')">📖 Manual de uso</button>
+      <div class="sidebar-section">Configuración</div>
+      <button class="sidebar-item" id="amenu-honorarios" onclick="adminTab('honorarios')">💰 Honorarios</button>
       <div class="sidebar-section">Cuenta</div>
       <button class="sidebar-item" id="amenu-perfil" onclick="adminTab('perfil')">👤 Mi Perfil</button>
     </div>
@@ -614,7 +616,7 @@
                 <div class="field"><label>Inspector</label><input type="text" id="f-insp-nombre" readonly style="background:var(--bg)"/></div>
                 <div class="field"><label>Mail</label><input type="email" id="f-mail"/></div>
               </div>
-              <div class="field" style="margin-bottom:12px"><label>Vista previa del mail</label><div class="mail-prev" id="mail-prev"></div></div>
+              <div class="field" style="margin-bottom:12px"><label>Vista previa del mail <span style="font-size:11px;color:var(--text2);font-weight:400">(editable)</span></label><textarea class="mail-prev" id="mail-prev" style="resize:vertical;min-height:200px;max-height:none;width:100%;box-sizing:border-box"></textarea></div>
               <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Se enviará desde: <strong style="color:var(--text)" id="mail-remitente">patitucciestudio@gmail.com</strong></p>
               <div style="display:flex;gap:8px;flex-wrap:wrap">
                 <button class="btn-primary" onclick="guardar(true)">✉️ Guardar y enviar mail</button>
@@ -780,7 +782,26 @@
         <div id="tabla-arch"><div class="loading"><div class="spinner"></div>Cargando archivo...</div></div>
       </div>
 
-      <!-- MI PERFIL ADMIN -->
+
+      <!-- ── HONORARIOS ─────────────────────────────────────── -->
+      <div id="asec-honorarios" style="display:none">
+        <h2 style="font-size:20px;font-weight:600;margin-bottom:4px">💰 Honorarios del perito</h2>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:20px">Consultá el resumen mensual de inspecciones y honorarios por inspector.</p>
+
+        <!-- Controles -->
+        <div class="card" style="margin-bottom:16px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+          <div>
+            <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Período</label>
+            <input type="month" id="hon-mes" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px">
+          </div>
+          <button class="btn-primary" onclick="cargarHonorarios()" style="height:38px;padding:0 18px">Consultar</button>
+          <button class="btn-secondary" onclick="enviarTodosHonorarios()" id="hon-btn-enviar-todos" style="height:38px;padding:0 18px;display:none">📧 Enviar a todos</button>
+        </div>
+
+        <!-- Resultados -->
+        <div id="hon-resultados"></div>
+      </div>
+
       <div id="asec-perfil" style="display:none">
         <h2 style="font-size:20px;font-weight:600;margin-bottom:20px">👤 Mi Perfil</h2>
         <div class="card" style="max-width:460px">
@@ -833,6 +854,8 @@
       <button class="sidebar-item" id="smenu-cerradas" onclick="inspTab('cerradas')">✅ Cerradas</button>
       <div class="sidebar-section">Ayuda</div>
       <button class="sidebar-item" onclick="window.open('https://estudiopatitucci.com.ar/manual-de-uso.html','_blank')">📖 Manual de uso</button>
+      <div class="sidebar-section">Facturación</div>
+      <button class="sidebar-item" id="smenu-honorarios" onclick="inspTab('honorarios')">💰 Mis honorarios</button>
       <div class="sidebar-section">Cuenta</div>
       <button class="sidebar-item" id="smenu-perfil" onclick="inspTab('perfil')">👤 Mi Perfil</button>
     </div>
@@ -887,6 +910,20 @@
           </div>
         </div>
       </div>
+      <!-- ── MIS HONORARIOS ── -->
+      <div id="isec-honorarios" style="display:none">
+        <h2 style="font-size:18px;font-weight:600;margin-bottom:4px">💰 Mis honorarios</h2>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:20px">Consultá cuánto tenés que facturar al estudio por el período seleccionado.</p>
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px">
+          <div>
+            <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">Período</label>
+            <input type="month" id="ihon-mes" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:14px">
+          </div>
+          <button class="btn-primary" onclick="cargarHonorariosInspector()" style="height:38px;padding:0 18px">Consultar</button>
+        </div>
+        <div id="ihon-resultados"></div>
+      </div>
+
       <!-- ═══ CALCULADOR ═══ -->
       <div id="isec-calculador" style="display:none">
         <h2 style="font-size:18px;font-weight:600;margin-bottom:6px">🧮 Calculador de tiempos</h2>
@@ -1107,6 +1144,17 @@
         <div class="card">
           <p class="section-title">Vehículo verificado</p>
           <div style="margin-bottom:12px"><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Kilometraje real *</label><input type="number" id="rel-km" style="width:200px"/></div>
+          <div style="margin-bottom:12px">
+            <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Tipo de inspección (honorarios) *</label>
+            <select id="rel-tipo-honorario" style="max-width:320px">
+              <option value="">— Seleccioná el tipo —</option>
+              <option value="Remota">Remota — $4.000</option>
+              <option value="Por fotos">Por fotos — $4.000</option>
+              <option value="Ampliaciones de calle">Ampliaciones de calle — $8.000</option>
+              <option value="Inspecciones Calle">Inspecciones Calle — $10.000</option>
+              <option value="Posible DT">Posible DT — $12.000</option>
+            </select>
+          </div>
           <div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Observaciones del inspector</label><textarea id="rel-danos" rows="3" style="resize:vertical"></textarea></div>
         </div>
 
@@ -1152,6 +1200,24 @@
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- GALERÍA INLINE (lightbox) -->
+<div id="galeria-modal" style="display:none" onclick="if(event.target===this)cerrarGaleria()">
+  <button class="galeria-close" onclick="cerrarGaleria()">✕</button>
+  <span id="galeria-counter" class="galeria-counter"></span>
+  <button id="galeria-prev" class="galeria-nav galeria-nav-prev" onclick="galeriaNav(-1)">&#8249;</button>
+  <div style="display:flex;align-items:center;justify-content:center;max-width:90vw;max-height:80vh;position:relative">
+    <img id="galeria-img" src="" alt="Foto" style="max-width:90vw;max-height:80vh;object-fit:contain;border-radius:10px;display:block" onerror="this.style.display='none';document.getElementById('galeria-err').style.display='flex'">
+    <div id="galeria-err" style="display:none;color:#fff;font-size:14px;flex-direction:column;align-items:center;gap:8px;padding:40px">
+      <span style="font-size:48px">🖼️</span><span style="text-align:center">No se pudo cargar la imagen.<br><small style="color:rgba(255,255,255,.6)">Drive puede requerir permiso adicional.</small></span>
+    </div>
+  </div>
+  <button id="galeria-next" class="galeria-nav galeria-nav-next" onclick="galeriaNav(1)">&#8250;</button>
+  <div class="galeria-actions">
+    <a id="galeria-dl" href="#" target="_blank" rel="noopener noreferrer" class="galeria-btn">⬇ Descargar</a>
+    <a id="galeria-view" href="#" target="_blank" rel="noopener noreferrer" class="galeria-btn galeria-btn-sec">🔗 Drive</a>
   </div>
 </div>
 
@@ -1454,7 +1520,7 @@ async function cambiarPass(){
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
 function adminTab(t){
-  ['dashboard','nueva','busqueda','pendientes','taller','revision','verif-rep','verif-rep2','resolver','cerradas','stats','archivo','perfil'].forEach(x=>{
+  ['dashboard','nueva','busqueda','pendientes','taller','revision','verif-rep','verif-rep2','resolver','cerradas','stats','archivo','honorarios','perfil'].forEach(x=>{
     const btn=s('amenu-'+x);if(btn)btn.className='sidebar-item'+(t===x?' active':'');
     const sec=s('asec-'+x);if(sec)sec.style.display=t===x?'block':'none';
   });
@@ -1469,6 +1535,7 @@ function adminTab(t){
   if(t==='cerradas')renderTablaAdmin('cerradas');
   if(t==='stats')renderStats();
   if(t==='archivo')cargarArchivo();
+  if(t==='honorarios')initHonorarios();
 }
 
 async function cargarInspecciones(){
@@ -1613,7 +1680,7 @@ function renderDashboard(){
     'paragolpe':'paragolpes'
   };
   function _normSug(str){
-    var s=String(str||'').toLowerCase()
+    var s=(str||'').toLowerCase()
       .replace(/[áàä]/g,'a').replace(/[éèë]/g,'e').replace(/[íìï]/g,'i')
       .replace(/[óòö]/g,'o').replace(/[úùü]/g,'u').replace(/ñ/g,'n')
       .replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
@@ -2075,29 +2142,29 @@ function renderFotos(r, ocultarCarpeta){
       var fileId=f.id||'';
       if(!fileId&&f.viewUrl&&f.viewUrl.includes('/file/d/')){try{fileId=f.viewUrl.split('/file/d/')[1].split('/')[0];}catch(e){}}
       var thumbUrl=f.thumbUrl||(fileId?'https://lh3.googleusercontent.com/d/'+fileId+'=w200':'');
-      var viewUrl=safeGoogleUrl(f.viewUrl||'');
-      var dlUrl=fileId?'https://drive.google.com/uc?export=download&id='+fileId:safeGoogleUrl(f.url||f.viewUrl||'');
       html+='<div style="text-align:center">';
-      html+='<a href="'+viewUrl+'" target="_blank" rel="noopener noreferrer" style="display:block;width:100px;height:100px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg3);text-decoration:none">';
+      html+='<div class="foto-thumb" onclick="abrirGaleria(\''+ck+'\','+fi+')" style="display:block;width:100px;height:100px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg3);cursor:pointer">';
       if(thumbUrl){
         html+='<img src="'+thumbUrl+'" alt="Foto '+(fi+1)+'" style="width:100%;height:100%;object-fit:cover" '
-          +'onerror="var el=this.parentElement;this.remove();el.innerHTML=\'<div style=&quot;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px&quot;><span style=&quot;font-size:26px&quot;>🖼️</span><span style=&quot;font-size:9px;color:var(--text2)&quot;>Sin permiso</span></div>\'+el.innerHTML;">';
+          +'onerror="var el=this.parentElement;this.remove();el.innerHTML=\'<div style=&quot;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px&quot;><span style=&quot;font-size:26px&quot;>🖼️</span><span style=&quot;font-size:9px;color:var(--text2)&quot;>Sin permiso</span></div>\';">';
       } else {
         html+='<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px">🖼️</div>';
       }
-      html+='</a>';
-      html+='<a href="'+dlUrl+'" target="_blank" rel="noopener noreferrer" style="font-size:10px;color:var(--accent);text-decoration:none;display:block;margin-top:4px">⬇ Descargar</a>';
+      html+='</div>';
+      html+='<span style="font-size:10px;color:var(--text2);display:block;margin-top:4px">Foto '+(fi+1)+'</span>';
       html+='</div>';
     });
     html+='</div>';
   } else if(fb.length){
-    // Caso B: fotos en base64 (Drive aún no procesó o no devolvió links) — mostrar inline
+    // Caso B: fotos en base64 — mostrar inline con lightbox
+    var ckB='fcb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    _fotosCache[ckB]=fb.map(function(src){return{viewUrl:src,url:src,id:''};});
     html+='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px">';
     fb.forEach(function(src,idx){
       html+='<div style="text-align:center">';
-      html+='<a href="'+src+'" target="_blank" style="display:block;width:100px;height:100px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg3);text-decoration:none">';
+      html+='<div class="foto-thumb" onclick="abrirGaleria(\''+ckB+'\','+idx+')" style="display:block;width:100px;height:100px;border-radius:8px;overflow:hidden;border:1px solid var(--border);background:var(--bg3);cursor:pointer">';
       html+='<img src="'+src+'" style="width:100%;height:100%;object-fit:cover">';
-      html+='</a>';
+      html+='</div>';
       html+='<span style="font-size:10px;color:var(--text2);display:block;margin-top:4px">Foto '+(idx+1)+'</span>';
       html+='</div>';
     });
@@ -2394,7 +2461,7 @@ function renderStats(){
     if(porEstado[i.Estado]!==undefined)porEstado[i.Estado]++;
     porInsp[i.Inspector]=(porInsp[i.Inspector]||0)+1;
     if(i.Compania)porCia[i.Compania]=(porCia[i.Compania]||0)+1;
-    var t=String(i.Tipo||'').toLowerCase();
+    var t=(i.Tipo||'').toLowerCase();
     if(t.includes('total'))porTipo['Daño Total']++;
     else if(t.includes('parcial'))porTipo['Daño Parcial']++;
     else porTipo['Otros']++;
@@ -2825,7 +2892,7 @@ function limpiarForm(){
   var manana=new Date(); manana.setDate(manana.getDate()+1);
   var mm=String(manana.getMonth()+1).padStart(2,'0'), dd=String(manana.getDate()).padStart(2,'0');
   if(s('f-finsp')) s('f-finsp').value=manana.getFullYear()+'-'+mm+'-'+dd;
-  hide('bloque-mail');s('mail-prev').textContent='';
+  hide('bloque-mail');s('mail-prev').value='';
   document.querySelectorAll('#insp-btns .insp-btn').forEach(function(b){b.className='insp-btn';});
   inspActual=null;if(s('msg-guard'))s('msg-guard').textContent='';
   // Resetear estado IA nueva IP
@@ -3051,7 +3118,7 @@ function actualizarPreview(){
   var cia=g('f-cia')||'';
   var rem=mailRemitente(cia);
   var el=s('mail-remitente');if(el)el.textContent=rem;
-  s('mail-prev').textContent='ESTUDIO PATITUCCI\nPericias - Danos Materiales - Homologacion CESVI\n\nHola '+inspActual+',\n\nTe asignamos la inspeccion para el '+(g('f-finsp')||'-')+':\n\nSiniestro: '+(g('f-sin')||'-')+'\nCompania: '+cia+'\nTipo: '+(g('f-tipo')||'-')+'\n\nPatente: '+(g('f-pat')||'-')+'\nModelo: '+(g('f-mod')||'-')+' ('+(g('f-anio')||'-')+')\nChasis: '+(g('f-chasis')||'-')+'\nMotor: '+(g('f-motor')||'-')+'\n\nAsegurado: '+(g('f-aseg')||'-')+'\nTel: '+(g('f-tel')||'-')+'\nDireccion: '+(g('f-dir')||'-')+', '+(g('f-localidad')||'-')+'\n\nDANOS DECLARADOS\n'+(g('f-danos')||'-')+(_den?'\n\nDENUNCIA DEL SINIESTRO\n'+_den:'')+'\n\nPlazo maximo: 48 hs.\n\nSaludos,\nEstudio Patitucci';
+  s('mail-prev').value='ESTUDIO PATITUCCI\nPericias - Danos Materiales - Homologacion CESVI\n\nHola '+inspActual+',\n\nTe asignamos la inspeccion para el '+(g('f-finsp')||'-')+':\n\nSiniestro: '+(g('f-sin')||'-')+'\nCompania: '+cia+'\nTipo: '+(g('f-tipo')||'-')+'\n\nPatente: '+(g('f-pat')||'-')+'\nModelo: '+(g('f-mod')||'-')+' ('+(g('f-anio')||'-')+')\nChasis: '+(g('f-chasis')||'-')+'\nMotor: '+(g('f-motor')||'-')+'\n\nAsegurado: '+(g('f-aseg')||'-')+'\nTel: '+(g('f-tel')||'-')+'\nDireccion: '+(g('f-dir')||'-')+', '+(g('f-localidad')||'-')+'\n\nDANOS DECLARADOS\n'+(g('f-danos')||'-')+(_den?'\n\nDENUNCIA DEL SINIESTRO\n'+_den:'')+'\n\nPlazo maximo: 48 hs.\n\nSaludos,\nEstudio Patitucci';
 }
 
 ['f-sin','f-cia','f-tipo','f-finsp','f-fsin','f-pat','f-mod','f-anio','f-chasis','f-motor','f-km','f-aseg','f-tel','f-dir','f-localidad','f-danos','f-danos-den'].forEach(function(id){
@@ -3074,7 +3141,7 @@ async function guardar(enviarMail){
   try{
     // Incluir datos del calculador pre-cargados por IA (si el admin los confirmó)
     var payloadCalc = _nuevaIpCalcData ? {relevamiento: JSON.stringify({calculador: _nuevaIpCalcData, preloaded: true})} : {};
-    const res=await apiCall(Object.assign({action:'guardar',sin,cia:g('f-cia'),tipo:g('f-tipo'),finsp:g('f-finsp'),fsin:g('f-fsin'),pat:pat.toUpperCase(),mod:g('f-mod'),anio:g('f-anio'),chasis:g('f-chasis'),motor:g('f-motor'),km:g('f-km'),aseg:g('f-aseg'),tel:g('f-tel'),dir:g('f-dir'),localidad:g('f-localidad'),danos:g('f-danos'),danosDen:g('f-danos-den'),inspector:inspActual,mail:s('f-mail').value,estado:'Pendientes de carga',mailEnviado:enviarMail,enviarMail,historial:[{estado:'Pendientes de carga',fecha:new Date().toLocaleString('es-AR'),usuario:'Administrador'}]}, payloadCalc));
+    const res=await apiCall(Object.assign({action:'guardar',sin,cia:g('f-cia'),tipo:g('f-tipo'),finsp:g('f-finsp'),fsin:g('f-fsin'),pat:pat.toUpperCase(),mod:g('f-mod'),anio:g('f-anio'),chasis:g('f-chasis'),motor:g('f-motor'),km:g('f-km'),aseg:g('f-aseg'),tel:g('f-tel'),dir:g('f-dir'),localidad:g('f-localidad'),danos:g('f-danos'),danosDen:g('f-danos-den'),inspector:inspActual,mail:s('f-mail').value,mailBody:s('mail-prev').value,estado:'Pendientes de carga',mailEnviado:enviarMail,enviarMail,historial:[{estado:'Pendientes de carga',fecha:new Date().toLocaleString('es-AR'),usuario:'Administrador'}]}, payloadCalc));
     if(res.ok){
       msg.className='msg ok';msg.textContent=enviarMail?'✓ Guardada y mail enviado.':'✓ Guardada.';
       toast(enviarMail?'Inspección guardada. Mail enviado al inspector.':'Inspección guardada correctamente.','ok');
@@ -3132,12 +3199,13 @@ function actualizarBadgesInspector(){
 }
 
 function inspTab(tab){
-  ['abiertas','carga','revision','cerradas','perfil','calculador'].forEach(function(x){
+  ['abiertas','carga','revision','cerradas','honorarios','perfil','calculador'].forEach(function(x){
     var btn=s('smenu-'+x);if(btn)btn.className='sidebar-item'+(tab===x?' active':'');
     var el=s('isec-'+x);if(el)el.style.display=tab===x?'block':'none';
   });
   hide('panel-rel');
   if(tab==='calculador'){calcRender();return;}
+  if(tab==='honorarios'){initHonorariosInspector();return;}
   if(tab!=='perfil')renderSeccionInsp(tab);
 }
 
@@ -3176,6 +3244,162 @@ function renderSeccionInsp(tipo){
         +'</tr>';
     }).join('')
     +'</tbody></table></div>';
+}
+
+// ── HONORARIOS — Inspector ────────────────────────────────────────────
+function initHonorariosInspector(){
+  var hoy=new Date();
+  var mes=String(hoy.getMonth()+1).padStart(2,'0');
+  var el=s('ihon-mes');
+  if(el&&!el.value) el.value=hoy.getFullYear()+'-'+mes;
+}
+
+async function cargarHonorariosInspector(){
+  var mesEl=s('ihon-mes');
+  var mesAnio=mesEl?mesEl.value:'';
+  var res=s('ihon-resultados');
+  if(!res)return;
+  res.innerHTML='<div class="loading"><div class="spinner"></div>Cargando...</div>';
+  try{
+    var r=await apiCall({action:'getResumenHonorarios',usuario:usuarioActual,mesAnio:mesAnio});
+    if(!r.ok){res.innerHTML='<p style="color:var(--red);font-size:14px">'+esc(r.msg||'Error')+'</p>';return;}
+    var data=r.resumenes||[];
+    if(!data.length){
+      res.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text2);font-size:14px">Sin inspecciones cargadas en ese período.</div>';
+      return;
+    }
+    var propio=data[0];
+    var meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var parts=(r.mesAnio||'').split('-');
+    var nombreMes=parts[1]?meses[parseInt(parts[1])-1]+' '+parts[0]:r.mesAnio||'';
+    var filas=propio.inspecciones.map(function(ins,i){
+      return '<tr>'
+        +'<td style="color:var(--text2);font-size:12px">'+(i+1)+'</td>'
+        +'<td>'+esc(ins.siniestro||'-')+'</td>'
+        +'<td>'+esc(ins.patente||'-')+'</td>'
+        +'<td>'+esc(ins.compania||'-')+'</td>'
+        +'<td>'+esc(ins.fechaInsp||'-')+'</td>'
+        +'<td><span style="background:var(--bg3);padding:2px 8px;border-radius:12px;font-size:12px">'+esc(ins.tipoHonorario||'Sin tipo')+'</span></td>'
+        +'<td style="font-weight:600;color:var(--accent)">'+fmtPesos(ins.monto)+'</td>'
+        +'</tr>';
+    }).join('');
+    res.innerHTML='<div class="card" style="margin-bottom:16px">'
+      +'<p class="section-title" style="margin-bottom:16px">'+nombreMes+'</p>'
+      +'<div class="tabla-wrap"><table>'
+      +'<thead><tr><th>#</th><th>Siniestro</th><th>Patente</th><th>Compañía</th><th>Fecha</th><th>Tipo</th><th>Monto</th></tr></thead>'
+      +'<tbody>'+filas+'</tbody></table></div>'
+      +'</div>'
+      +'<div class="card" style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2)">'
+      +'<div>'
+      +'<p style="font-size:12px;color:var(--text2);margin-bottom:2px">Total a facturar — '+nombreMes+'</p>'
+      +'<p style="font-size:28px;font-weight:700;color:var(--accent)">'+fmtPesos(propio.total)+'</p>'
+      +'</div>'
+      +'<div style="text-align:right">'
+      +'<p style="font-size:12px;color:var(--text2)">'+propio.inspecciones.length+' inspección'+(propio.inspecciones.length!==1?'es':'')+'</p>'
+      +'<p style="font-size:11px;color:var(--text3);margin-top:4px">Emitir factura al Estudio Patitucci</p>'
+      +'</div>'
+      +'</div>';
+  }catch(e){
+    res.innerHTML='<p style="color:var(--red);font-size:14px">Error: '+esc(e.toString())+'</p>';
+  }
+}
+
+function fmtPesos(n){
+  if(!n&&n!==0)return '$0';
+  return '$'+Number(n).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:0});
+}
+
+// ── HONORARIOS — Admin ────────────────────────────────────────────────
+function initHonorarios(){
+  var hoy=new Date();
+  var el=s('hon-mes');
+  if(el&&!el.value) el.value=hoy.getFullYear()+'-'+String(hoy.getMonth()+1).padStart(2,'0');
+}
+
+async function cargarHonorarios(){
+  var mesEl=s('hon-mes');
+  var mesAnio=mesEl?mesEl.value:'';
+  var res=s('hon-resultados');
+  if(!res)return;
+  res.innerHTML='<div class="loading"><div class="spinner"></div>Cargando...</div>';
+  try{
+    var r=await apiCall({action:'getResumenHonorarios',usuario:'Administrador',mesAnio:mesAnio});
+    if(!r.ok){res.innerHTML='<p style="color:var(--red);font-size:14px">'+esc(r.msg||'Error')+'</p>';return;}
+    var data=r.resumenes||[];
+    var btnTodos=s('hon-btn-enviar-todos');
+    if(btnTodos)btnTodos.style.display=data.length?'inline-flex':'none';
+    if(!data.length){
+      res.innerHTML='<div class="card" style="text-align:center;padding:40px;color:var(--text2);font-size:14px">Sin inspecciones en ese período.</div>';
+      return;
+    }
+    var meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var parts=(r.mesAnio||'').split('-');
+    var nombreMes=parts[1]?meses[parseInt(parts[1])-1]+' '+parts[0]:r.mesAnio||'';
+    var totalGlobal=data.reduce(function(a,b){return a+b.total;},0);
+
+    // Resumen global
+    var html='<div class="card" style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px;background:var(--bg2)">'
+      +'<div><p style="font-size:12px;color:var(--text2);margin-bottom:2px">Total general — '+nombreMes+'</p>'
+      +'<p style="font-size:24px;font-weight:700;color:var(--accent)">'+fmtPesos(totalGlobal)+'</p></div>'
+      +'<div><p style="font-size:12px;color:var(--text2);margin-bottom:2px">Inspectores</p>'
+      +'<p style="font-size:24px;font-weight:700">'+data.length+'</p></div>'
+      +'<div><p style="font-size:12px;color:var(--text2);margin-bottom:2px">Inspecciones</p>'
+      +'<p style="font-size:24px;font-weight:700">'+data.reduce(function(a,b){return a+b.inspecciones.length;},0)+'</p></div>'
+      +'</div>';
+
+    // Tabla por inspector
+    html+='<div class="card"><p class="section-title" style="margin-bottom:12px">Detalle por inspector</p>'
+      +'<div class="tabla-wrap"><table>'
+      +'<thead><tr><th>Inspector</th><th>Inspecciones</th><th>Total</th><th></th></tr></thead><tbody>';
+    data.forEach(function(r){
+      html+='<tr>'
+        +'<td style="font-weight:500">'+esc(r.inspector)+'</td>'
+        +'<td style="color:var(--text2)">'+r.inspecciones.length+'</td>'
+        +'<td style="font-weight:600;color:var(--accent)">'+fmtPesos(r.total)+'</td>'
+        +'<td><button class="btn-secondary btn-sm" onclick="verDetalleHonorarios(\''+esc(r.inspector)+'\',\''+esc(mesAnio)+'\')">Ver detalle</button></td>'
+        +'</tr>';
+    });
+    html+='</tbody></table></div></div>';
+    res.innerHTML=html;
+  }catch(e){
+    res.innerHTML='<p style="color:var(--red);font-size:14px">Error: '+esc(e.toString())+'</p>';
+  }
+}
+
+async function verDetalleHonorarios(inspector,mesAnio){
+  var res=s('hon-resultados');
+  if(!res)return;
+  try{
+    var r=await apiCall({action:'getResumenHonorarios',usuario:'Administrador',mesAnio:mesAnio});
+    if(!r.ok)return;
+    var propio=(r.resumenes||[]).find(function(x){return x.inspector===inspector;});
+    if(!propio)return;
+    var meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    var parts=(mesAnio||'').split('-');
+    var nombreMes=parts[1]?meses[parseInt(parts[1])-1]+' '+parts[0]:mesAnio;
+    var filas=propio.inspecciones.map(function(ins,i){
+      return '<tr>'
+        +'<td style="color:var(--text2);font-size:12px">'+(i+1)+'</td>'
+        +'<td>'+esc(ins.siniestro||'-')+'</td>'
+        +'<td>'+esc(ins.patente||'-')+'</td>'
+        +'<td>'+esc(ins.compania||'-')+'</td>'
+        +'<td>'+esc(ins.fechaInsp||'-')+'</td>'
+        +'<td><span style="background:var(--bg3);padding:2px 8px;border-radius:12px;font-size:12px">'+esc(ins.tipoHonorario||'Sin tipo')+'</span></td>'
+        +'<td style="font-weight:600;color:var(--accent)">'+fmtPesos(ins.monto)+'</td>'
+        +'</tr>';
+    }).join('');
+    res.innerHTML='<button class="btn-secondary btn-sm" onclick="cargarHonorarios()" style="margin-bottom:16px">← Volver</button>'
+      +'<div class="card" style="margin-bottom:16px">'
+      +'<p class="section-title" style="margin-bottom:4px">'+esc(inspector)+' — '+nombreMes+'</p>'
+      +'<div class="tabla-wrap"><table>'
+      +'<thead><tr><th>#</th><th>Siniestro</th><th>Patente</th><th>Compañía</th><th>Fecha</th><th>Tipo</th><th>Monto</th></tr></thead>'
+      +'<tbody>'+filas+'</tbody></table></div></div>'
+      +'<div class="card" style="display:flex;justify-content:space-between;align-items:center;background:var(--bg2)">'
+      +'<div><p style="font-size:12px;color:var(--text2);margin-bottom:2px">Total '+esc(inspector)+'</p>'
+      +'<p style="font-size:28px;font-weight:700;color:var(--accent)">'+fmtPesos(propio.total)+'</p></div>'
+      +'<div style="text-align:right"><p style="font-size:12px;color:var(--text2)">'+propio.inspecciones.length+' inspección'+(propio.inspecciones.length!==1?'es':'')+'</p></div>'
+      +'</div>';
+  }catch(e){}
 }
 
 function verDetalleInsp(id){
@@ -3449,7 +3673,7 @@ function limpiarRelevamiento(){
   relOpRender();
   relCalcRender();
   // Resetear campos del formulario
-  ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit','rel-dir-taller','rel-loc-taller'].forEach(function(x){if(s(x))s(x).value='';});
+  ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit','rel-dir-taller','rel-loc-taller','rel-tipo-honorario'].forEach(function(x){if(s(x))s(x).value='';});
   // Resetear fotos y mensajes
   s('rel-fotos').value='';
   s('rel-preview').innerHTML='';
@@ -3523,6 +3747,7 @@ function guardarBorrador(){
     calculador:{tipo:relCalcState.tipo,piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo};}),total:calcTotal,operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};})},
     taller:s('rel-taller').value,telTaller:s('rel-tel').value,mailTaller:s('rel-mail').value,
     cuit:s('rel-cuit').value,dirTaller:s('rel-dir-taller')?s('rel-dir-taller').value:'',locTaller:s('rel-loc-taller')?s('rel-loc-taller').value:'',
+    tipoHonorario:s('rel-tipo-honorario')?s('rel-tipo-honorario').value:'',
     costoDiaChapa:relCostoDiaChapa,costoHoraMecánica:relCostoHoraMecánica,costoPanoPintura:relCostoPanoPintura,ts:Date.now()};
   try{localStorage.setItem('bdr_'+relId,JSON.stringify(bd));}catch(e){}
   _r5LastSaveTs = Date.now();
@@ -3532,6 +3757,7 @@ function guardarBorrador(){
 ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit','rel-dir-taller','rel-loc-taller'].forEach(function(id){
   var el=s(id);if(el)el.addEventListener('input',guardarBorrador);
 });
+var _elTH=s('rel-tipo-honorario');if(_elTH)_elTH.addEventListener('change',guardarBorrador);
 
 function abrirRel(id){
   relId=id;notifVistas[id]=true;
@@ -3571,8 +3797,9 @@ function abrirRel(id){
     s('rel-cuit').value=rel.cuit||'';
     if(s('rel-dir-taller'))s('rel-dir-taller').value=rel.dirTaller||'';
     if(s('rel-loc-taller'))s('rel-loc-taller').value=rel.locTaller||'';
+    if(s('rel-tipo-honorario'))s('rel-tipo-honorario').value=rel.tipoHonorario||'';
   } else {
-    ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit','rel-dir-taller','rel-loc-taller'].forEach(function(x){if(s(x))s(x).value='';});
+    ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit','rel-dir-taller','rel-loc-taller','rel-tipo-honorario'].forEach(function(x){if(s(x))s(x).value='';});
   }
   // Verificar borrador — se hace async después de mostrar el form
   s('rel-fotos').value='';s('rel-preview').innerHTML='';s('rel-errores').textContent='';s('msg-rel').textContent='';
@@ -3590,7 +3817,7 @@ function abrirRel(id){
       devDiv.style.display='none';devDiv.innerHTML='';
     }
   }
-  ['isec-abiertas','isec-carga','isec-revision','isec-cerradas','isec-perfil','notif-bar'].forEach(function(x){hide(x);});
+  ['isec-abiertas','isec-carga','isec-revision','isec-cerradas','isec-honorarios','isec-perfil','notif-bar'].forEach(function(x){hide(x);});
   show('panel-rel');
   // Llenar card de info auto y auto-asignar tipo de vehículo
   relLlenarInfoAuto(i);
@@ -4142,7 +4369,7 @@ function tallerBuscar(){
       _tallerResultados=res.talleres;
       dd.innerHTML=res.talleres.map(function(t,i){
         var sub=[t.cuit?'CUIT '+t.cuit:'',t.loc||t.dir].filter(Boolean).join(' · ');
-        return '<div onclick="tallerSeleccionar('+i+')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:14px" onmouseover="this.style.background=document.getElementById(\'panel-rel\').classList.contains(\'modo-campo\')?\'#e8f0fe\':\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'
+        return '<div onclick="tallerSeleccionar('+i+')" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:14px" onmouseover="this.style.background=\'var(--bg3)\'" onmouseout="this.style.background=\'\'">'
           +'<strong style="color:var(--text)">'+esc(t.nombre)+'</strong>'
           +(sub?'<br><span style="font-size:12px;color:var(--text3)">'+esc(sub)+'</span>':'')
           +'</div>';
@@ -4218,7 +4445,7 @@ async function enviarRel(){
   var calcData={tipo:relCalcState.tipo,piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};}),total:calcTotalHs+calcTotalOpHs,totalPanos:calcTotalPanos,costoDiaChapa:relCostoDiaChapa,costoHoraMecánica:relCostoHoraMecánica,costoPanoPintura:relCostoPanoPintura,costoTotal:_costoTotal};
   var _fl=fotosPendientes.filter(function(f){return f.driveLink;}).map(function(f){return f.driveLink;});
   var tareasText = s('rel-tareas') ? s('rel-tareas').value.trim() : '';
-  var rel={km,danos,calculador:calcData,taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),dirTaller:s('rel-dir-taller')?s('rel-dir-taller').value.trim():'',locTaller:s('rel-loc-taller')?s('rel-loc-taller').value.trim():'',fotosLinks:_fl,cantFotos:_fl.length,fechaEnvio:new Date().toISOString(),tareasARealizar:tareasText};
+  var rel={km,danos,calculador:calcData,taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),dirTaller:s('rel-dir-taller')?s('rel-dir-taller').value.trim():'',locTaller:s('rel-loc-taller')?s('rel-loc-taller').value.trim():'',fotosLinks:_fl,cantFotos:_fl.length,fechaEnvio:new Date().toISOString(),tareasARealizar:tareasText,tipoHonorario:s('rel-tipo-honorario')?s('rel-tipo-honorario').value:''};
   // Sin conexión: encolar para envío automático al reconectar (no se pierde nada).
   if(!navigator.onLine){
     await _encolarRel(rel,msg);
@@ -4706,8 +4933,8 @@ function generarPDFCompleto(id){
     +'<footer>Estudio Patitucci · estudiopatitucci.com.ar · Homologado CESVI Argentina · '+fecha+'</footer>'
     +'</body></html>';
 
-  var sinNum=String(i.Siniestro||'siniestro').replace(/[^a-zA-Z0-9]/g,'_');
-  var patNum=String(i.Patente||'').replace(/\s/g,'');
+  var sinNum=(i.Siniestro||'siniestro').replace(/[^a-zA-Z0-9]/g,'_');
+  var patNum=(i.Patente||'').replace(/\s/g,'');
   var filename='Pericial_'+sinNum+(patNum?'_'+patNum:'')+'_'+new Date().toISOString().slice(0,10)+'.pdf';
   mostrarVistaPrevia(html,filename);
 }
@@ -6615,7 +6842,7 @@ function gridInitFromState(){
 
 // Normalización igual a prueba-voz.html
 function vozNorm(str) {
-  return String(str||'').toLowerCase()
+  return (str||'').toLowerCase()
     .replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i')
     .replace(/ó/g,'o').replace(/ú/g,'u').replace(/ñ/g,'n')
     .replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
@@ -6827,46 +7054,81 @@ async function vozProcesarConGemini(transcript) {
 
 // Resuelve una accion devuelta por Gemini: por idx (nuevo) o por pieza/zona (compat).
 function _vozResolver(a, lista) {
-  if (a.idx != null && lista && lista[a.idx]) {
-    var info = lista[a.idx];
-    return vozBuscarPiezaPorNombre(info.nombre, info.zona);
+  if (a.idx != null && lista[a.idx]) {
+    return lista[a.idx];
   }
-  if (a.pieza) return vozBuscarPiezaPorNombre(a.pieza, a.zona || null);
+  // compatibilidad: buscar por pieza+zona
+  if (a.pieza) {
+    for (var i=0; i<lista.length; i++) {
+      if (lista[i].pieza===a.pieza && (!a.zona||lista[i].zona===a.zona)) return lista[i];
+    }
+  }
   return null;
 }
 
-function vozFallbackLocal(transcript) {
-  var frags = transcript.split(/,|;|\by también\b|\btambien\b/i).map(function(s){return s.trim();}).filter(Boolean);
-  var msgs = [], hayOk = false;
-  frags.forEach(function(f) {
-    var r = vozParsearYAgregar(f);
-    if (r.ok) {
-      hayOk = true;
-      msgs.push(r.pieza+' — '+r.acciones.join('+')+( r.acciones.indexOf('Reparar')>=0?' ('+r.nivel.charAt(0)+')':'' ));
-    } else { msgs.push('⚠ '+r.msg); }
+// Aplica resultado de Gemini al grid
+function vozAplicarRespuestaGemini(resp, lista) {
+  var res = resp.resultado || [];
+  var nuevas = 0;
+  var msgs = [];
+  res.forEach(function(a) {
+    var pieza = _vozResolver(a, lista);
+    if (!pieza) { msgs.push('No encontré: ' + (a.pieza||'?')); return; }
+    var acciones = Array.isArray(a.acciones) ? a.acciones : ['Reparar'];
+    var nivel = a.nivel || 'Leve';
+    var changed = gridSetPieza(pieza.zona, pieza.pieza, acciones, nivel, a.horas||null, a.panos||null);
+    if (changed) {
+      nuevas++;
+      msgs.push(pieza.pieza + ' — ' + acciones.join('+'));
+    }
   });
-  if (hayOk) { gridRender(); guardarBorrador(); }
-  vozSetFeedback(msgs.join(' | '), hayOk ? 'voz-ok' : 'voz-warn');
+  if (nuevas > 0) { gridRender(); guardarBorrador(); }
+  vozSetFeedback(msgs.join(' | ')||'Sin cambios', nuevas>0 ? 'voz-ok' : 'voz-warn');
 }
 
-// ── Panel de feedback ─────────────────────────────────────────────
-function vozSetFeedback(msg, tipo) {
-  var el = document.getElementById('voz-feedback'); if(!el) return;
-  el.className = tipo||''; el.textContent = msg||'';
-}
-function vozSetTranscript(txt) {
-  var el = document.getElementById('voz-transcript'); if(!el) return;
-  el.textContent = txt||'';
+function vozFallbackLocal(transcript) {
+  vozSetFeedback('IA no disponible — procesando localmente...', 'voz-warn');
+  var lista = vozGetPiezasList();
+  var res = vozProcesarLocal(transcript, lista);
+  var msgs = [];
+  res.forEach(function(r) {
+    if (r.ok) {
+      msgs.push(r.pieza + ' — ' + r.acciones.join('+'));
+      gridSetPieza(r.zona||r.pieza, r.pieza, r.acciones, r.nivel||'Leve', null, null);
+    }
+  });
+  if (msgs.length) { gridRender(); guardarBorrador(); vozSetFeedback(msgs.join(' | '), 'voz-ok'); }
+  else { vozSetFeedback('No reconocí piezas. Intentá de nuevo.', 'voz-warn'); }
 }
 
-// ── SpeechRecognition ─────────────────────────────────────────────
-var vozSR = window.SpeechRecognition || window.webkitSpeechRecognition;
-var vozRec = null, vozEscuchando = false;
+function vozProcesarLocal(transcript, lista) {
+  var norm = transcript.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+  norm = vozExpandirAliases(norm);
+  var sinVerbos = vozQuitarVerbos(norm);
+  var accDetectadas = vozDetectarAcciones(norm);
+  var nivelDetectado = vozDetectarNivel(norm) || 'Leve';
+  if (!accDetectadas.length) accDetectadas = [{ tarea:'Reparar' }];
+  var resultados = [];
+  (lista||[]).forEach(function(p) {
+    var nombreNorm = p.pieza.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').trim();
+    var alias = VOZ_ALIASES[nombreNorm] || nombreNorm;
+    if (sinVerbos.indexOf(alias)>=0 || sinVerbos.indexOf(nombreNorm)>=0) {
+      resultados.push({ pieza:p.pieza, zona:p.zona, acciones:accDetectadas.map(function(a){return a.tarea;}), nivel:nivelDetectado, ok:true });
+    }
+  });
+  return resultados;
+}
 
-function vozToggleMic() {
-  if (!relCalcState.tipo) { alert('Primero seleccioná el tipo de vehículo.'); return; }
-  if (!vozSR) { alert('La detección de voz requiere Chrome.'); return; }
-  if (vozEscuchando) vozDetener(); else vozIniciar();
+function vozGetPiezasList() {
+  var tipo = relCalcState.tipo;
+  if (!tipo || !CALC_DATA_GRID[tipo]) return [];
+  var lista = [];
+  Object.keys(CALC_DATA_GRID[tipo]).forEach(function(zona) {
+    CALC_DATA_GRID[tipo][zona].forEach(function(pieza) {
+      lista.push({ zona:zona, pieza:pieza });
+    });
+  });
+  return lista;
 }
 
 function vozIniciar() {
@@ -6895,100 +7157,23 @@ function vozIniciar() {
       vozProcesarConGemini(final_);
     }
   };
-  vozRec.onerror = function(e) { vozSetFeedback('Error: '+e.error, 'voz-err'); vozDetener(); };
+  vozRec.onerror = function(e) {
+    vozSetFeedback('Error de micrófono: ' + e.error, 'voz-warn');
+    vozDetener();
+  };
   vozRec.onend = function() { if (vozEscuchando) vozRec.start(); };
   vozRec.start();
 }
 
 function vozDetener() {
   vozEscuchando = false;
-  if (vozRec) vozRec.stop();
-  var btn   = document.getElementById('voz-mic-btn');
+  if (vozRec) { try { vozRec.stop(); } catch(e){} vozRec = null; }
+  var btn = document.getElementById('voz-mic-btn');
+  if (btn) { btn.classList.remove('escuchando'); btn.textContent = '🎤'; }
   var panel = document.getElementById('voz-panel');
-  if (btn)   { btn.classList.remove('escuchando'); btn.textContent = '🎤'; }
   if (panel) panel.classList.remove('visible');
 }
 
-// Consulta de lado (izquierda/derecha)
-var _vozConsultasPendientes = [];
-function vozMostrarConsultaLado(consultas, idx) {
-  _vozConsultasPendientes = consultas;
-  var panel = document.getElementById('voz-consulta-lado');
-  var texto = document.getElementById('voz-consulta-texto');
-  var btns  = document.getElementById('voz-consulta-btns');
-  if (!panel || idx >= consultas.length) { vozOcultarConsultaLado(); return; }
-  var c = consultas[idx];
-  var nombreBase = (c.opciones[0]||'').replace(/\s*(izquierd[oa]|derech[oa]|izq\.?|der\.?)\b/ig,'').trim();
-  texto.textContent = 'Lado de: ' + nombreBase;
-  var opciones = c.opciones.slice();
-  opciones.push('Ambas');
-  btns.innerHTML = opciones.map(function(op, i) {
-    var label = op === 'Ambas' ? 'Ambas' : /izquierd|izq/i.test(op) ? 'Izquierda' : /derech|der/i.test(op) ? 'Derecha' : op;
-    return '<button class="btn-sm btn-secondary" data-op="'+esc(op)+'" onclick="vozConfirmarLado('+idx+', this.getAttribute(\'data-op\'))">'+esc(label)+'</button>';
-  }).join('');
-  panel.style.display = 'block';
-}
 
-function vozConfirmarLado(idx, opcion) {
-  var consultas = _vozConsultasPendientes || [];
-  var c = consultas[idx];
-  if (c) {
-    var objetivos = opcion === 'Ambas' ? c.opciones.slice() : [opcion];
-    var nuevas = 0;
-    objetivos.forEach(function(nombre) {
-      var ctx = vozBuscarPiezaPorNombre(nombre, c.zona);
-      if (!ctx) return;
-      var hs    = (c.horas != null && c.horas !== 'null') ? parseFloat(c.horas) : null;
-      var panos = (c.panos != null && c.panos !== 'null') ? parseFloat(c.panos) : null;
-      var nivel = c.nivel && c.nivel !== 'null' ? c.nivel : 'Leve';
-      if (vozAgregarTarea(ctx.zona, ctx.pieza, c.tarea || 'Reparar', nivel, hs, panos)) nuevas++;
-    });
-    if (nuevas > 0) { gridRender(); guardarBorrador(); }
-  }
-  vozMostrarConsultaLado(consultas, idx + 1);
-}
-
-function vozOcultarConsultaLado() {
-  var panel = document.getElementById('voz-consulta-lado');
-  if (panel) panel.style.display = 'none';
-  _vozConsultasPendientes = [];
-}
-
-
-// -- R4: Modo campo --
-function toggleModoCampo() {
-  var panel = document.getElementById('panel-rel');
-  var btn   = document.getElementById('btn-modo-campo');
-  if (!panel) return;
-  var activo = panel.classList.toggle('modo-campo');
-  if (btn) {
-    btn.textContent = activo ? 'Modo campo ON' : '☀ Modo campo';
-    btn.classList.toggle('activo', activo);
-  }
-}
-
-// -- R5: Indicador de guardado siempre visible --
-var _r5LastSaveTs = null;
-
-function _r5ActualizarIndicador() {
-  var ind = document.getElementById('calc-guardado');
-  if (!ind) return;
-  if (!_r5LastSaveTs) { ind.textContent = ''; return; }
-  if (!navigator.onLine) {
-    ind.textContent = '⚠ Sin conexion - guardado local';
-    ind.style.color = 'var(--yellow)';
-    return;
-  }
-  var seg = Math.round((Date.now() - _r5LastSaveTs) / 1000);
-  ind.style.color = seg < 60 ? 'var(--green)' : 'var(--text2)';
-  if (seg < 5)       ind.textContent = '✓ Guardado';
-  else if (seg < 60) ind.textContent = '✓ Guardado hace ' + seg + ' seg';
-  else               ind.textContent = '✓ Guardado hace ' + Math.floor(seg/60) + ' min';
-}
-
-setInterval(_r5ActualizarIndicador, 10000);
-window.addEventListener('online',  _r5ActualizarIndicador);
-window.addEventListener('offline', _r5ActualizarIndicador);
 </script>
-</body>
-</html>
+</
