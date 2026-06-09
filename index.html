@@ -3856,6 +3856,13 @@ function abrirRel(id){
   }).catch(function(){});
 }
 
+function toggleModoCampo(){
+  var pr=s('panel-rel');var btn=s('btn-modo-campo');
+  if(!pr)return;
+  var on=pr.classList.toggle('modo-campo');
+  if(btn)btn.classList.toggle('activo',on);
+}
+
 function cerrarRel(){
   // R4 — limpiar modo campo al salir del relevamiento
   var pr=s('panel-rel');if(pr)pr.classList.remove('modo-campo');
@@ -6012,7 +6019,7 @@ function relCalcUpdateField(uid, campo, valor){
   }
   else if(campo==='pieza'){p.pieza=valor;p.hsTrabajo=0;}
   else if(campo==='tarea'){p.tarea=valor;p.nivelDano='';p.hsTrabajo=0;}
-  else if(campo==='nivelDano'){p.nivelDano=valor;p.hsTrabajo=0;}
+  else if(campo==='nivelDano'){p.nivelDano=valor;p.hsTrabajo=({Leve:4,Medio:6,Fuerte:8}[valor]||0);}
   else if(campo==='hsTrabajo'){p.hsTrabajo=parseFloat(valor)||0;}
   else if(campo==='panos'){p.panos=parseFloat(valor)||0;}
   relCalcRender();
@@ -6105,7 +6112,7 @@ function gridToggleTask(rid,tarea){
 function gridSetNivel(rid,tarea,nivel){
   var ctx=_gMap[rid]; if(!ctx) return;
   var e=gFind(ctx.zona,ctx.pieza.nombre,tarea); if(!e) return;
-  e.nivelDano=nivel; e.hsTrabajo=0; gridRender(); guardarBorrador();
+  e.nivelDano=nivel; e.hsTrabajo=({Leve:4,Medio:6,Fuerte:8}[nivel]||0); gridRender(); guardarBorrador();
 }
 function gridSetHs(rid,tarea,valor){
   var ctx=_gMap[rid]; if(!ctx) return;
@@ -6148,7 +6155,7 @@ function otraSetTarea(id,t){
   e.tarea=parts.join('+');
   gridRender(); guardarBorrador();
 }
-function otraSetNivel(id,n){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.nivelDano=n;e.hsTrabajo=0; gridRender(); guardarBorrador(); }
+function otraSetNivel(id,n){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.nivelDano=n;e.hsTrabajo=({Leve:4,Medio:6,Fuerte:8}[n]||0); gridRender(); guardarBorrador(); }
 function otraSetHs(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.hsTrabajo=parseFloat(v)||0; gridUpdateAll(); guardarBorrador(); }
 function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.panos=parseFloat(v)||0; gridUpdateAll(); guardarBorrador(); }
 
