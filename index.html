@@ -2125,6 +2125,7 @@ function abrirModal(id){
   // ─── Botones
   html+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
   html+='<button class="btn-secondary btn-sm" onclick="generarPDFCompleto(\''+esc(i.ID)+'\')">📄 Informe de Pericial</button>';
+  if(rel&&rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length&&(i.Compania||'').toLowerCase().indexOf('auto reclamo')!==-1)html+='<button class="btn-sm" style="background:rgba(28,110,164,.12);color:#1c6ea4;border:1px solid rgba(28,110,164,.3)" onclick="presupuestoClienteAbrir(\''+esc(i.ID)+'\')">🧾 Presupuesto Cliente</button>';
   html+='<button class="btn-sm" style="background:rgba(37,211,102,.12);color:#25d366;border:1px solid rgba(37,211,102,.3)" onclick="compartirWhatsApp(\''+esc(i.ID)+'\')">💬 WhatsApp</button>';
   if(rel&&rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length)html+='<button class="btn-sm" style="background:rgba(220,38,38,.12);color:#dc2626;border:1px solid rgba(220,38,38,.3)" onclick="exportarParaOrion(\''+esc(i.ID)+'\')">🤖 Agente IA</button>';
   if(i.Estado==='Pendientes de carga'||i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)" onclick="enviarATaller(\''+esc(i.ID)+'\')">&#x1F517; Enviar a taller</button>';
@@ -4850,6 +4851,148 @@ function exportarParaOrion(id){
 // ─── PDFs ─────────────────────────────────────────────────────────────────────
 function generarPDF(id){ generarPDFCompleto(id); }
 function generarPDFRel(id){ generarPDFCompleto(id); }
+/* ===== AUTO RECLAMO — Presupuesto Cliente (modo prueba) ===== */
+var _presCli=null;
+function _arNorm(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();}
+function _arKey(modelo,pieza){return _arNorm(modelo)+'|'+_arNorm(pieza);}
+function _arHistGet(){try{return JSON.parse(localStorage.getItem('autoreclamo_repuestos')||'{}');}catch(e){return {};}}
+function _arHistSet(o){try{localStorage.setItem('autoreclamo_repuestos',JSON.stringify(o));}catch(e){}}
+function presupuestoClienteAbrir(id){
+  var i=inspecciones.find(function(x){return x.ID==id;});if(!i){if(window.toast)toast('No encontré la inspección','error');return;}
+  var rel=i.Relevamiento;if(typeof rel==='string'){try{rel=JSON.parse(rel);}catch(e){rel=null;}}
+  if(!rel||!rel.calculador||!rel.calculador.piezas||!rel.calculador.piezas.length){if(window.toast)toast('Esta inspección no tiene piezas calculadas','warn');return;}
+  var calc=rel.calculador;
+  var ZMEC=['Mecánica / Vano Motor','Mecánica','Tren Delantero y Tracción','Tren Delantero y Tracción 4x4','Tren Delantero y Suspensión','Tren Trasero'];
+  var totalHsChapa=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a:a+(p.hsTrabajo||p.horas||0);},0);
+  var totalHsMec=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a+(p.hsTrabajo||p.horas||0):a;},0);
+  var totalPanos=calc.piezas.reduce(function(a,p){return a+(hasTarea(p,'Pintar')?(p.panos||1):hasTarea(p,'Difuminar')?0.5:0);},0);
+  var diasTotal=totalHsChapa>0?Math.ceil(totalHsChapa/4*2)/2:0;
+  var costoChapa=diasTotal*(calc.costoDiaChapa||0);
+  var costoMec=totalHsMec*(calc['costoHoraMecánica']||0);
+  var costoPintura=totalPanos*(calc.costoPanoPintura||0);
+  var totalOp=(calc.operaciones||[]).reduce(function(a,o){return a+(o.costo||0);},0);
+  var manoObra=costoChapa+costoMec+costoPintura+totalOp;
+  var grupos={},orden=[];
+  calc.piezas.forEach(function(p){var key=(p.zona||'')+'||'+(p.pieza||'');if(!grupos[key]){grupos[key]={zona:p.zona||'',pieza:p.pieza||'',tareas:[]};orden.push(key);}grupos[key].tareas.push(p);});
+  var gruposArr=orden.map(function(k){return grupos[k];});
+  var sustituciones=gruposArr.filter(function(g){return g.tareas.some(function(t){return hasTarea(t,'Sustituir');});});
+  var modelo=i.Modelo||'';
+  _presCli={i:i,calc:calc,manoObra:manoObra,gruposArr:gruposArr,sustituciones:sustituciones,modelo:modelo};
+  var fmt=function(n){return Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});};
+  var hist=_arHistGet();
+  var iaBtn=sustituciones.length?'<button id="prescli-ia" onclick="presupuestoClienteEstimarIA()" style="width:100%;margin-bottom:12px;background:#eaf3fb;color:#1c6ea4;border:1px solid #bcd9ef;border-radius:9px;padding:10px;font-size:13px;font-weight:700;cursor:pointer">🔍 Estimar precios con IA</button>':'';
+  var prev=document.getElementById('prescli-modal');if(prev)prev.remove();
+  var ov=document.createElement('div');ov.id='prescli-modal';
+  ov.style.cssText='position:fixed;inset:0;z-index:10001;background:rgba(15,48,87,.55);display:flex;align-items:center;justify-content:center;padding:16px';
+  var filasRep=sustituciones.map(function(g,idx){
+    var k=_arKey(modelo,g.pieza),h=hist[k];
+    var val=h?(' value="'+h.precio+'"'):'';
+    var hint=h?('<div style="font-size:10px;color:#1c6ea4;margin-top:2px;padding-left:2px">📌 Tu precio anterior: $'+fmt(h.precio)+' · '+esc(h.fecha)+'</div>'):'';
+    return '<div style="margin-bottom:9px">'
+      +'<div style="display:flex;align-items:center;gap:8px">'
+      +'<div style="flex:1;font-size:13px;color:#1f2933">'+esc(g.pieza)+'<span style="color:#9aa3ad;font-size:11px"> · '+esc(g.zona)+'</span></div>'
+      +'<span style="color:#9aa3ad">$</span>'
+      +'<input type="number" min="0" id="repcli-'+idx+'" placeholder="0"'+val+' style="width:120px;padding:7px 9px;border:1px solid #d8e2ec;border-radius:7px;font-size:13px">'
+      +'</div>'+hint+'</div>';
+  }).join('');
+  if(!sustituciones.length)filasRep='<p style="font-size:12px;color:#9aa3ad;margin:0">No hay piezas a sustituir en esta inspección.</p>';
+  ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
+    +'<div style="background:linear-gradient(135deg,#0f3057,#1c6ea4);color:#fff;padding:18px 22px;border-radius:16px 16px 0 0">'
+    +'<div style="font-size:18px;font-weight:800;letter-spacing:.5px">AUTO RECLAMO</div>'
+    +'<div style="font-size:12px;color:#bcd6e8">Presupuesto para el cliente</div></div>'
+    +'<div style="padding:20px 22px">'
+    +'<p style="font-size:13px;color:#3e4c59;margin:0 0 14px">Mano de obra calculada: <b>$'+fmt(manoObra)+'</b>. Cargá el precio estimado de los repuestos a sustituir y generá el PDF. <span style="color:#9aa3ad">Se guardan para la próxima.</span></p>'
+    +'<div style="font-weight:700;color:#0f3057;font-size:13px;margin-bottom:8px">Precio de repuestos <span style="font-weight:400;color:#9aa3ad;font-size:11px">(estimados)</span></div>'
+    +filasRep
+    +iaBtn
+    +'<div style="display:flex;gap:10px;margin-top:20px">'
+    +'<button onclick="document.getElementById(\'prescli-modal\').remove()" style="flex:0 0 auto;background:#eef3f8;color:#0f3057;border:none;border-radius:9px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer">Cancelar</button>'
+    +'<button onclick="presupuestoClienteGenerar()" style="flex:1;background:#0f3057;color:#fff;border:none;border-radius:9px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer">🧾 Generar presupuesto PDF</button>'
+    +'</div></div></div>';
+  document.body.appendChild(ov);
+}
+function presupuestoClienteGenerar(){
+  if(!_presCli)return;
+  var c=_presCli,i=c.i;
+  var fmt=function(n){return Number(n||0).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2});};
+  var hist=_arHistGet(),hoy=new Date().toLocaleDateString('es-AR');
+  var totalRep=0,filasRepPDF='';
+  c.sustituciones.forEach(function(g,idx){
+    var el=document.getElementById('repcli-'+idx);
+    var v=el?(parseFloat(el.value)||0):0; totalRep+=v;
+    if(v>0){
+      hist[_arKey(c.modelo,g.pieza)]={precio:v,fecha:hoy};
+      filasRepPDF+='<tr style="border-bottom:1px solid #e8eef4"><td style="padding:6px 10px">'+esc(g.pieza)+'</td><td style="padding:6px 10px;color:#64748b;font-size:11px">'+esc(g.zona)+'</td><td style="padding:6px 10px;text-align:right;font-weight:600">$'+fmt(v)+'</td></tr>';
+    }
+  });
+  _arHistSet(hist);
+  var total=c.manoObra+totalRep;
+  var filasTrab=c.gruposArr.map(function(g){
+    var seen={},lst=[];
+    g.tareas.forEach(function(t){var nm=(t.tarea||'');if(nm&&!seen[nm]){seen[nm]=1;lst.push(nm);}});
+    var nivel='';g.tareas.forEach(function(t){if(t.nivelDano)nivel=t.nivelDano;});
+    return '<tr style="border-bottom:1px solid #e8eef4"><td style="padding:6px 10px;color:#64748b;font-size:11px">'+esc(g.zona)+'</td><td style="padding:6px 10px;font-weight:500">'+esc(g.pieza)+'</td><td style="padding:6px 10px">'+esc(lst.join(' + '))+'</td><td style="padding:6px 10px;text-align:center">'+esc(nivel||'-')+'</td></tr>';
+  }).join('');
+  var fecha=new Date().toLocaleDateString('es-AR');
+  var presNum=(i.Siniestro||'').toString().replace(/[^0-9]/g,'').slice(-6)||('00'+Math.floor(Math.random()*9999)).slice(-4);
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><style>'
+    +'*{box-sizing:border-box}body{font-family:Arial,sans-serif;font-size:12px;color:#1f2933;padding:0;margin:0}'
+    +'.wrap{padding:30px 34px;max-width:900px;margin:0 auto}'
+    +'.top{background:linear-gradient(135deg,#0f3057,#1c6ea4);color:#fff;padding:24px 34px;display:flex;justify-content:space-between;align-items:flex-end}'
+    +'.top h1{margin:0;font-size:24px;font-weight:800;letter-spacing:1px}'
+    +'.top p{margin:3px 0 0;font-size:11px;color:#bcd6e8}.top .r{text-align:right;font-size:11px;color:#dbeaf5}'
+    +'h2{font-size:12px;background:#0f3057;color:#fff;padding:6px 11px;border-radius:5px;margin:18px 0 9px;letter-spacing:.04em}'
+    +'.g{display:grid;grid-template-columns:1fr 1fr;gap:6px 24px}'
+    +'.c span{color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.04em;display:block}.c p{margin:2px 0 0;font-weight:600}'
+    +'table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px}'
+    +'th{background:#0f3057;color:#fff;padding:6px 10px;text-align:left;font-size:10px}'
+    +'.res td{padding:7px 10px}.res .tot{background:#0f3057;color:#fff;font-weight:800;font-size:14px}.res .totv{background:#ffd166;color:#0f3057;font-weight:800;font-size:15px;text-align:right}'
+    +'.note{background:#f4f8fb;border-left:4px solid #1c6ea4;padding:10px 14px;border-radius:0 7px 7px 0;font-size:11px;color:#3e4c59;line-height:1.6;margin-top:14px}'
+    +'footer{margin-top:22px;border-top:1px solid #e2e8f0;padding-top:9px;font-size:10px;color:#94a3b8;text-align:center}'
+    +'</style></head><body>'
+    +'<div class="top"><div><h1>AUTO RECLAMO</h1><p>Presupuesto de reparación para tu reclamo</p></div>'
+    +'<div class="r"><div>Presupuesto N° '+esc(presNum)+'</div><div>Fecha: '+fecha+'</div><div>Validez: 15 días</div></div></div>'
+    +'<div class="wrap">'
+    +'<h2>Datos del vehículo</h2><div class="g">'
+    +'<div class="c"><span>Marca / Modelo</span><p>'+esc(i.Modelo||'-')+'</p></div>'
+    +'<div class="c"><span>Año</span><p>'+esc(i.Anio||'-')+'</p></div>'
+    +'<div class="c"><span>Patente</span><p>'+esc(i.Patente||'-')+'</p></div>'
+    +'<div class="c"><span>Titular</span><p>'+esc(i.Asegurado||'-')+'</p></div></div>'
+    +'<h2>Detalle de la reparación</h2>'
+    +'<table><thead><tr><th>Zona</th><th>Pieza</th><th>Trabajo</th><th style="text-align:center">Daño</th></tr></thead><tbody>'+filasTrab+'</tbody></table>'
+    +(filasRepPDF?'<h2>Repuestos <span style="font-weight:400;opacity:.8">(estimados)</span></h2><table><thead><tr><th>Pieza</th><th>Zona</th><th style="text-align:right">Precio estimado</th></tr></thead><tbody>'+filasRepPDF+'</tbody></table>':'')
+    +'<h2>Resumen</h2><table class="res"><tbody>'
+    +'<tr style="border-bottom:1px solid #e8eef4"><td>Mano de obra (chapa, pintura, mecánica)</td><td style="text-align:right;font-weight:600">$'+fmt(c.manoObra)+'</td></tr>'
+    +(totalRep?'<tr style="border-bottom:1px solid #e8eef4"><td>Repuestos (estimados)</td><td style="text-align:right;font-weight:600">$'+fmt(totalRep)+'</td></tr>':'')
+    +'</tbody><tfoot><tr><td class="tot">TOTAL ESTIMADO</td><td class="totv">$'+fmt(total)+'</td></tr></tfoot></table>'
+    +'<div class="note"><b>Importante:</b> los valores de repuestos son <b>estimados</b> y están sujetos a confirmación según cotización del repuestero o concesionario. La mano de obra fue calculada en base al relevamiento de daños. Pueden surgir daños ocultos al desarmar el vehículo. Este presupuesto no constituye asesoramiento legal.</div>'
+    +'<footer>AUTO RECLAMO · Instagram @autoreclamo · autoreclamo.ok@gmail.com · '+fecha+'</footer>'
+    +'</div></body></html>';
+  var pn=(i.Patente||'').replace(/\s/g,'');
+  var filename='Presupuesto_AutoReclamo_'+(pn||presNum)+'_'+new Date().toISOString().slice(0,10)+'.pdf';
+  var m=document.getElementById('prescli-modal');if(m)m.remove();
+  mostrarVistaPrevia(html,filename);
+}
+async function presupuestoClienteEstimarIA(){
+  if(!_presCli)return;
+  var c=_presCli;
+  var veh=((c.i.Modelo||'')+' '+(c.i.Anio||'')).trim();
+  var btn=document.getElementById('prescli-ia');
+  if(btn){btn.disabled=true;btn.textContent='Estimando con IA...';}
+  var hechas=0;
+  for(var idx=0;idx<c.sustituciones.length;idx++){
+    var el=document.getElementById('repcli-'+idx);
+    if(!el)continue;
+    if(el.value && parseFloat(el.value)>0)continue;
+    try{
+      var res=await apiCall({action:'estimarRepuesto', pieza:c.sustituciones[idx].pieza, vehiculo:veh});
+      if(res && res.ok && res.precio){ el.value=res.precio; el.style.background='#fffbe6'; hechas++; }
+    }catch(e){}
+  }
+  if(btn){btn.disabled=false;btn.textContent='🔍 Estimar precios con IA';}
+  if(window.toast)toast(hechas?('Estimé '+hechas+' repuesto(s) con IA. Revisá y ajustá los valores.'):'No pude estimar precios ahora', hechas?'ok':'warn');
+}
+/* ===== fin AUTO RECLAMO ===== */
 function generarPDFCompleto(id){
   var i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
   var rel=i.Relevamiento;if(typeof rel==='string'){try{rel=JSON.parse(rel);}catch(e){rel=null;}}
