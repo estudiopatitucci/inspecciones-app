@@ -4893,7 +4893,7 @@ function presupuestoClienteAbrir(id){
       +'<div style="flex:1;font-size:13px;color:#1f2933">'+esc(g.pieza)+'<span style="color:#9aa3ad;font-size:11px"> · '+esc(g.zona)+'</span></div>'
       +'<span style="color:#9aa3ad">$</span>'
       +'<input type="number" min="0" id="repcli-'+idx+'" placeholder="0"'+val+' style="width:120px;padding:7px 9px;border:1px solid #d8e2ec;border-radius:7px;font-size:13px">'
-      +'</div>'+hint+'</div>';
+      +'</div>'+hint+'<div id="rephint-'+idx+'" style="font-size:10px;color:#9aa3ad;margin-top:2px;padding-left:2px"></div></div>';
   }).join('');
   if(!sustituciones.length)filasRep='<p style="font-size:12px;color:#9aa3ad;margin:0">No hay piezas a sustituir en esta inspección.</p>';
   ov.innerHTML='<div style="background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
@@ -4986,7 +4986,9 @@ async function presupuestoClienteEstimarIA(){
     if(el.value && parseFloat(el.value)>0)continue;
     try{
       var res=await apiCall({action:'estimarRepuesto', pieza:c.sustituciones[idx].pieza, vehiculo:veh});
-      if(res && res.ok && res.precio){ el.value=res.precio; el.style.background='#fffbe6'; hechas++; }
+      var hint=document.getElementById('rephint-'+idx);
+      if(res && res.ok && res.precio){ el.value=res.precio; el.style.background='#fffbe6'; if(hint)hint.textContent=(res.fuente||'estimado')+' · '+(res.n||0)+' result. · rango $'+Number(res.min||0).toLocaleString('es-AR')+'–$'+Number(res.max||0).toLocaleString('es-AR'); hechas++; }
+      else { if(hint)hint.textContent='No encontrado en ML — cargalo a mano'; }
     }catch(e){}
   }
   if(btn){btn.disabled=false;btn.textContent='🔍 Estimar precios con IA';}
