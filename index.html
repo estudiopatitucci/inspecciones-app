@@ -473,6 +473,7 @@
             <div style="display:flex;gap:8px;margin-bottom:16px">
               <button id="cia-riv" onclick="selCia('rivadavia')" class="insp-btn sel">Seguros Rivadavia</button>
               <button id="cia-prov" onclick="selCia('provincia')" class="insp-btn">Provincia Seguros</button>
+              <button id="cia-peri" onclick="selCia('pericial')" class="insp-btn">Provincia • Pericial</button>
               <button id="cia-auto" onclick="selCia('manual')" class="insp-btn">Carga manual</button>
             </div>
             <div class="pdf-zone" id="pdf-zone" onclick="document.getElementById('pdf-input').click()" ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="handleDrop(event)">
@@ -1028,6 +1029,11 @@
               <option>Motovehiculo</option>
             </select>
           </div>
+          <div style="margin-bottom:14px">
+            <button type="button" class="btn-secondary btn-sm" onclick="orionImportarAbrir()" style="display:inline-flex;align-items:center;gap:6px">📋 Importar Informe ORION</button>
+            <input type="file" id="orion-file-input" accept="application/pdf" style="display:none" onchange="orionImportarFile(this)">
+            <div id="orion-import-status" style="display:none;font-size:12px;color:var(--text2);margin-top:8px">Leyendo informe…</div>
+          </div>
           <div id="g-no-tipo" style="font-size:13px;color:var(--text3);padding:4px 0 8px">Seleccioná el tipo de vehículo para ver las zonas.</div>
           <div id="g-main" style="display:none">
             <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
@@ -1128,6 +1134,11 @@
                 <span style="font-weight:600;color:var(--text)">Total estimado</span>
                 <span id="rel-c-total" style="font-family:'DM Mono',monospace;font-weight:700;font-size:16px;color:var(--accent)">$0</span>
               </div>
+              <div id="rel-c-orion-row" style="display:none;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">
+                <span style="color:var(--text2)">Informe ORION (M.O.+Mat.)</span>
+                <span id="rel-c-orion-val" style="font-family:'DM Mono',monospace;font-weight:500">$0</span>
+              </div>
+              <div id="rel-c-orion-diff" style="display:none;text-align:right;font-size:11px;margin-top:4px"></div>
             </div>
           </div>
         </div>
@@ -1153,6 +1164,7 @@
               <option value="Ampliaciones de calle">Ampliaciones de calle — $8.000</option>
               <option value="Inspecciones Calle">Inspecciones Calle — $10.000</option>
               <option value="Posible DT">Posible DT — $12.000</option>
+              <option value="Pericial">Pericial — $0</option>
             </select>
           </div>
           <div><label style="font-size:11px;color:var(--text2);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em">Observaciones del inspector</label><textarea id="rel-danos" rows="3" style="resize:vertical"></textarea></div>
@@ -1298,7 +1310,14 @@
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 const API='https://script.google.com/macros/s/AKfycbywk-SytIxiH7suDaIjfK9ZhQ6qOlAxxAM6hEoeqr8-PKWuk0-qDMmMMxQkOx3f8HMu/exec';
-const SECRET_TOKEN='ep_9k2mX7vQn4pRjL8wZdA3sYtB6uCfHg0E';
+// ─── SESIÓN — token temporal emitido por el backend al hacer login ──────────
+// Dura 12 hs. Se guarda en localStorage para no pedir la clave en cada apertura.
+let SESS=null,rolActual='inspector';
+function _sessGuardar(tok,nombre,rol,exp){SESS=tok;rolActual=rol||'inspector';try{localStorage.setItem('ep_sess',JSON.stringify({t:tok,n:nombre,r:rolActual,exp:exp||Date.now()+11.5*3600*1000}));}catch(e){}}
+function _sessLeer(){try{var v=JSON.parse(localStorage.getItem('ep_sess')||'null');if(v&&v.t&&v.n&&v.exp&&v.exp>Date.now())return v;}catch(e){}_sessBorrar();return null;}
+function _sessBorrar(){SESS=null;try{localStorage.removeItem('ep_sess');}catch(e){}}
+function _sesionVencida(){_sessBorrar();try{logout();}catch(e){}_mostrarToastError('Tu sesión venció. Ingresá de nuevo para continuar.',null);}
+function _chkSess(j){if(j&&j.code==='SESSION')_sesionVencida();return j;}
 const INSP_MAILS={'Ignacio':'medinainspecciones@gmail.com','Matías':'mns661590@gmail.com','Valentino':'valentinopatitucci5@gmail.com','Sebastián':'Patitucci.mp@gmail.com','Mariano':'Patitucci.mp@gmail.com','Bruno':'bruno@estudiopatitucci.com','Majo':'sanchezmajo2022@gmail.com','Pablo':'Patitucci.mp@gmail.com'};
 // Inspectores con permiso para cambiar el estado de sus propios relevamientos
 const INSP_PUEDE_CAMBIAR_ESTADO = ['Mariano','Valentino','Bruno'];
@@ -1380,12 +1399,15 @@ async function apiCall(data,_retryFn){
   var ctrl=new AbortController();
   var tid=setTimeout(function(){ctrl.abort();},30000);
   try{
-    var r=await fetch(API,{method:'POST',body:JSON.stringify(Object.assign({token:SECRET_TOKEN},data)),signal:ctrl.signal});
+    var r=await fetch(API,{method:'POST',body:JSON.stringify(Object.assign({sess:SESS},data)),signal:ctrl.signal});
     clearTimeout(tid);
     if(!r.ok)throw new Error('HTTP '+r.status);
-    return r.json();
+    var j=await r.json();
+    if(j&&j.code==='SESSION'){_sesionVencida();throw new Error('sesion');}
+    return j;
   }catch(e){
     clearTimeout(tid);
+    if(e&&e.message==='sesion')throw e;
     var msg=e.name==='AbortError'
       ?'El servidor tardó demasiado (timeout). Verificá tu conexión e intentá de nuevo.'
       :'Error de conexión con el servidor. Verificá tu acceso e intentá de nuevo.';
@@ -1393,12 +1415,12 @@ async function apiCall(data,_retryFn){
     throw e;
   }
 }
-function apiCallXHR(data,onProgress){return new Promise(function(resolve,reject){var xhr=new XMLHttpRequest();xhr.open('POST',API);xhr.responseType='json';if(onProgress&&xhr.upload){xhr.upload.onprogress=function(e){if(e.lengthComputable)onProgress(e.loaded,e.total);};}xhr.onload=function(){if(xhr.status>=200&&xhr.status<300){resolve(xhr.response);}else{reject(new Error('HTTP '+xhr.status));}};xhr.onerror=function(){reject(new Error('red'));};xhr.send(JSON.stringify(Object.assign({token:SECRET_TOKEN},data)));});}
+function apiCallXHR(data,onProgress){return new Promise(function(resolve,reject){var xhr=new XMLHttpRequest();xhr.open('POST',API);xhr.responseType='json';if(onProgress&&xhr.upload){xhr.upload.onprogress=function(e){if(e.lengthComputable)onProgress(e.loaded,e.total);};}xhr.onload=function(){if(xhr.status>=200&&xhr.status<300){var j=xhr.response;if(j&&j.code==='SESSION'){_sesionVencida();reject(new Error('sesion'));return;}resolve(j);}else{reject(new Error('HTTP '+xhr.status));}};xhr.onerror=function(){reject(new Error('red'));};xhr.send(JSON.stringify(Object.assign({sess:SESS},data)));});}
 function mostrarProgresoSubida(loaded,total,nFotos){var wrap=s('upload-progress-wrap');var bar=s('upload-progress-bar');var pct=s('upload-progress-pct');var lbl=s('upload-progress-label');var sub=s('upload-progress-sub');if(!wrap)return;var pctVal=total>0?Math.min(99,Math.round(loaded/total*100)):0;if(bar)bar.style.width=pctVal+'%';if(pct)pct.textContent=pctVal+'%';if(lbl)lbl.textContent='Subiendo '+(nFotos||'')+(nFotos===1?' foto...':(nFotos>1?' fotos...':'...'));if(sub){var mb=(loaded/1048576).toFixed(1)+' / '+(total/1048576).toFixed(1)+' MB';sub.textContent=mb;}}
 function ocultarProgresoSubida(){var wrap=s('upload-progress-wrap');if(wrap)wrap.style.display='none';var bar=s('upload-progress-bar');if(bar)bar.style.width='0%';}
 function iniciarProgresoSubida(nFotos){var wrap=s('upload-progress-wrap');if(wrap)wrap.style.display='block';var bar=s('upload-progress-bar');if(bar)bar.style.width='0%';var pct=s('upload-progress-pct');if(pct)pct.textContent='0%';var lbl=s('upload-progress-label');if(lbl)lbl.textContent='Subiendo '+(nFotos||'')+(nFotos===1?' foto...':(nFotos>1?' fotos...':'...'));var sub=s('upload-progress-sub');if(sub)sub.textContent='';}
 async function _fetchTimeout(url,opts,ms){var ctrl=new AbortController();var tid=setTimeout(function(){ctrl.abort();},ms||30000);try{var r=await fetch(url,Object.assign({},opts,{signal:ctrl.signal}));clearTimeout(tid);return r;}catch(e){clearTimeout(tid);throw e;}}
-async function apiGet(){const r=await _fetchTimeout(API+'?token='+SECRET_TOKEN,{},30000);return r.json();}
+async function apiGet(){const r=await _fetchTimeout(API+'?sess='+encodeURIComponent(SESS||''),{},30000);const j=await r.json();if(j&&j.code==='SESSION'){_sesionVencida();throw new Error('sesion');}return j;}
 
 async function doLogin(){
   const nombre=s('login-nombre').value,pass=s('login-pass').value,err=s('login-error');
@@ -1419,7 +1441,7 @@ async function doLogin(){
     },1000);
     var tid=setTimeout(function(){ctrl.abort();},15000);
     try{
-      var r=await fetch(API,{method:'POST',body:JSON.stringify({token:SECRET_TOKEN,action:'login',nombre:nombre,clave:pass}),signal:ctrl.signal});
+      var r=await fetch(API,{method:'POST',body:JSON.stringify({action:'login',nombre:nombre,clave:pass}),signal:ctrl.signal});
       clearTimeout(tid);clearInterval(ticker);
       if(!r.ok)throw new Error('HTTP '+r.status);
       return await r.json();
@@ -1447,9 +1469,16 @@ async function doLogin(){
   }
 
   if(!res||!res.ok){err.textContent=res&&res.msg?res.msg:'Contraseña incorrecta.';btn.textContent='Ingresar';btn.disabled=false;return;}
+  _sessGuardar(res.sess,nombre,res.rol,res.exp);
   err.textContent='';
   btn.textContent='Cargando...';
   hide('screen-login');
+  await _entrarApp(nombre);
+  btn.textContent='Ingresar';btn.disabled=false;
+}
+
+// Configura las pantallas post-login. La usan doLogin y la reanudación de sesión.
+async function _entrarApp(nombre){
   const ls=s('screen-loading');ls.style.display='flex';
   s('loading-msg').textContent='Cargando inspecciones...';
   if(nombre==='Administrador'){
@@ -1458,7 +1487,6 @@ async function doLogin(){
     s('admin-user-label').textContent='Administrador';
     await cargarInspecciones();
     ls.style.display='none';
-    btn.textContent='Ingresar';btn.disabled=false;
     adminTab('dashboard');
     iniciarAutoRefresh();
   } else {
@@ -1474,11 +1502,12 @@ async function doLogin(){
     if(micBtn) micBtn.style.display=VOZ_BETA.indexOf(nombre)>=0?'':'none';
     await cargarInspector();
     ls.style.display='none';
-    btn.textContent='Ingresar';btn.disabled=false;
   }
 }
 
 function logout(){
+  try{if(SESS)fetch(API,{method:'POST',body:JSON.stringify({action:'logout',sess:SESS})}).catch(function(){});}catch(e){}
+  _sessBorrar();rolActual='inspector';
   usuarioActual=null;inspActual=null;relId=null;fotosPendientes=[];fotosSubiendo=0;
   if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
   ['screen-admin','screen-inspector'].forEach(x=>{s(x).style.display='none';});
@@ -1922,7 +1951,7 @@ function renderResumenCalcAdmin(calc){
 
   var filas = orden.map(function(key){
     var g = grupos[key];
-    var chips = g.tareas
+    var chips = _expandTareas(g.tareas)
       .sort(function(a,b){ var o={Reparar:1,Sustituir:2,Pintar:3,Difuminar:4}; return (o[a.tarea]||9)-(o[b.tarea]||9); })
       .map(function(t){
         var col = colores[t.tarea]||'var(--text3)';
@@ -1968,7 +1997,7 @@ function renderResumenCalcAdmin(calc){
     return a;
   },0);
   var gran = totHs + totOpHs;
-  var dias = gran>0 ? Math.ceil(gran/8*2)/2 : 0;
+  var dias = gran>0 ? Math.ceil(gran/4*2)/2 : 0;
   var costoChapa = calc.costoChapa||0, costoPano = calc.costoPano||0;
   var totalCosto = (dias*costoChapa)+(totPanos*costoPano);
 
@@ -2349,8 +2378,9 @@ async function cargarArchivo(){
   tablaEl.innerHTML='<div class="loading"><div class="spinner"></div>Cargando archivo...</div>';
   estadoEl.style.display='none';
   try{
-    var res=await _fetchTimeout(API+'?token='+SECRET_TOKEN+'&action=getArchivadas',{},30000);
+    var res=await _fetchTimeout(API+'?sess='+encodeURIComponent(SESS||'')+'&action=getArchivadas',{},30000);
     var data=await res.json();
+    _chkSess(data);
     if(data.ok){
       inspeccionesArchivadas=data.data||[];
       archivoYaCargado=true;
@@ -2548,9 +2578,10 @@ function renderStats(){
 // ─── PDF ──────────────────────────────────────────────────────────────────────
 function selCia(cia){
   ciaActual=cia;
-  ['riv','prov','auto'].forEach(function(x){s('cia-'+x).className='insp-btn';});
-  s('cia-'+{rivadavia:'riv',provincia:'prov',manual:'auto'}[cia]).className='insp-btn sel';
-  const titulos={rivadavia:'Subir PDF de Seguros Rivadavia',provincia:'Subir PDF de Provincia Seguros',manual:'Carga manual'};
+  ['riv','prov','peri','auto'].forEach(function(x){var b=s('cia-'+x); if(b) b.className='insp-btn';});
+  var _bid={rivadavia:'riv',provincia:'prov',pericial:'peri',manual:'auto'}[cia];
+  if(s('cia-'+_bid)) s('cia-'+_bid).className='insp-btn sel';
+  const titulos={rivadavia:'Subir PDF de Seguros Rivadavia',provincia:'Subir PDF de Provincia Seguros',pericial:'Subir Informe Pericial ORION (Provincia)',manual:'Carga manual'};
   s('pdf-zone-title').textContent=titulos[cia];
   if(cia==='manual'){hide('paso-pdf');show('paso-form');limpiarForm();}
 }
@@ -2650,7 +2681,10 @@ async function procesarPDF(file){
       }catch(e2){console.warn('Rivadavia p2 parse error:',e2);}
     }
 
-    const datos=ciaActual==='rivadavia'?extraerRivadavia(txt,_rvDanosDen,_rvDanos):extraerProvincia(txt);
+    let datos;
+    if(ciaActual==='rivadavia') datos=extraerRivadavia(txt,_rvDanosDen,_rvDanos);
+    else if(ciaActual==='pericial'){ var _plines=(window.__orionExtraerLineas? await window.__orionExtraerLineas(pdf): []); datos=extraerProvinciaPericial(_plines); }
+    else datos=extraerProvincia(txt);
     llenarFormulario(datos);
     hide('pdf-loading');hide('paso-pdf');show('paso-form');
     s('paso-form-titulo').textContent='Revisá los datos — editá lo que necesites';
@@ -2876,6 +2910,38 @@ function extraerProvincia(txt){
   };
 }
 
+function extraerProvinciaPericial(lines){
+  var full=(lines||[]).join('\n');
+  function m1(re){ var x=full.match(re); return x?String(x[1]).replace(/\s+/g,' ').trim():''; }
+  function toISO(d){ var p=String(d||'').split('/'); return p.length===3? p[2]+'-'+p[1].padStart(2,'0')+'-'+p[0].padStart(2,'0'):''; }
+  var sin=m1(/N[°º]?\s*Siniestro\s*:\s*([0-9][0-9\-\/]+)/i);
+  var fsin=toISO(m1(/Fecha\s*Siniestro\s*:\s*(\d{2}\/\d{2}\/\d{4})/i));
+  var finsp=toISO(m1(/Fecha\s+de\s+Inspecci.{0,2}n\s*:\s*(\d{2}\/\d{2}\/\d{4})/i)||m1(/Fecha\s+Informe\s*:\s*(\d{2}\/\d{2}\/\d{4})/i));
+  var marca=m1(/^Marca\s*:\s*(.+)$/im), modelo=m1(/^Modelo\s*:\s*(.+)$/im), version=m1(/^Tipo\s*:\s*(.+)$/im);
+  var anio=m1(/A[nñ]o\s+de\s+Fabricaci.{0,2}n\s*:\s*(\d{4})/i);
+  var pat=m1(/Patente\s*:\s*([A-Z]{2}-?\d{3}-?[A-Z]{2}|[A-Z]{3}-?\d{3})/i);
+  var motor=m1(/N[°º]?\s*Motor\s*:\s*([A-Z0-9]+)/i);
+  var chasis=m1(/N[°º]?\s*Carrocer.{0,2}a\s*:\s*([A-Z0-9]+)/i);
+  var km=m1(/Kilometraje\s*:\s*([\d\.]+)/i);
+  var localidad=m1(/Localidad\s*:\s*(.+?)\s*$/im);
+  var rol=m1(/\b(TERCERO|TERCERA|ASEGURADO|ASEGURADA|TITULAR|DENUNCIANTE)\b\s*D\.?\s*N\.?\s*I\.?/i);
+  if(!rol) rol=m1(/([A-ZÁÉÍÓÚ]{4,20})\s+D\.?\s*N\.?\s*I\.?\s*\(/i);
+  var hecho=m1(/DESCRIPCI.{0,2}N\s+DEL\s+HECHO\s*:\s*([\s\S]+?)(?:\s+Peritado\s+por|\s+Reporte\s+sistema|\s+P.{0,2}gina\s+\d|$)/i);
+  var tallerObs=m1(/(?:^|\n)\s*Taller\s+([A-ZÁÉÍÓÚ][A-Za-zÁÉÍÓÚñ'\.\s]{2,40}?)(?:\s*\n|\s+Mail|\s+Tel|$)/);
+  var aseg=(tallerObs && !/generico/i.test(tallerObs))? tallerObs.trim() : 'Genérico';
+  var tel=(aseg!=='Genérico')? m1(/Tel\s*:?\s*([0-9][0-9\s\-]{5,18})/i) : '';
+  var lugarPer=m1(/Lugar\s+Peritaci.{0,2}n\s*:\s*(.+?)\s+Peritado\s+en/i)||m1(/Lugar\s+Peritaci.{0,2}n\s*:\s*(.+)$/im);
+  var dir=(aseg!=='Genérico' && lugarPer && !/mediaci/i.test(lugarPer))? lugarPer : '';
+  var mod=[marca,modelo,version].filter(Boolean).join(' ');
+  var danos='';
+  try{ if(window.__orionParse){ var pp=window.__orionParse(lines)||{};
+    danos=(pp.piezas||[]).map(function(x){return x.nombre;}).concat((pp.pintura||[]).map(function(x){return x.nombre+' (pintura)';})).filter(Boolean).join(', '); } }catch(e){}
+  return {sin:sin,cia:'Provincia Seguros',tipo:rol,finsp:finsp,fsin:fsin,
+    pat:pat?pat.toUpperCase():'',mod:mod,anio:anio,chasis:chasis,motor:motor,km:km,
+    aseg:aseg,tel:tel,dir:dir,localidad:localidad,danos:danos,danosDen:hecho,
+    tipoVehiculo:(typeof derivarTipoVehiculo==='function'?derivarTipoVehiculo(mod):'')};
+}
+
 function llenarFormulario(d){
   function set(id,val){var el=s(id);if(el&&val)el.value=val;}
   set('f-sin',d.sin);set('f-tipo',d.tipo);set('f-finsp',d.finsp);set('f-fsin',d.fsin);
@@ -2884,6 +2950,7 @@ function llenarFormulario(d){
   set('f-aseg',d.aseg);set('f-tel',d.tel);set('f-dir',d.dir);set('f-localidad',d.localidad);
   set('f-danos',d.danos);set('f-danos-den',d.danosDen);
   if(d.cia){var sel=s('f-cia');for(var i=0;i<sel.options.length;i++){if(sel.options[i].text===d.cia){sel.selectedIndex=i;break;}}}
+  if(d.tipoVehiculo){var _tv=s('ia-nueva-tipo'); if(_tv) _tv.value=d.tipoVehiculo;}
 }
 
 function limpiarForm(){
@@ -3753,6 +3820,12 @@ function guardarBorrador(){
   _r5LastSaveTs = Date.now();
   _r5ActualizarIndicador();
 }
+var _r5LastSaveTs = 0;
+function _r5ActualizarIndicador(){
+  var el=s('calc-guardado'); if(!el)return;
+  el.textContent='✓ Guardado'; el.style.color='var(--green)';
+  setTimeout(function(){ el.textContent='…'; },2500);
+}
 
 ['rel-km','rel-danos','rel-taller','rel-tel','rel-mail','rel-cuit','rel-dir-taller','rel-loc-taller'].forEach(function(id){
   var el=s(id);if(el)el.addEventListener('input',guardarBorrador);
@@ -3903,9 +3976,8 @@ function relLlenarInfoAuto(insp){
 }
 
 // ─── AUTO-ASIGNACIÓN DE TIPO DE VEHÍCULO ─────────────────────────────────────
-function autoAsignarTipoVehiculo(modelo){
-  var sel=s('rel-calc-tipo');if(!sel||!modelo)return;
-  var m=String(modelo).toLowerCase();
+function derivarTipoVehiculo(modelo){
+  var m=String(modelo||'').toLowerCase();
   var tipo='';
 
   // ── Pickups (primero para que no caigan en sedan) ──────────────────────────
@@ -3933,11 +4005,12 @@ function autoAsignarTipoVehiculo(modelo){
   else if(/etios|corolla|yaris|civic|focus|\bgol\b|\bpolo\b|\bvento\b|virtus|suran|\bup\b|onix|cruze|prisma|cobalt|\bsail\b|agile|aveo|celta|classic|palio|punto|bravo|linea|\buno\b|grand siena|cronos|\bargo\b|\bmobi\b|logan|sandero|fluence|\bclio\b|megane|latitude|\b206\b|\b207\b|\b208\b|\b307\b|\b308\b|\b408\b|\b508\b|\bc3\b|\bc4\b|\bc5\b|versa|tiida|march|sentra|almera|\bfit\b|\bjazz\b|\bcity\b|\bi30\b|elantra|hb20|accent|cerato|\brio\b|picanto|fiesta|mondeo|\bka\b|\bgolf\b|jetta|\ba1\b|\ba3\b|\ba4\b|\ba6\b|serie 1|serie 3|serie 5|clase a|clase c|clase e|meriva|zafira|cobalt|granta|vesta|fiat 500|abarth|tipo|bravo|\b147\b|\b156\b|\b166\b/.test(m))
     tipo='Sedán / Hatchback (4-5 Puertas)';
 
-  if(tipo){
-    sel.value=tipo;
-    relCalcState.tipo=tipo;
-    relCalcSetTipo();
-  }
+  return tipo;
+}
+function autoAsignarTipoVehiculo(modelo){
+  var sel=s('rel-calc-tipo');if(!sel||!modelo)return;
+  var tipo=derivarTipoVehiculo(modelo);
+  if(tipo){ sel.value=tipo; relCalcState.tipo=tipo; relCalcSetTipo(); }
 }
 
 // ─── COMPRESIÓN DE FOTOS ──────────────────────────────────────────────────────
@@ -4441,11 +4514,12 @@ async function enviarRel(){
   var calcTotalOpHs=relOpState.reduce(function(acc,o){
     if(o.operacion==='Banco de estiraje') return acc+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
     if(o.operacion==='Desmontaje y montaje de accesorios') return acc+(o.horas||0);
+    if(o.operacion==='Diferencia entre baremo y cotización real') return acc+(o.horas||0);
     return acc;
   },0);
   var calcTotalPanos=relCalcState.piezas.reduce(function(acc,p){if(hasTarea(p,'Pintar'))return acc+(p.panos||0);if(hasTarea(p,'Difuminar'))return acc+0.5;return acc;},0);
   var _totalOpCosto=relOpState.reduce(function(acc,o){return acc+(o.costo||0);},0);
-  var _diasChapa=Math.ceil((calcTotalHs+calcTotalOpHs)/8*2)/2;
+  var _diasChapa=Math.ceil((calcTotalHs+calcTotalOpHs)/4*2)/2;
   var _costoChapa=_diasChapa*relCostoDiaChapa;
   var _costoPintura=calcTotalPanos*relCostoPanoPintura;
   var _costoTotal=_costoChapa+_costoPintura+_totalOpCosto;
@@ -4795,10 +4869,10 @@ function generarPDFCompleto(id){
     });
     var filas=orden.map(function(key){
       var g=grupos[key];
-      var principal=g.tareas.find(function(t){return t.tarea==='Reparar'||t.tarea==='Sustituir';});
-      var pintar=g.tareas.find(function(t){return t.tarea==='Pintar';});
-      var difuminar=g.tareas.find(function(t){return t.tarea==='Difuminar';});
-      var tareasLabel=g.tareas.map(function(t){return t.tarea;})
+      var principal=g.tareas.find(function(t){return hasTarea(t,'Reparar')||hasTarea(t,'Sustituir');});
+      var pintar=g.tareas.find(function(t){return hasTarea(t,'Pintar');});
+      var difuminar=g.tareas.find(function(t){return hasTarea(t,'Difuminar');});
+      var tareasLabel=_expandTareas(g.tareas).map(function(t){return t.tarea;})
         .sort(function(a,b){var o={Reparar:1,Sustituir:1,Pintar:2,Difuminar:3};return(o[a]||9)-(o[b]||9);})
         .filter(function(v,ii,arr){return arr.indexOf(v)===ii;}).join(' + ');
       var nivel=(principal&&principal.nivelDano)||'';
@@ -4818,7 +4892,7 @@ function generarPDFCompleto(id){
     var totalHsChapaPDF=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a:a+(p.hsTrabajo||p.horas||0);},0);
     var totalHsMecPDF=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a+(p.hsTrabajo||p.horas||0):a;},0);
     var totalPanos=calc.piezas.reduce(function(a,p){return a+(hasTarea(p,'Pintar')?(p.panos||1):hasTarea(p,'Difuminar')?0.5:0);},0);
-    var diasTotal=totalHsChapaPDF>0?Math.ceil(totalHsChapaPDF/8*2)/2:0;
+    var diasTotal=totalHsChapaPDF>0?Math.ceil(totalHsChapaPDF/4*2)/2:0;
     // Costos
     var costoDia=calc.costoDiaChapa||0,costoHMec=calc.costoHoraMecánica||0,costoPano=calc.costoPanoPintura||0;
     var costoChapa=diasTotal*costoDia;
@@ -5083,7 +5157,7 @@ async function descargarTodasLasFotos(cacheKey){
     return new Blob([buf],{type:mime});
   }
   async function fetchViaGAS(item){
-    var url=API+'?token='+SECRET_TOKEN+'&action=getFile&fileId='+item.id;
+    var url=API+'?sess='+encodeURIComponent(SESS||'')+'&action=getFile&fileId='+item.id;
     var r=await fetch(url);
     var data=await r.json();
     if(!data.ok)throw new Error(data.msg||'error GAS');
@@ -5243,7 +5317,17 @@ document.addEventListener('DOMContentLoaded', function() {
   // Comprobar si es un link de taller
   var tallerParam=(new URLSearchParams(window.location.search)).get('taller');
   if(tallerParam){iniciarVistaTaller(tallerParam);return;}
-  // Siempre mostrar pantalla de login al abrir la página
+  // Sesión vigente (menos de 12 hs): entrar directo sin pedir la clave
+  var v=_sessLeer();
+  if(v){
+    SESS=v.t;rolActual=v.r||'inspector';
+    var lp=document.getElementById('landing-page');
+    if(lp)lp.classList.add('hidden');
+    hide('screen-login');
+    _entrarApp(v.n);
+    return;
+  }
+  // Sin sesión guardada: se muestra la landing con el acceso al login
 });
 
 // ─── VISTA TALLER ──────────────────────────────────────────────────────────
@@ -5393,6 +5477,7 @@ async function enviarRelTallerDesdeForm(){
   var calcTotalOpHs=relOpState.reduce(function(acc,o){
     if(o.operacion==='Banco de estiraje') return acc+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
     if(o.operacion==='Desmontaje y montaje de accesorios') return acc+(o.horas||0);
+    if(o.operacion==='Diferencia entre baremo y cotización real') return acc+(o.horas||0);
     return acc;
   },0);
   var calcTotalPanos=relCalcState.piezas.reduce(function(acc,p){if(hasTarea(p,'Pintar'))return acc+(p.panos||0);if(hasTarea(p,'Difuminar'))return acc+0.5;return acc;},0);
@@ -5675,7 +5760,7 @@ var SUSTITUIR_16HS_GRID = [
   'Piso de carga de chapa acanalada'
 ];
 var SUSTITUIR_16HS = ['Lateral de caja derecho','Lateral de caja izquierdo','Guardabarro trasero derecho','Guardabarro trasero izquierdo'];
-var OP_LISTA = ['Banco de estiraje','Carga de gas aire acondicionado','Alineación y balanceo','Armado de rueda','Escaneo / reseteo de módulos','Desmontaje y montaje de accesorios','Mecánica y/o electricidad','Pegado parabrisas/luneta','Otra'];
+var OP_LISTA = ['Banco de estiraje','Carga de gas aire acondicionado','Alineación y balanceo','Armado de rueda','Escaneo / reseteo de módulos','Desmontaje y montaje de accesorios','Mecánica y/o electricidad','Pegado parabrisas/luneta','Diferencia entre baremo y cotización real','Otra'];
 var relCalcState = {tipo:'', piezas:[]};
 var relCalcIdx = 0;
 var openZones = {};
@@ -5687,6 +5772,7 @@ var relOpIdx = 0;
 var relCostoDiaChapa = 0;
 var relCostoPanoPintura = 0;
 var relCostoHoraMecánica = 0;
+var relOrionTotalMO = 0; // Total Mano de Obra y Materiales del informe ORION (cifra de control)
 
 // Zonas cuyas horas se cobran como mecánica (por hora), no como chapa (por día)
 var ZONAS_MECANICA_COSTO = ['Mecánica / Vano Motor','Mecánica','Tren Delantero y Tracción','Tren Delantero y Tracción 4x4','Tren Delantero y Suspensión','Tren Trasero'];
@@ -5710,6 +5796,7 @@ function relActualizarCosto(){
   var totalOpHs = relOpState.reduce(function(acc,o){
     if(o.operacion==='Banco de estiraje') return acc+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
     if(o.operacion==='Desmontaje y montaje de accesorios') return acc+(o.horas||0);
+    if(o.operacion==='Diferencia entre baremo y cotización real') return acc+(o.horas||0);
     return acc;
   },0);
   var totalHsChapaConOp = totalHsChapa + totalOpHs;
@@ -5720,7 +5807,7 @@ function relActualizarCosto(){
   },0);
   var totalCostoOps = relOpState.reduce(function(acc,o){return acc+(o.costo||0);},0);
 
-  var dias = Math.ceil(totalHsChapaConOp / 8 * 2) / 2;
+  var dias = Math.ceil(totalHsChapaConOp / 4 * 2) / 2;
   var costoChapa = dias * relCostoDiaChapa;
   var costoMec = totalHsMec * relCostoHoraMecánica;
   var costoPintura = totalPanos * relCostoPanoPintura;
@@ -5739,7 +5826,7 @@ function relActualizarCosto(){
   if(s('rel-c-chapa-val')) s('rel-c-chapa-val').textContent = fmt(costoChapa);
   var mecRow = s('rel-c-mec-row');
   if(mecRow){ mecRow.style.display = totalHsMec > 0 ? 'flex' : 'none'; }
-  if(s('rel-c-hs-mec')) s('rel-c-hs-mec').textContent = totalHsMec;
+  if(s('rel-c-hs-mec')) s('rel-c-hs-mec').textContent = Math.round(totalHsMec*100)/100;
   if(s('rel-c-mec-val')) s('rel-c-mec-val').textContent = fmt(costoMec);
   if(s('rel-c-panos')) s('rel-c-panos').textContent = totalPanos;
   if(s('rel-c-pano-val')) s('rel-c-pano-val').textContent = fmt(costoPintura);
@@ -5747,6 +5834,19 @@ function relActualizarCosto(){
   if(opsRow) opsRow.style.display = totalCostoOps > 0 ? 'flex' : 'none';
   if(s('rel-c-ops-val')) s('rel-c-ops-val').textContent = fmt(totalCostoOps);
   if(s('rel-c-total')) s('rel-c-total').textContent = fmt(total);
+  // Control: comparar total calculado vs "Total Mano de Obra y Materiales" del informe ORION
+  var _omo=Number(window.relOrionTotalMO)||0;
+  var _oRow=s('rel-c-orion-row'), _oVal=s('rel-c-orion-val'), _oDiff=s('rel-c-orion-diff');
+  if(_oRow) _oRow.style.display=_omo>0?'flex':'none';
+  if(_oVal) _oVal.textContent=fmt(_omo);
+  if(_oDiff){
+    if(_omo>0){
+      _oDiff.style.display='block';
+      var _d=Math.round(total-_omo);
+      if(Math.abs(_d)<=1){ _oDiff.innerHTML='<span style="color:#16a34a;font-weight:600">✔ coincide con el informe</span>'; }
+      else { _oDiff.innerHTML='<span style="color:#d97706;font-weight:600">Δ '+(_d>0?'+':'')+fmt(_d)+' vs informe</span>'; }
+    } else { _oDiff.style.display='none'; }
+  }
 }
 
 function relGenerarTareas(){
@@ -5770,9 +5870,10 @@ function relGenerarTareas(){
   var totalOpHs = ops.reduce(function(a,o){
     if(o.operacion==='Banco de estiraje') return a+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
     if(o.operacion==='Desmontaje y montaje de accesorios') return a+(o.horas||0);
+    if(o.operacion==='Diferencia entre baremo y cotización real') return a+(o.horas||0);
     return a;
   },0);
-  var dias = Math.ceil((totalHsChapa + totalHsMec + totalOpHs) / 8 * 2) / 2;
+  var dias = Math.ceil((totalHsChapa + totalHsMec + totalOpHs) / 4 * 2) / 2;
   var totalPanos = piezas.reduce(function(a,p){
     if(hasTarea(p,'Pintar'))    return a+(p.panos||0);
     if(hasTarea(p,'Difuminar')) return a+0.5;
@@ -5849,7 +5950,7 @@ function relGenerarTareas(){
   var lineas = [
     'Estimación al '+fechaStr+':',
     dias+' día'+(dias!==1?'s':'')+' x '+fmt(costoChapa)+' = '+fmt(costoManoObra),
-    (totalHsMec>0?(totalHsMec+' hs mecánica x '+fmt(costoMec)+' = '+fmt(costoMecánica)):''),
+    (totalHsMec>0?(Math.round(totalHsMec*100)/100+' hs mecánica x '+fmt(costoMec)+' = '+fmt(costoMecánica)):''),
     totalPanos+' paño'+(totalPanos!==1?'s':'')+' x '+fmt(costoPano)+' = '+fmt(costoPintura),
     'Materiales de pintura ORIÓN: '+fmt(materialOrion),
     'Varios: '+fmt(varios),
@@ -5982,6 +6083,9 @@ function relOpRender(){
       }).join('');
       extraFields='<select onchange="relOpUpdate('+uid+',\'horas\',this.value)" style="font-size:11px;padding:5px 6px;min-width:100px">'
         +'<option value="0">— Horas —</option>'+hsOpts+'</select>';
+    } else if(o.operacion==='Diferencia entre baremo y cotización real'){
+      var _dh=Math.round((o.horas||0)*100)/100;
+      extraFields='<span style="font-size:12px;color:var(--text2);padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px">'+(_dh>=0?'+':'')+(''+_dh).replace('.',',')+' hs · ajuste automático</span>';
     } else if(o.operacion==='Alineación y balanceo'||o.operacion==='Armado de rueda'||o.operacion==='Escaneo / reseteo de módulos'||o.operacion==='Carga de gas aire acondicionado'||o.operacion==='Mecánica y/o electricidad'||o.operacion==='Pegado parabrisas/luneta'){
       extraFields='<div style="position:relative;display:inline-flex;align-items:center">'
         +'<span style="position:absolute;left:8px;font-size:13px;color:var(--text3);pointer-events:none">$</span>'
@@ -6077,6 +6181,13 @@ function getHsRango(nombrePieza,tarea,nivelDano){
   if(nivelDano==='Fuerte') return [8,9,10,11,12];
   return _hsRango(12);
 }
+// Opciones de horas incluyendo el valor actual aunque no esté en el rango
+// (para tiempos finos importados de ORION, ej. 0,66 / 1,52). Editable.
+function hsOptsHTML(hsRango, actual){
+  var arr = hsRango.slice();
+  if(actual>0 && arr.indexOf(actual)===-1) arr=[actual].concat(arr);
+  return arr.map(function(h){return '<option value="'+h+'"'+(actual===h?' selected':'')+'>'+h+' hs</option>';}).join('');
+}
 
 // ── zona toggle ──
 function gridToggleZone(zona){ openZones[zona]=!openZones[zona]; gridRenderAcordeones(); }
@@ -6131,6 +6242,8 @@ function otraRemove(id){ relCalcState.piezas=relCalcState.piezas.filter(function
 function otraUpdateNombre(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(e){e.pieza=v;gridUpdateAll();guardarBorrador();} }
 // Verifica si una pieza tiene una tarea (soporta tarea simple o compuesta "Reparar+Pintar")
 function hasTarea(p,t){ if(!p||!p.tarea) return false; return p.tarea===t||p.tarea.split('+').indexOf(t)>=0; }
+// Expande objetos con tarea compuesta ("Reparar+Pintar") en items por tarea, para renderizar chips correctos
+function _expandTareas(arr){ var out=[]; (arr||[]).forEach(function(t){ String(t.tarea||'').split('+').forEach(function(tt){ tt=tt.trim(); if(!tt) return; out.push({tarea:tt, hsTrabajo:t.hsTrabajo, horas:t.horas, panos:t.panos, nivelDano:t.nivelDano}); }); }); return out; }
 
 function otraSetTarea(id,t){
   var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return;
@@ -6158,6 +6271,663 @@ function otraSetTarea(id,t){
 function otraSetNivel(id,n){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.nivelDano=n;e.hsTrabajo=({Leve:4,Medio:6,Fuerte:8}[n]||0); gridRender(); guardarBorrador(); }
 function otraSetHs(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.hsTrabajo=parseFloat(v)||0; gridUpdateAll(); guardarBorrador(); }
 function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x._id===id;}); if(!e)return; e.panos=parseFloat(v)||0; gridUpdateAll(); guardarBorrador(); }
+
+// ════════════════════════════════════════════════════════════════════
+//  IMPORTADOR DE INFORME PERICIAL ORION / CESVICOM   (Fase A — frontend)
+//  Lee el PDF con pdf.js, parsea las secciones, matchea contra
+//  CALC_DATA_GRID y carga el calculador del relevamiento.
+//  Aditivo y FAIL-SAFE: si no reconoce un informe ORION válido, avisa
+//  y NO modifica el estado actual del calculador.
+// ════════════════════════════════════════════════════════════════════
+(function(){
+  'use strict';
+
+  // ---- Sinónimos ORION (nombre crudo) -> nombre EXACTO del catálogo ----
+  var ORION_SINON = {
+    // ── existentes ─────────────────────────────────────────────────────
+    'Alma de Paragolpes Delantero':'Alma metálica de paragolpes delantero',
+    'Paragolpes Del. (Con Impresion)':'Paragolpes delantero',
+    'Paragolpes Del. (Sin Pintar)':'Paragolpes delantero',
+    'Guarda. Plast. Del. Der.':'Guardaplast derecho',
+    'Guarda. Plast. Del. Izq.':'Guardaplast izquierdo',
+    'Traversa Del.Superior':'Travesaño superior de panel frontal',
+    'Traba del Capot':'Traba de seguridad de capot',
+    'Condensador':'Condensador de aire acondicionado',
+    'Radiador':'Radiador de agua de motor',
+    'Electroventilador':'Electroventilador completo (Carenado y aspas)',
+    'TOMA DE AIRE':'Toma de aire (Entrada)',
+    'Deposito de radiador/liquido refrigerante':'Depósito de expansión de refrigerante',
+    'Moldura Lateral Guard. Del.Der.':'Moldura de guardabarro delantero derecho',
+    'Moldura Lateral Guard. Del.Izq.':'Moldura de guardabarro delantero izquierdo',
+    'Rejilla de Aireacion':'Rejilla frontal superior (Central)',
+    'Rejilla del Paragolpes':'Rejilla frontal inferior (Central)',
+    'Pasarrueda Del.Der.':'Pasarruedas interno estructural delantero derecho',
+    'Pasarrueda Del.Izq.':'Pasarruedas interno estructural delantero izquierdo',
+    'Agua Desmineralizada':'Agua desmineralizada',
+    'Liquido Refrigerante':'Líquido refrigerante',
+    // ── nuevos (Fase A+) ────────────────────────────────────────────────
+    // Paragolpes trasero — variantes con/sin impresion, lat, central
+    'Paragolpes Tras. (Con Impresion)':'Paragolpes trasero',
+    'Paragolpes Tras. (Sin Impresion)':'Paragolpes trasero',
+    'Paragolpes Tras. Central':'Paragolpes trasero',
+    'Paragolpes Tras Lat Der.':'Paragolpes trasero',
+    'Paragolpes Tras Lat Izq.':'Paragolpes trasero',
+    // Paragolpes delantero con lado (Ka, etc.)
+    'Paragolpes Del. Der.':'Paragolpes delantero',
+    'Paragolpes Del. Izq.':'Paragolpes delantero',
+    // Absorbedor de golpes
+    'Absorbedor de Golpes Delantero':'Absorbedor de impacto interno de paragolpes',
+    'Absorbedor de Golpes Trasero':'Absorbedor de impacto de paragolpes trasero',
+    // Portón trasero (nombre ORION corto vs. nombre completo del catálogo)
+    'Porton Tras.':'Portón trasero (Modelos Hatchback / SUV)',
+    // Sede / placa portafaros traseros
+    'Placa Portalamparas Tras.Der.':'Sede de faro trasero derecho',
+    'Placa Portalamparas Tras.Izq.':'Sede de faro trasero izquierdo',
+    'Chapa Portafaros Tras.Der.':'Sede de faro trasero derecho',
+    'Chapa Portafaros Tras.Izq.':'Sede de faro trasero izquierdo',
+    // Piso trasero
+    'Piso Trasero':'Piso de baúl',
+    // Óptica principal (prefijo "A Jgo faros" de Mercedes/formatos especiales)
+    'A Jgo faros (Optica izq)':'Óptica principal izquierda',
+    'A Jgo faros (Optica der)':'Óptica principal derecha',
+    // Carcasa electroventilador
+    'Carcasa de Electroventilador':'Electroventilador completo (Carenado y aspas)',
+    // Marco / parrilla delantera
+    'Marco de la Rejilla de Aireacion':'Rejilla frontal superior (Central)',
+    'A Parilla frente con emblema':'Rejilla frontal superior (Central)',
+    // ── nuevos (Fase A++ — 17 PDFs) ─────────────────────────────────────
+    // Suspensión delantera
+    'Bieleta de Suspension Del. Der.':'Bieleta de barra estabilizadora derecha',
+    'Bieleta de Suspension Del. Izq.':'Bieleta de barra estabilizadora izquierda',
+    // Caños de aire acondicionado (abreviados ORION)
+    'CAÑO SUP A/A':'Caño A/A superior',
+    'CAÑO INF A/A':'Caño A/A inferior',
+    'Caño aire acondicionado que va del evaporador al condensador':'Caño A/A superior',
+    // Depósitos
+    'Deposito Agua Refrigerante':'Depósito de expansión de refrigerante',
+    // Travesaño inferior
+    'Traversa Del.Inferior':'Travesaño inferior de panel frontal',
+    // Soporte/Bandeja de batería
+    'Soporte Bateria':'Bandeja de sujeción de batería',
+    // Pasarruedas traseros
+    'Pasarrueda Tras.Der.':'Pasarruedas interno estructural trasero derecho',
+    'Pasarrueda Tras.Izq.':'Pasarruedas interno estructural trasero izquierdo',
+    // Guardaplast trasero (= guardabarro plástico trasero)
+    'Guarda. Plast. Tras. Der.':'Guardabarro trasero derecho',
+    'Guarda. Plast. Tras. Izq.':'Guardabarro trasero izquierdo',
+    // Parante exterior / delantero
+    'Parante Exterior Sup. Del. Der.':'Parante delantero derecho',
+    'Parante Exterior Sup. Del. Izq.':'Parante delantero izquierdo',
+    'A PARANTE PLASTICO DE PUERTA DEL IZQ':'Parante delantero izquierdo',
+    'A PARANTE PLASTICO DE PUERTA DEL DER':'Parante delantero derecho',
+    'A PARANTE PLASTICO DE PUERTA TRAS IZQ':'Parante central izquierdo',
+    'A PARANTE PLASTICO DE PUERTA TRAS DER':'Parante central derecho',
+    // Carcasa / cubierta de espejo retrovisor
+    'Cubierta Espejo Retr. Der.':'Carcasa de espejo retrovisor derecho',
+    'Cubierta Espejo Retr. Izq.':'Carcasa de espejo retrovisor izquierdo',
+    'Tapa Plastica Ext. Ant. Espejo Der.':'Carcasa de espejo retrovisor derecho',
+    'Tapa Plastica Ext. Ant. Espejo Izq.':'Carcasa de espejo retrovisor izquierdo',
+    // Cerradura de baúl
+    'Cerradura Tapa de Baul':'Cerradura de baúl / portón trasero',
+    // Tubo toma de aire
+    'Tubo Toma de Aire':'Toma de aire (Entrada)',
+    // Spoiler inferior delantero
+    'Spoiler Paragolpes Del.':'Spoiler inferior de paragolpes delantero',
+    'Spoiler Paragolpes Del. (Con Impresion)':'Spoiler inferior de paragolpes delantero',
+    // Eje trasero (puente)
+    'Puente Eje Tras.':'Eje trasero',
+    // Portamaza
+    'Porta Masa Derecho':'Portamaza delantero derecho',
+    'Porta Masa Izquierdo':'Portamaza delantero izquierdo',
+    // Bagueta = Moldura de guardabarro
+    'A BAGUETA DE GUARD DEL DER':'Moldura de guardabarro delantero derecho',
+    'A BAGUETA DE GUARD DEL IZQ':'Moldura de guardabarro delantero izquierdo',
+    // Manija exterior — abreviaturas PDD/PDI/PTD/PTI
+    'Manija Apertura Ext. PDD (parte ext.)':'Manija exterior de puerta delantera derecha',
+    'Manija Apertura Ext. PDI (parte ext.)':'Manija exterior de puerta delantera izquierda',
+    'Manija Apertura Ext. PDD':'Manija exterior de puerta delantera derecha',
+    'Manija Apertura Ext. PDI':'Manija exterior de puerta delantera izquierda',
+    'Manija Apertura Ext. PTD':'Manija exterior de puerta trasera derecha',
+    'Manija Apertura Ext. PTI':'Manija exterior de puerta trasera izquierda',
+    // Encausador de aire (= deflector aerodinámico lateral)
+    'Encausador de Aire Lat Der':'Deflector de aire inferior de paragolpes delantero',
+    'Encausador de Aire Lat Izq':'Deflector de aire inferior de paragolpes delantero',
+    'Encausador sup. Aire del Radiador':'Deflector de aire inferior de paragolpes delantero',
+    'Encausador inf. Aire del Radiador':'Deflector de aire inferior de paragolpes delantero',
+    // Zócalo (nombre corto ORION)
+    'Zocalo Derecho':'Zócalo exterior derecho',
+    'Zocalo Izquierdo':'Zócalo exterior izquierdo',
+    'Moldura de Zocalo Der.':'Zócalo exterior derecho',
+    'Moldura de Zocalo Izq.':'Zócalo exterior izquierdo',
+    // Carcasa de filtro de aire (ORION usa "carcasa", catálogo "carcaza")
+    'Carcasa del Filtro de Aire':'Carcaza de filtro de aire',
+    // Travesaño inferior de radiador → panel frontal (equivalente estructural)
+    'Travesaño inferior de radiador':'Travesaño inferior de panel frontal',
+    // Soportes de paragolpes (abrev. PPE = paragolpes)
+    'Soportes Izq de PPE Del':'Soporte de paragolpes delantero izquierdo',
+    'Soportes Der de PPE Del':'Soporte de paragolpes delantero derecho'
+  };
+
+  function oNorm(s){
+    var t = ' ' + String(s||'').toLowerCase() + ' ';
+    // 1. tildes
+    t = t.replace(/[áàâä]/g,'a').replace(/[éèêë]/g,'e').replace(/[íìîï]/g,'i')
+         .replace(/[óòôö]/g,'o').replace(/[úùûü]/g,'u').replace(/ñ/g,'n');
+    // 2. quitar contenido entre comillas dobles ("Ford","Ka","MP3"…)
+    t = t.replace(/"[^"]*"/g,' ');
+    // 3. quitar contenido entre corchetes ([sin portalamparas],[sin impresión],[Negro]…)
+    t = t.replace(/\[[^\]]*\]/g,' ');
+    // 4. expandir abreviaturas con punto (incluye sin espacio: "del.der")
+    t = t.replace(/\bder\./g,' derecha ').replace(/\bizq\./g,' izquierda ')
+         .replace(/\bdel\./g,' delantero ').replace(/\btras\./g,' trasero ')
+         .replace(/\bsup\./g,' superior ').replace(/\binf\./g,' inferior ')
+         .replace(/\bplast\./g,' plastico ');
+    // 5. "del" sin punto = preposición → "de"
+    t = t.replace(/\bdel\b/g,' de ');
+    // 6. quitar códigos de referencia ORION tipo "D-11/01", "d-10/01", etc.
+    t = t.replace(/\b[a-z]-\d+\/\d+\b/g,' ');
+    // 7. quitar todo carácter no alfanumérico
+    t = t.replace(/[^a-z0-9\s]/g,' ');
+    // 8. sacar marcas de autopartes (nunca aparecen en el catálogo)
+    t = t.replace(/\b(valeo|bosch|mahle|hella|depo|tyc|magneti|marelli|behr|nissens|febi|sachs|monroe|gabriel|skf|ina|ngk|denso|continental|delphi|kyb)\b/g,' ');
+    // 9. plural→singular donde el catálogo es inconsistente
+    t = t.replace(/\bguardabarros\b/g,'guardabarro');
+    // 10. singular→plural (catálogo siempre dice "paragolpes")
+    t = t.replace(/\bparagolpe\b/g,'paragolpes');
+    // 11. canonizar lado y delant/tras (género indistinto)
+    t = t.replace(/\b(derecho|derecha|dcho|dcha|der)\b/g,'LADODER')
+         .replace(/\b(izquierdo|izquierda|izdo|izda|izq)\b/g,'LADOIZQ')
+         .replace(/\b(delantero|delantera|delant)\b/g,'delantero')
+         .replace(/\b(trasero|trasera)\b/g,'trasero');
+    // 12. typos y variantes ortográficas frecuentes en ORION
+    t = t.replace(/\babsorvedor\b/g,'absorbedor');  // typo frecuente
+    t = t.replace(/\bcarcasa\b/g,'carcaza');         // catálogo usa "carcaza"
+    // 13. sacar marcas de neumáticos (no aparecen en catálogo)
+    t = t.replace(/\b(michelin|bridgestone|pirelli|goodyear|continental|firestone|dunlop|yokohama|hankook|toyo|nexen|maxxis|primacy|energy|pilot)\b/g,' ');
+    return t.replace(/\s+/g,' ').trim();
+  }
+  function oLado(nq){ if(/LADODER/.test(nq))return'DER'; if(/LADOIZQ/.test(nq))return'IZQ'; return null; }
+  function oNum(s){
+    s=String(s||'').trim();
+    if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s=s.replace(/\./g,'').replace(',','.');
+    else s=s.replace(',','.');
+    var n=parseFloat(s); return isNaN(n)?null:n;
+  }
+  function oCap(s){ s=String(s||''); return s? s.charAt(0).toUpperCase()+s.slice(1).toLowerCase() : ''; }
+  function oPanos(sup){ if(sup==null)return 0; if(sup<=0.50)return 0.5; if(sup<1.0)return 1.0; return 1.5; }
+
+  // ---- Catálogo plano del tipo de vehículo seleccionado ----
+  function oCatalogo(tipo){
+    var base = (window.CALC_DATA_GRID && window.CALC_DATA_GRID[tipo]) || {};
+    var arr = [];
+    Object.keys(base).forEach(function(z){
+      (base[z]||[]).forEach(function(p){
+        arr.push({ zona:z, nombre:p.nombre, hs:p.defaultHs||0, hsR:p.defaultHsR||0,
+                   reqPint:!!p.requierePintura, norm:oNorm(p.nombre) });
+      });
+    });
+    arr.forEach(function(c){ c.lado=oLado(c.norm); });
+    return arr;
+  }
+  var SINON_N = null;
+  function oResolverSinon(cat){
+    if(!SINON_N){ SINON_N={}; Object.keys(ORION_SINON).forEach(function(k){ SINON_N[oNorm(k)]=oNorm(ORION_SINON[k]); }); }
+    return SINON_N;
+  }
+  function oMatch(nombre, cat){
+    var nq=oNorm(nombre), lq=oLado(nq);
+    var c=cat.find(function(x){return x.norm===nq;}); if(c) return {c:c,via:'exacto'};
+    var sn=oResolverSinon(cat)[nq];
+    if(sn){ c=cat.find(function(x){return x.norm===sn;}); if(c) return {c:c,via:'sinónimo'}; }
+    var wq=nq.split(' ').filter(function(w){return w.length>2;}), best=null, bs=0;
+    for(var i=0;i<cat.length;i++){
+      var cc=cat[i]; if(lq && cc.lado && cc.lado!==lq) continue;
+      var wc=cc.norm.split(' ');
+      var com=wq.filter(function(w){return wc.indexOf(w)!==-1;}).length;
+      var sc=com/Math.max(wq.length,1);
+      if(sc>bs){bs=sc;best=cc;}
+    }
+    return bs>=0.70?{c:best,via:'fuzzy'}:null;
+  }
+
+  // ---- Extracción de líneas con pdf.js (agrupación por Y) ----
+  async function oExtraerLineas(pdf){
+    var lines=[];
+    for(var i=1;i<=pdf.numPages;i++){
+      var page=await pdf.getPage(i);
+      var content=await page.getTextContent();
+      var rMap={};
+      content.items.forEach(function(it){
+        var str=it.str; if(!str || !/\S/.test(str)) return;
+        var x=it.transform[4], y=it.transform[5];
+        var yKey=null, ks=Object.keys(rMap);
+        for(var k=0;k<ks.length;k++){ if(Math.abs(Number(ks[k])-y)<=2.2){ yKey=ks[k]; break; } }
+        if(yKey===null) yKey=String(y);
+        if(!rMap[yKey]) rMap[yKey]=[];
+        rMap[yKey].push({x:x,s:str});
+      });
+      var rows=Object.keys(rMap).map(function(yk){
+        var its=rMap[yk].sort(function(a,b){return a.x-b.x;});
+        return { y:Number(yk), text:its.map(function(o){return o.s;}).join(' ').replace(/\s+/g,' ').trim() };
+      }).filter(function(r){return r.text.length>0;})
+        .sort(function(a,b){return b.y-a.y;});
+      rows.forEach(function(r){ lines.push(r.text); });
+    }
+    return lines;
+  }
+
+  // ---- Parser de secciones (mismo criterio validado offline) ----
+  function oParse(lines){
+    var idx={};
+    lines.forEach(function(l,i){
+      var s=l.trim();
+      if(/^1\s*-\s*sustituci/i.test(s)) idx.sust=i;
+      else if(/^2\s*-\s*reparaci/i.test(s)) idx.rep=i;
+      else if(/^4\s*-\s*varios/i.test(s)) idx.var_=i;
+      else if(/^6\s*-\s*conceptos/i.test(s)) idx.mec=i;
+      else if(/^7\s*-\s*pintura/i.test(s)) idx.pint=i;
+      else if(/^chapa\s*\$/i.test(s)) idx.tot=i;
+      else if(/^observaciones grales/i.test(s)) idx.obs=i;
+    });
+    function bloque(a,b){ if(idx[a]==null) return []; return lines.slice(idx[a]+1, (idx[b]!=null?idx[b]:lines.length)); }
+
+    var piezas=[];
+    bloque('sust','rep').forEach(function(l){
+      var s=l.trim();
+      // filtrar encabezados, totales y líneas de resumen que no son piezas
+      if(!s||/^(página|tiempo|t\.std|niv\.|total\b|mecánica\s+mano)/i.test(s)) return;
+      var m=s.match(/^(Ø\s*)?(.+?)\s+(\d+,\d+)\s+([BAM])?\s*(\d+,\d+)$/);
+      if(!m) return;
+      var t=oNum(m[3]), ts=oNum(m[5]);
+      piezas.push({nombre:m[2].trim(), tarea:'Sustituir', tiempoOrion:t, tStd:ts,
+                   tiempoUsado:(t&&t>0?t:ts), tipeada:!!m[1]});
+    });
+    bloque('rep','var_').forEach(function(l){
+      var s=l.trim(); if(!s||/^(niv\.|página|tiempo)/i.test(s)) return;
+      var m=s.match(/^(T\s+)?(.+?)\s+(Fuerte|Leve|Mediano|Grave)\s+(\d+,\d+)\s+(\d+,\d+)\s+(\d+,\d+)$/i);
+      if(!m) return;
+      var t=oNum(m[4]), ts=oNum(m[5]);
+      piezas.push({nombre:m[2].trim(), tarea:'Reparar', nivelDano:m[3].toLowerCase(),
+                   tiempoOrion:t, tStd:ts, tiempoUsado:(t&&t>0?t:ts)});
+    });
+
+    var pintura=[];
+    bloque('pint','tot').forEach(function(l){
+      var s=l.trim(); if(!s||/^(niv\.|página)/i.test(s)) return;
+      if(/^(chapa|mecánica|electricidad|pintura|materiales|varios|total)\b/i.test(s)) return;
+      var m=s.match(/^(S\s+)?(.+?)\s+(Sustitución|Fuerte|Leve|Mediano|Grave)\s+(\d+,\d+)\s+(\d+,\d+)\s+(\d+,\d+)$/i);
+      if(!m) return;
+      pintura.push({nombre:m[2].trim(), panos:oPanos(oNum(m[4])), superficie:oNum(m[4])});
+    });
+
+    var operaciones=[];
+    bloque('var_','mec').forEach(function(l){
+      var s=l.trim(); if(!s||/^(tiempo|página)/i.test(s)) return;
+      if(/pequeños materiales|selladores/i.test(s)) return;
+      // Filtrar líneas de sust/rep que puedan haberse colado (tienen nivel de daño) y totales
+      if(/\b(sustitución|sustituc|fuerte|leve|mediano|grave)\b/i.test(s)) return;
+      if(/^total\b/i.test(s)) return;
+      var m=s.match(/^(.+?)\s+(\d+,\d+)\s+(\d+,\d+)$/);
+      if(!m) return;
+      operaciones.push({nombre:m[1].trim().replace(/:$/,''), tipo:'varios', horas:oNum(m[2]), costo:oNum(m[3])});
+    });
+    bloque('mec','pint').forEach(function(l){
+      var s=l.trim(); if(!s||/^(tiempo|página)/i.test(s)) return;
+      if(/\b(sustitución|sustituc|fuerte|leve|mediano|grave)\b/i.test(s)) return;
+      if(/^total\b/i.test(s)) return;
+      var m=s.match(/^(.+?)\s+(\d+,\d+)\s+(\d+,\d+)$/);
+      if(!m) return;
+      operaciones.push({nombre:m[1].trim(), tipo:'mecanica', horas:oNum(m[2]), costo:oNum(m[3])});
+    });
+
+    var obs = (idx.obs!=null? lines.slice(idx.obs).join('\n') : '');
+    // Convierte el valor a pesos: si dice "mil" o el número es <1000 => x1000 (ej: "$130" -> 130000, "150 mil" -> 150000)
+    function milS(v,w){ var n=parseFloat(String(v).replace(/\./g,'').replace(',','.'))||0; if(w) return n*1000; return n<1000?n*1000:n; }
+    var costos={}, mm;
+    // Paños: "Paños 6x 150 mil", "6 paños x $150 mil", "6 paños x $150"
+    if((mm=obs.match(/pa[ñn]os?\s*:?\s*(\d+)\s*[x\*]\s*\$?\s*([\d.,]+)\s*(mil)?/i)) ||
+       (mm=obs.match(/(\d+)\s*pa[ñn]os?\s*[x\*]\s*\$?\s*([\d.,]+)\s*(mil)?/i))){ costos.panosEstimados=parseInt(mm[1],10); costos.costoPanoPintura=milS(mm[2],mm[3]); }
+    // Chapa/días: "Chapa 4x 130 mil", "5 dias x $130", "días 4 * 130 mil"
+    if((mm=obs.match(/(?:chapa|d[íi]as?)\s*:?\s*(\d+)\s*[x\*]\s*\$?\s*([\d.,]+)\s*(mil)?/i)) ||
+       (mm=obs.match(/(\d+)\s*d[íi]as?\s*[x\*]\s*\$?\s*([\d.,]+)\s*(mil)?/i))){ costos.diasEstimados=parseInt(mm[1],10); costos.costoDiaChapa=milS(mm[2],mm[3]); }
+    if((mm=obs.match(/mec[áa]nica[^\n]*?[x\*]\s*\$?\s*([\d.,]+)\s*(mil)?/i))){ costos.costoHoraMecanica=milS(mm[1],mm[2]); }
+    // "Mecanica 4 hs * 60 mil" — capturar horas estimadas de mecánica
+    if((mm=obs.match(/mec[áa]nica\s+(\d+(?:[.,]\d+)?)\s*hs?/i))){ costos.hsMecanicaEstimadas=parseFloat(mm[1].replace(',','.')); }
+
+    // Total Mano de Obra y Materiales (cifra de control del informe; incluye materiales que el inspector no carga)
+    var _tmo=lines.join('\n').match(/total\s+mano\s+de\s+obra\s+y\s+materiales\D*([\d][\d.,]*)/i);
+    if(_tmo){ var _tmoV=parseFloat(_tmo[1].replace(/\./g,'').replace(',','.')); if(_tmoV>0) costos.totalManoObra=_tmoV; }
+    return { piezas:piezas, pintura:pintura, operaciones:operaciones, costos:costos, esOrion:(idx.sust!=null) };
+  }
+
+  // ---- Mapeo de operaciones ORION -> relOpState ----
+  function oMapOperaciones(ops){
+    var out=[], extra=[], banco=null;
+    function oBanco(){ banco=banco||{operacion:'Banco de estiraje',puestaMedicion:0,tiempoEstiraje:0,horas:0,costo:0,nombre:''}; return banco; }
+    ops.forEach(function(o){
+      var n=(o.nombre||'').toLowerCase();
+      if(/peque(ñ|n)os?\s+materiales|selladores|ceras?\s+de\s+cavidad/i.test(n)) return; // ya incluido en Total M.O.+Mat.
+      var _pm=Number(o.puestaMedicion)||0, _te=Number(o.tiempoEstiraje)||0, _hs=Number(o.horas)||0;
+      if(/estiraje|bancada|puesta en banca|medici/.test(n)){
+        var b=oBanco();
+        if(_pm||_te){ b.puestaMedicion+=_pm; b.tiempoEstiraje+=_te; return; }   // formato fusionado de Gemini con campos propios
+        if(/puesta|medici/.test(n) && !/estiraje/.test(n)){ b.puestaMedicion+=_hs; return; } // "Puesta en bancada" / "Medición"
+        b.tiempoEstiraje+=_hs; return;                                          // "Estiraje" o "Banco de estiraje" fusionado
+      }
+      if(/alineaci/.test(n)){ out.push({operacion:'Alineación y balanceo',puestaMedicion:0,tiempoEstiraje:0,horas:0,costo:25000,nombre:''}); return; }
+      if(/escane|reseteo|diagn[óo]stico de m[óo]dulo/.test(n)){ out.push({operacion:'Escaneo / reseteo de módulos',puestaMedicion:0,tiempoEstiraje:0,horas:0,costo:180000,nombre:''}); return; }
+      if(/carga a\/a|carga de gas|\ba\/a\b/.test(n)){ out.push({operacion:'Carga de gas aire acondicionado',puestaMedicion:0,tiempoEstiraje:0,horas:0,costo:o.costo||0,nombre:''}); return; }
+      if(o.tipo==='mecanica'){ out.push({operacion:'Mecánica y/o electricidad',puestaMedicion:0,tiempoEstiraje:0,horas:0,costo:o.costo||0,nombre:o.nombre}); return; }
+      extra.push({nombre:(o.nombre||'').trim(), tarea:'Reparar', tiempoUsado:Number(o.horas)||0}); // pieza no reconocida -> Otras piezas, NUNCA operación
+    });
+    if(banco) out.unshift(banco);
+    return {operaciones:out, piezasExtra:extra};
+  }
+
+  // ---- Carga al calculador (fail-safe) ----
+  function oCargar(parsed){
+    if(!window.relCalcState || !relCalcState.tipo){ toast('Seleccioná el tipo de vehículo antes de importar.','err'); return; }
+    if(!parsed.esOrion || !parsed.piezas.length){ toast('No reconocí un Informe Pericial ORION válido en el PDF.','err'); return; }
+    if(relCalcState.piezas && relCalcState.piezas.length){
+      if(!confirm('El calculador ya tiene piezas cargadas. ¿Reemplazarlas con las del informe ORION?')) return;
+    }
+    var cat=oCatalogo(relCalcState.tipo);
+    var nuevas=[], piezasOut=[], seen={};
+    function pushPieza(zona,pieza,tarea,nivel,hs,panos,sup){
+      var k=zona+'|'+pieza+'|'+tarea; if(seen[k]) return; seen[k]=true;
+      piezasOut.push({_id:0, zona:zona, pieza:pieza, tarea:tarea, nivelDano:nivel||'', hsTrabajo:hs||0, panos:panos||0, _superficie:sup||0});
+    }
+    // Sustituir / Reparar — tiempos baremo (sin escalar; el inspector ajusta en el modal)
+    parsed.piezas.forEach(function(p){
+      var m=oMatch(p.nombre,cat);
+      if(m){
+        var baremo=(p.tarea==='Reparar')?m.c.hsR:m.c.hs;
+        var hs=(p.tiempoUsado>0)?p.tiempoUsado:(baremo||0); // tiempo ORION tal cual (refleja el informe)
+        pushPieza(m.c.zona, m.c.nombre, p.tarea, (p.nivelDano?oCap(p.nivelDano):''), hs, 0, 0);
+      } else {
+        nuevas.push(p);
+        pushPieza('Otras piezas', p.nombre, p.tarea, (p.nivelDano?oCap(p.nivelDano):''), p.tiempoUsado||0, 0, 0);
+      }
+    });
+    // Pintura — paños en 0 (inspector los ingresa en el modal), superficie guardada para distribución proporcional
+    parsed.pintura.forEach(function(pt){
+      var m=oMatch(pt.nombre,cat);
+      if(m){ pushPieza(m.c.zona, m.c.nombre, 'Pintar', '', 0, 0, pt.superficie||0); return; }
+      // Otras piezas: fusionar Pintar en la fila de chapa con el mismo nombre (no duplicar R+P)
+      var _ex=piezasOut.find(function(x){return x.zona==='Otras piezas' && x.pieza===pt.nombre && (hasTarea(x,'Reparar')||hasTarea(x,'Sustituir'));});
+      if(_ex){
+        if(!hasTarea(_ex,'Pintar')) _ex.tarea=(_ex.tarea?_ex.tarea+'+':'')+'Pintar';
+        if(!_ex.panos) _ex.panos=1;
+        _ex._superficie=pt.superficie||0;
+      } else {
+        pushPieza('Otras piezas', pt.nombre, 'Pintar', '', 0, 0, pt.superficie||0);
+      }
+    });
+    // Operaciones (lista cerrada). Las piezas no reconocidas vuelven a "Otras piezas", NUNCA a operaciones.
+    var _mapped=oMapOperaciones(parsed.operaciones);
+    (_mapped.piezasExtra||[]).forEach(function(px){
+      if(px.nombre) pushPieza('Otras piezas', px.nombre, px.tarea||'Reparar', '', px.tiempoUsado||0, 0, 0);
+    });
+    // Asignar IDs a piezas
+    var startId=window.relCalcIdx||0;
+    piezasOut.forEach(function(p){ p._id=startId++; });
+    relCalcState.piezas=piezasOut;
+    window.relCalcIdx=startId;
+    // Asignar IDs a operaciones
+    var ops=_mapped.operaciones;
+    var opId=window.relOpIdx||0;
+    window.relOpState=ops.map(function(o){ o._id=opId++; return o; });
+    window.relOpIdx=opId;
+    // Mostrar modal para que el inspector ingrese los totales manualmente
+    var msg=piezasOut.length+' piezas'+(nuevas.length?' · '+nuevas.length+' en "Otras"':'');
+    window.relOrionTotalMO = Number((parsed.costos||{}).totalManoObra)||0;
+    toast('✅ '+msg+' — completá los totales en el panel','ok');
+    oMostrarModalTotales(parsed.costos||{});
+  }
+
+  // ---- Modal post-import: inspector ingresa paños / días / mecánica / costos ----
+  // ---- Pantalla de revisión editable ANTES de cargar (Etapa 2) ----
+  function oMostrarRevision(parsed, onConfirm){
+    var prev=document.getElementById('orion-rev-modal'); if(prev) prev.remove();
+    var work={
+      esOrion:parsed.esOrion, costos:parsed.costos||{},
+      piezas:(parsed.piezas||[]).map(function(p,i){var o=Object.assign({},p);o._rid='p'+i;return o;}),
+      pintura:(parsed.pintura||[]).map(function(p,i){var o=Object.assign({},p);o._rid='t'+i;return o;}),
+      operaciones:(parsed.operaciones||[]).map(function(p,i){var o=Object.assign({},p);o._rid='o'+i;return o;})
+    };
+    function findRid(rid){ return work.piezas.concat(work.pintura,work.operaciones).find(function(x){return x._rid===rid;}); }
+    var ov=document.createElement('div'); ov.id='orion-rev-modal';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9850;display:flex;align-items:center;justify-content:center;padding:14px';
+    var inS='background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text1);font-size:13px;box-sizing:border-box';
+    var delS='background:rgba(229,83,83,.15);color:#e55;border:1px solid rgba(229,83,83,.3);border-radius:6px;width:28px;height:28px;cursor:pointer;flex-shrink:0;font-size:15px;line-height:1';
+    var lblS='font-size:11px;color:var(--text3)';
+    function rowWrap(rid,cells){ return '<div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap">'+cells+'<button data-del="'+rid+'" style="'+delS+'">×</button></div>'; }
+    function secTit(t){ return '<div style="margin:15px 0 6px;font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px">'+t+'</div>'; }
+    function secPiezas(){
+      if(!work.piezas.length) return '';
+      return secTit('Piezas ('+work.piezas.length+')')+work.piezas.map(function(p){
+        var badge='<span style="font-size:11px;font-weight:700;padding:3px 7px;border-radius:5px;color:#fff;background:'+(p.tarea==='Sustituir'?'#e05c5c':'#f0b429')+'">'+(p.tarea==='Sustituir'?'S':'R')+'</span>';
+        return rowWrap(p._rid,
+          '<input data-rid="'+p._rid+'" data-f="nombre" value="'+esc(p.nombre||'')+'" style="'+inS+';flex:1;min-width:140px">'
+          +badge
+          +(p.nivelDano?'<span style="'+lblS+'">'+oCap(p.nivelDano)+'</span>':'')
+          +'<input data-rid="'+p._rid+'" data-f="tiempoUsado" type="number" step="0.01" value="'+(p.tiempoUsado||0)+'" style="'+inS+';width:74px"><span style="'+lblS+'">hs</span>');
+      }).join('');
+    }
+    function secPintura(){
+      if(!work.pintura.length) return '';
+      return secTit('Pintura ('+work.pintura.length+')')+work.pintura.map(function(p){
+        return rowWrap(p._rid,
+          '<input data-rid="'+p._rid+'" data-f="nombre" value="'+esc(p.nombre||'')+'" style="'+inS+';flex:1;min-width:140px">'
+          +'<span style="font-size:11px;font-weight:700;padding:3px 7px;border-radius:5px;color:#fff;background:#5b8dee">P</span>'
+          +'<input data-rid="'+p._rid+'" data-f="superficie" type="number" step="0.01" value="'+(p.superficie||0)+'" style="'+inS+';width:74px"><span style="'+lblS+'">m2</span>');
+      }).join('');
+    }
+    function secOps(){
+      if(!work.operaciones.length) return '';
+      return secTit('Operaciones ('+work.operaciones.length+')')+work.operaciones.map(function(p){
+        return rowWrap(p._rid,
+          '<input data-rid="'+p._rid+'" data-f="nombre" value="'+esc(p.nombre||'')+'" style="'+inS+';flex:1;min-width:140px">'
+          +'<input data-rid="'+p._rid+'" data-f="horas" type="number" step="0.01" value="'+(p.horas||0)+'" style="'+inS+';width:64px"><span style="'+lblS+'">hs</span>'
+          +'<span style="'+lblS+'">$</span><input data-rid="'+p._rid+'" data-f="costo" type="number" step="1" value="'+(p.costo||0)+'" style="'+inS+';width:90px">');
+      }).join('');
+    }
+    function secCostos(){
+      var c=work.costos||{};
+      var fmt=function(n){return n?('$'+Number(n).toLocaleString('es-AR')):'—';};
+      var chip=function(l,v){return '<span style="font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 9px;display:inline-block;margin:0 6px 6px 0">'+l+': <b style="color:var(--text1)">'+v+'</b></span>';};
+      return secTit('Detectado en Observaciones')
+        +'<div style="margin-bottom:6px">'+chip('Dias',c.diasEstimados||'—')+chip('$/dia',fmt(c.costoDiaChapa))
+        +chip('Panos',c.panosEstimados||'—')+chip('$/pano',fmt(c.costoPanoPintura))+chip('Total M.O.+Mat',fmt(c.totalManoObra))+'</div>';
+    }
+    function render(){
+      ov.innerHTML='<div style="background:var(--bg2);border-radius:14px;max-width:680px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,.5)">'
+        +'<div style="padding:18px 18px 8px"><div style="font-weight:700;font-size:16px;color:var(--text1);margin-bottom:4px">📋 Revisar informe antes de cargar</div>'
+        +'<div style="font-size:13px;color:var(--text2)">Verificá lo detectado. Podés editar nombres o tiempos, y quitar filas con ×. Nada se carga hasta confirmar.</div></div>'
+        +'<div style="overflow:auto;padding:0 18px;flex:1">'+secPiezas()+secPintura()+secOps()+secCostos()+'</div>'
+        +'<div style="display:flex;gap:8px;justify-content:flex-end;padding:14px 18px;border-top:1px solid var(--border)">'
+        +'<button data-act="cancel" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:9px 16px;border-radius:7px;cursor:pointer;font-size:13px">Cancelar</button>'
+        +'<button data-act="confirm" style="background:var(--accent);border:none;color:#fff;padding:9px 22px;border-radius:7px;cursor:pointer;font-size:14px;font-weight:600">✔ Confirmar y cargar</button></div></div>';
+    }
+    ov.addEventListener('input', function(e){
+      var t=e.target, rid=t.getAttribute&&t.getAttribute('data-rid'); if(!rid) return;
+      var f=t.getAttribute('data-f'), it=findRid(rid); if(!it) return;
+      if(f==='nombre') it[f]=t.value; else it[f]=parseFloat(t.value)||0;
+    });
+    ov.addEventListener('click', function(e){
+      var t=e.target;
+      var del=t.getAttribute&&t.getAttribute('data-del');
+      if(del){ work.piezas=work.piezas.filter(function(x){return x._rid!==del;});
+               work.pintura=work.pintura.filter(function(x){return x._rid!==del;});
+               work.operaciones=work.operaciones.filter(function(x){return x._rid!==del;}); render(); return; }
+      var act=t.getAttribute&&t.getAttribute('data-act');
+      if(act==='cancel'){ ov.remove(); toast('Importación cancelada.','err'); return; }
+      if(act==='confirm'){ ov.remove(); onConfirm({piezas:work.piezas,pintura:work.pintura,operaciones:work.operaciones,costos:work.costos,esOrion:work.esOrion}); return; }
+    });
+    render();
+    document.body.appendChild(ov);
+  }
+
+  function oMostrarModalTotales(c){
+    var prev=document.getElementById('orion-totales-modal');
+    if(prev) prev.remove();
+    var fn=function(v){ return (v!=null && v!=='')?v:''; };
+    var ov=document.createElement('div');
+    ov.id='orion-totales-modal';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9800;display:flex;align-items:center;justify-content:center;padding:16px';
+    var inp='width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:9px 10px;color:var(--text1);font-size:14px;box-sizing:border-box';
+    var lbl='font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px';
+    ov.innerHTML=''
+      +'<div style="background:var(--bg2);border-radius:14px;padding:24px 20px;max-width:440px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,.5)">'
+        +'<div style="font-weight:700;font-size:16px;color:var(--text1);margin-bottom:6px">📋 Totales del informe ORION</div>'
+        +'<div style="font-size:13px;color:var(--text2);margin-bottom:20px">Ingresá los valores de las Observaciones del informe. Los campos pre-cargados fueron detectados automáticamente.</div>'
+        +(c.totalManoObra? '<div style="font-size:12px;color:var(--text2);background:var(--bg3);border:1px solid var(--border);border-radius:7px;padding:8px 10px;margin-bottom:16px">📊 Total Mano de Obra y Materiales (informe): <b style="color:var(--text1)">$'+Number(c.totalManoObra).toLocaleString('es-AR',{minimumFractionDigits:2,maximumFractionDigits:2})+'</b><br><span style="font-size:11px">Cifra de control (incluye materiales). El total estimado debería acercarse a este número.</span></div>' : '')
+        +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">'
+          +'<div><div style="'+lbl+'">Días de chapa</div>'
+            +'<input id="omt-dias" type="number" min="0" step="0.5" value="'+fn(c.diasEstimados)+'" style="'+inp+'"></div>'
+          +'<div><div style="'+lbl+'">$ por día chapa</div>'
+            +'<input id="omt-cdia" type="number" min="0" value="'+fn(c.costoDiaChapa)+'" style="'+inp+'"></div>'
+          +'<div><div style="'+lbl+'">Paños de pintura</div>'
+            +'<input id="omt-panos" type="number" min="0" step="0.5" value="'+fn(c.panosEstimados)+'" style="'+inp+'"></div>'
+          +'<div><div style="'+lbl+'">$ por paño</div>'
+            +'<input id="omt-cpano" type="number" min="0" value="'+fn(c.costoPanoPintura)+'" style="'+inp+'"></div>'
+          +'<div><div style="'+lbl+'">Hs mecánica</div>'
+            +'<input id="omt-mec" type="number" min="0" step="0.5" value="'+fn(c.hsMecanicaEstimadas)+'" style="'+inp+'"></div>'
+          +'<div><div style="'+lbl+'">$ por hora mec.</div>'
+            +'<input id="omt-cmec" type="number" min="0" value="'+fn(c.costoHoraMecanica)+'" style="'+inp+'"></div>'
+        +'</div>'
+        +'<div style="display:flex;gap:8px;justify-content:flex-end">'
+          +'<button id="omt-skip-btn" style="background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:9px 16px;border-radius:7px;cursor:pointer;font-size:13px">Completar después</button>'
+          +'<button id="omt-apply-btn" style="background:var(--accent);border:none;color:#fff;padding:9px 22px;border-radius:7px;cursor:pointer;font-size:14px;font-weight:600">✔ Aplicar</button>'
+        +'</div>'
+      +'</div>';
+    document.body.appendChild(ov);
+    function _render(){
+      if(typeof relOpRender==='function') relOpRender();
+      if(typeof relCalcRender==='function') relCalcRender();
+      if(typeof relActualizarCosto==='function') relActualizarCosto();
+      if(typeof guardarBorrador==='function') guardarBorrador();
+    }
+    document.getElementById('omt-skip-btn').addEventListener('click',function(){
+      document.getElementById('orion-totales-modal').remove(); _render();
+    });
+    document.getElementById('omt-apply-btn').addEventListener('click',function(){
+      oAplicarTotales();
+      var m=document.getElementById('orion-totales-modal'); if(m) m.remove();
+      _render();
+    });
+  }
+
+  // ---- Aplica los totales ingresados en el modal ----
+  function oAplicarTotales(){
+    var gv=function(id){ return parseFloat(document.getElementById(id).value)||0; };
+    var dias =gv('omt-dias');
+    var panos=gv('omt-panos');
+    var hsMec=gv('omt-mec');
+    var cDia =gv('omt-cdia');
+    var cPano=gv('omt-cpano');
+    var cMec =gv('omt-cmec');
+    var piezas=relCalcState.piezas||[];
+    // 1. Distribuir paños a piezas Pintar (proporcional por superficie guardada)
+    if(panos>0){
+      var pintP=piezas.filter(function(p){return hasTarea(p,'Pintar');});
+      var totSup=pintP.reduce(function(s,p){return s+(p._superficie||0);},0);
+      if(totSup>0 && pintP.length>0){
+        var assigned=0;
+        pintP.forEach(function(p,i){
+          if(i<pintP.length-1){
+            var share=Math.max(0.5,Math.round((p._superficie||0)/totSup*panos*2)/2);
+            p.panos=share; assigned+=share;
+          }
+        });
+        pintP[pintP.length-1].panos=Math.max(0.5,Math.round((panos-assigned)*2)/2);
+      } else if(pintP.length>0){
+        var eq=Math.max(0.5,Math.round(panos/pintP.length*2)/2);
+        pintP.forEach(function(p){p.panos=eq;});
+      }
+    }
+    // 2. Reconciliar hs de chapa con una operación de diferencia (sin repartir entre piezas).
+    //    Las piezas conservan su tiempo ORION; el delta hasta días×4 va a una sola línea trazable.
+    var OP_DIF='Diferencia entre baremo y cotización real';
+    var _ops=(window.relOpState||[]).filter(function(o){return o.operacion!==OP_DIF;});
+    if(dias>0){
+      var tgt=dias*4;
+      var totChP=piezas.reduce(function(s,p){return ZONAS_MECANICA_COSTO.indexOf(p.zona)===-1?s+(p.hsTrabajo||0):s;},0);
+      var totChO=_ops.reduce(function(s,o){
+        if(o.operacion==='Banco de estiraje') return s+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
+        if(o.operacion==='Desmontaje y montaje de accesorios') return s+(o.horas||0);
+        return s;
+      },0);
+      var delta=Math.round((tgt-(totChP+totChO))*100)/100;
+      if(Math.abs(delta)>=0.01){
+        var _did=window.relOpIdx||0; window.relOpIdx=_did+1;
+        _ops.push({_id:_did, operacion:OP_DIF, puestaMedicion:0, tiempoEstiraje:0, horas:delta, costo:0, nombre:''});
+      }
+    }
+    window.relOpState=_ops;
+    // 3. Escalar hs mecánica
+    if(hsMec>0){
+      var mP=piezas.filter(function(p){return ZONAS_MECANICA_COSTO.indexOf(p.zona)!==-1&&(p.hsTrabajo||0)>0;});
+      var totM=mP.reduce(function(s,p){return s+(p.hsTrabajo||0);},0);
+      if(totM>0){var sm=hsMec/totM; mP.forEach(function(p){p.hsTrabajo=Math.round(p.hsTrabajo*sm*100)/100;});}
+    }
+    // 4. Costos al panel de costos
+    if(cDia>0){window.relCostoDiaChapa=cDia; var e1=s('rel-costo-chapa'); if(e1)e1.value=cDia;}
+    if(cMec>0){window.relCostoHoraMecánica=cMec; var e2=s('rel-costo-mecanica'); if(e2)e2.value=cMec;}
+    if(cPano>0){window.relCostoPanoPintura=cPano; var e3=s('rel-costo-pano'); if(e3)e3.value=cPano;}
+    var parts=[];
+    if(dias>0) parts.push(dias+' días');
+    if(panos>0) parts.push(panos+' paños');
+    if(hsMec>0) parts.push(hsMec+' hs mec.');
+    toast('✅ Totales aplicados'+(parts.length?' — '+parts.join(' · '):''),'ok');
+  }
+
+  // ---- Handlers públicos ----
+  window.orionImportarAbrir = function(){
+    if(!window.relCalcState || !relCalcState.tipo){ toast('Seleccioná el tipo de vehículo antes de importar el informe.','err'); return; }
+    var inp=s('orion-file-input'); if(inp) inp.click();
+  };
+  window.orionImportarFile = async function(input){
+    var file=input.files && input.files[0]; if(!file) return; input.value='';
+    if(file.type!=='application/pdf'){ toast('Subí el PDF del Informe Pericial ORION.','err'); return; }
+    var st=s('orion-import-status'); if(st){ st.style.display='block'; st.textContent='Leyendo informe ORION…'; }
+    try{
+      var ab=await file.arrayBuffer();
+      var pdf=await pdfjsLib.getDocument({data:ab}).promise;
+      var lines=await oExtraerLineas(pdf);
+
+      // ── Parser determinístico como vía principal (mismo PDF = mismo resultado, sin alucinaciones) ──
+      if(st) st.textContent='Procesando informe…';
+      var parsed=oParse(lines);
+
+      // ── Gemini SOLO como fallback silencioso si el regex no reconoció un ORION válido ──
+      if(!parsed || !parsed.esOrion){
+        try{
+          if(st) st.textContent='Analizando con IA…';
+          var res=await apiCall({action:'parsearOrion', texto:lines.join('\n')});
+          if(res && res.ok && res.parsed && res.parsed.esOrion){
+            var _det=parsed;
+            parsed=res.parsed;
+            if(_det && _det.costos) parsed.costos=_det.costos; // costos siempre del regex (Observaciones/total)
+          }
+        }catch(iaErr){
+          console.warn('Fallback IA ORION falló:', iaErr);
+        }
+      }
+
+      oMostrarRevision(parsed, oCargar);
+    }catch(err){
+      toast('Error al leer el informe: '+(err&&err.message?err.message:err),'err');
+    }finally{
+      if(st) st.style.display='none';
+    }
+  };
+
+  // Exponer parser determinístico para el importador de IP (Provincia Pericial)
+  window.__orionExtraerLineas = oExtraerLineas;
+  window.__orionParse = oParse;
+})();
+
 
 // ════════════════════════════════════════════════════════
 //  FEATURE: NUEVA IP CON IA
@@ -6722,7 +7492,7 @@ function renderPiezaRow(zona,pieza,mostrarZona){
     }
     var hsRango=getHsRango(pieza.nombre,t,e.nivelDano);
     var hsHab=sinNivel||e.nivelDano;
-    var hsOpts=hsRango.map(function(h){return '<option value="'+h+'"'+(e.hsTrabajo===h?' selected':'')+'>'+h+' hs</option>';}).join('');
+    var hsOpts=hsOptsHTML(hsRango, e.hsTrabajo);
     var panosHtml='';
     if(esPintura){
       var panosOpts=[0.5,1,1.5,2,2.5,3].map(function(n){return '<option value="'+n+'"'+(e.panos===n?' selected':'')+'>'+n+(n===1?' paño':' paños')+'</option>';}).join('');
@@ -6761,7 +7531,7 @@ function renderAcordeonOtras(){
     }).join('')+'</div>'; }
     var hsRango=getHsRango('',esRep?'Reparar':esSust?'Sustituir':'Reparar',pr.nivelDano);
     var hsHab=esSust||pr.nivelDano;
-    var hsOpts=hsRango.map(function(h){return '<option value="'+h+'"'+(pr.hsTrabajo===h?' selected':'')+'>'+h+' hs</option>';}).join('');
+    var hsOpts=hsOptsHTML(hsRango, pr.hsTrabajo);
     var panosHtml='';
     if(tienePintura){
       var panosOpts=[0.5,1,1.5,2,2.5,3].map(function(n){return '<option value="'+n+'"'+(pr.panos===n?' selected':'')+'>'+n+(n===1?' paño':' paños')+'</option>';}).join('');
@@ -6796,7 +7566,7 @@ function gridUpdateResumen(){
   var abrev={Reparar:'R',Sustituir:'S',Pintar:'P',Difuminar:'D'};
   el.innerHTML=orden.map(function(key){
     var g=grupos[key];
-    var chips=g.tareas.map(function(pr,i){
+    var chips=_expandTareas(g.tareas).map(function(pr,i){
       var ab=abrev[pr.tarea],esPintura=pr.tarea==='Pintar',esDifuminar=pr.tarea==='Difuminar';
       var panosLbl='';
       if(esPintura&&pr.panos) panosLbl='· '+pr.panos+(pr.panos===1?' paño':' paños');
@@ -6818,6 +7588,7 @@ function gridUpdateTotal(){
   var totalOpHs=relOpState.reduce(function(a,o){
     if(o.operacion==='Banco de estiraje') return a+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
     if(o.operacion==='Desmontaje y montaje de accesorios') return a+(o.horas||0);
+    if(o.operacion==='Diferencia entre baremo y cotización real') return a+(o.horas||0);
     return a;
   },0);
   var panos=relCalcState.piezas.reduce(function(a,p){
@@ -6825,8 +7596,8 @@ function gridUpdateTotal(){
     if(hasTarea(p,'Difuminar')) return a+0.5;
     return a;
   },0);
-  var gran=total+totalOpHs;
-  var dias=gran>0?Math.ceil(gran/8*2)/2:0;
+  var gran=Math.round((total+totalOpHs)*100)/100;
+  var dias=gran>0?Math.ceil(gran/4*2)/2:0;
   var dLabel=dias===1?'1 día':dias+' días';
   el.innerHTML=gran+' <span style="font-size:14px;font-weight:400">hs</span>'
     +(gran>0?'&nbsp;<span style="font-size:13px;font-weight:400;color:var(--text2)">('+dLabel+')</span>':'')
@@ -6986,156 +7757,131 @@ function vozParsearYAgregar(txt) {
   return {ok:true, pieza:ctx.pieza.nombre, zona:ctx.zona, acciones:acciones.map(function(a){return a.tarea;}), nivel:nivel, hs:hs, panos:panos};
 }
 
-// ── Gemini Voice ─────────────────────────────────────────────────
+// ── Reconocimiento de voz + Gemini ───────────────────────────────
+var vozSR = window.SpeechRecognition || window.webkitSpeechRecognition;
+var vozRec = null;
+var vozEscuchando = false;
+
+// Lista que se manda a Gemini: [{nombre, zona}] indexada por posición (idx).
 function vozGetPiezasList() {
   var gridData = CALC_DATA_GRID[relCalcState.tipo] || {};
   var lista = [];
   Object.keys(gridData).forEach(function(zona) {
-    (gridData[zona]||[]).forEach(function(p) { lista.push({zona:zona, nombre:p.nombre}); });
+    (gridData[zona] || []).forEach(function(p) {
+      lista.push({ nombre: p.nombre, zona: zona });
+    });
   });
   return lista;
 }
 
+// Busca el objeto pieza real {zona, pieza:<obj>} por nombre exacto (y zona opcional).
 function vozBuscarPiezaPorNombre(nombre, zona) {
   var gridData = CALC_DATA_GRID[relCalcState.tipo] || {};
   var zonas = zona ? [zona] : Object.keys(gridData);
-  for (var z=0; z<zonas.length; z++) {
+  for (var z = 0; z < zonas.length; z++) {
     var piezas = gridData[zonas[z]] || [];
-    for (var p=0; p<piezas.length; p++) {
-      if (piezas[p].nombre === nombre) return {zona:zonas[z], pieza:piezas[p]};
+    for (var p = 0; p < piezas.length; p++) {
+      if (piezas[p].nombre === nombre) return { zona: zonas[z], pieza: piezas[p] };
     }
   }
   return vozBuscarPieza(nombre);
 }
 
-function vozAplicarRespuestaGemini(res, lista) {
-  var nuevas = 0, msgs = [];
-  (res.acciones||[]).forEach(function(a) {
-    var ctx = _vozResolver(a, lista);
-    if (!ctx) { msgs.push('⚠ No encontré pieza'); return; }
-    var hs    = (a.horas  != null && a.horas  !== 'null') ? parseFloat(a.horas)  : null;
-    var panos = (a.panos  != null && a.panos  !== 'null') ? parseFloat(a.panos)  : null;
-    var nivel = a.nivel && a.nivel !== 'null' ? a.nivel : 'Leve';
-    if (vozAgregarTarea(ctx.zona, ctx.pieza, a.tarea, nivel, hs, panos)) {
-      nuevas++;
-      var tag = a.tarea+(a.tarea==='Reparar'?' ('+nivel.charAt(0)+')':'');
-      msgs.push(ctx.pieza.nombre+' — '+tag+(hs?' · '+hs+'hs':'')+(panos?' · '+panos+'P':''));
-    } else {
-      msgs.push(ctx.pieza.nombre+' ya estaba');
-    }
-  });
-  (res.eliminar||[]).forEach(function(e) {
-    var ctx = _vozResolver(e, lista);
-    if (!ctx) return;
-    var existing = gFind(ctx.zona, ctx.pieza.nombre, e.tarea);
-    if (existing) {
-      relCalcState.piezas = relCalcState.piezas.filter(function(x){ return x._id!==existing._id; });
-      msgs.push('✕ '+ctx.pieza.nombre+' — '+e.tarea);
-      nuevas++;
-    }
-  });
-  if (nuevas > 0) { gridRender(); guardarBorrador(); }
-  vozSetFeedback(msgs.join(' | ')||'Sin cambios', nuevas>0 ? 'voz-ok' : 'voz-warn');
-
-  // Piezas sin lado definido -> preguntar izq/der
-  var consultas = (res.consultar||[]).map(function(c) {
-    var nombres = (c.opciones||[]).map(function(op) {
-      if (typeof op === 'number' && lista && lista[op]) return lista[op].nombre; // idx (nuevo)
-      return op; // nombre (compat)
-    }).filter(Boolean);
-    var primera = (c.opciones||[])[0];
-    var zona = (typeof primera === 'number' && lista && lista[primera]) ? lista[primera].zona : c.zona;
-    return { opciones:nombres, zona:zona, tarea:c.tarea, nivel:c.nivel, horas:c.horas, panos:c.panos };
-  }).filter(function(c) { return c.opciones.length; });
-  if (consultas.length) vozMostrarConsultaLado(consultas, 0);
-}
-
-async function vozProcesarConGemini(transcript) {
-  try {
-    var lista = vozGetPiezasList();
-    var res = await apiCall({action:'interpretarVoz', transcript:transcript, tipo:relCalcState.tipo, piezas:lista});
-    if (res.ok) { vozAplicarRespuestaGemini(res, lista); }
-    else { vozFallbackLocal(transcript); }
-  } catch(err) { vozFallbackLocal(transcript); }
-}
-
-// Resuelve una accion devuelta por Gemini: por idx (nuevo) o por pieza/zona (compat).
-function _vozResolver(a, lista) {
-  if (a.idx != null && lista[a.idx]) {
-    return lista[a.idx];
-  }
-  // compatibilidad: buscar por pieza+zona
-  if (a.pieza) {
-    for (var i=0; i<lista.length; i++) {
-      if (lista[i].pieza===a.pieza && (!a.zona||lista[i].zona===a.zona)) return lista[i];
-    }
-  }
+// Normaliza el texto de la acción que devuelve Gemini a las tareas del grid.
+function vozNormalizarTarea(t) {
+  var n = vozNorm(t);
+  if (n.indexOf('sustit') >= 0 || n.indexOf('cambi') >= 0 || n.indexOf('reempl') >= 0) return 'Sustituir';
+  if (n.indexOf('pint') >= 0) return 'Pintar';
+  if (n.indexOf('repar') >= 0 || n.indexOf('arregl') >= 0 || n.indexOf('chap') >= 0) return 'Reparar';
   return null;
 }
 
-// Aplica resultado de Gemini al grid
+function vozNivelDesde(v) {
+  var n = vozNorm(v || '');
+  if (n.indexOf('grav') >= 0 || n.indexOf('fuerte') >= 0 || n.indexOf('sever') >= 0) return 'Fuerte';
+  if (n.indexOf('medio') >= 0 || n.indexOf('moder') >= 0) return 'Medio';
+  return 'Leve';
+}
+
+// Resuelve un item de Gemini ({idx} o {pieza,zona}) al objeto real {zona, pieza:<obj>}.
+function vozResolverPieza(item, lista) {
+  var ref = null;
+  if (item.idx != null && lista[item.idx]) ref = lista[item.idx];
+  else if (item.pieza) {
+    var pn = vozNorm(item.pieza);
+    for (var i = 0; i < lista.length; i++) {
+      if (vozNorm(lista[i].nombre) === pn) { ref = lista[i]; break; }
+    }
+  }
+  if (!ref) return null;
+  return vozBuscarPiezaPorNombre(ref.nombre, ref.zona);
+}
+
+// Aplica la respuesta de Gemini. Backend: {ok:true, resultado:[{idx,pieza,acciones,nivel}]}.
 function vozAplicarRespuestaGemini(resp, lista) {
-  var res = resp.resultado || [];
-  var nuevas = 0;
-  var msgs = [];
-  res.forEach(function(a) {
-    var pieza = _vozResolver(a, lista);
-    if (!pieza) { msgs.push('No encontré: ' + (a.pieza||'?')); return; }
-    var acciones = Array.isArray(a.acciones) ? a.acciones : ['Reparar'];
-    var nivel = a.nivel || 'Leve';
-    var changed = gridSetPieza(pieza.zona, pieza.pieza, acciones, nivel, a.horas||null, a.panos||null);
-    if (changed) {
-      nuevas++;
-      msgs.push(pieza.pieza + ' — ' + acciones.join('+'));
-    }
-  });
-  if (nuevas > 0) { gridRender(); guardarBorrador(); }
-  vozSetFeedback(msgs.join(' | ')||'Sin cambios', nuevas>0 ? 'voz-ok' : 'voz-warn');
-}
-
-function vozFallbackLocal(transcript) {
-  vozSetFeedback('IA no disponible — procesando localmente...', 'voz-warn');
-  var lista = vozGetPiezasList();
-  var res = vozProcesarLocal(transcript, lista);
-  var msgs = [];
-  res.forEach(function(r) {
-    if (r.ok) {
-      msgs.push(r.pieza + ' — ' + r.acciones.join('+'));
-      gridSetPieza(r.zona||r.pieza, r.pieza, r.acciones, r.nivel||'Leve', null, null);
-    }
-  });
-  if (msgs.length) { gridRender(); guardarBorrador(); vozSetFeedback(msgs.join(' | '), 'voz-ok'); }
-  else { vozSetFeedback('No reconocí piezas. Intentá de nuevo.', 'voz-warn'); }
-}
-
-function vozProcesarLocal(transcript, lista) {
-  var norm = transcript.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
-  norm = vozExpandirAliases(norm);
-  var sinVerbos = vozQuitarVerbos(norm);
-  var accDetectadas = vozDetectarAcciones(norm);
-  var nivelDetectado = vozDetectarNivel(norm) || 'Leve';
-  if (!accDetectadas.length) accDetectadas = [{ tarea:'Reparar' }];
-  var resultados = [];
-  (lista||[]).forEach(function(p) {
-    var nombreNorm = p.pieza.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\s]/g,' ').trim();
-    var alias = VOZ_ALIASES[nombreNorm] || nombreNorm;
-    if (sinVerbos.indexOf(alias)>=0 || sinVerbos.indexOf(nombreNorm)>=0) {
-      resultados.push({ pieza:p.pieza, zona:p.zona, acciones:accDetectadas.map(function(a){return a.tarea;}), nivel:nivelDetectado, ok:true });
-    }
-  });
-  return resultados;
-}
-
-function vozGetPiezasList() {
-  var tipo = relCalcState.tipo;
-  if (!tipo || !CALC_DATA_GRID[tipo]) return [];
-  var lista = [];
-  Object.keys(CALC_DATA_GRID[tipo]).forEach(function(zona) {
-    CALC_DATA_GRID[tipo][zona].forEach(function(pieza) {
-      lista.push({ zona:zona, pieza:pieza });
+  var items = resp.resultado || [];
+  var nuevas = 0, msgs = [];
+  items.forEach(function(a) {
+    var ctx = vozResolverPieza(a, lista);
+    if (!ctx) { msgs.push('⚠ No encontré: ' + (a.pieza || '?')); return; }
+    var acciones = Array.isArray(a.acciones) ? a.acciones : (a.acciones ? [a.acciones] : []);
+    acciones = acciones.filter(function(t) { return t && vozNorm(t) !== 'ok'; });
+    if (!acciones.length) return;
+    var nivel = vozNivelDesde(a.nivel);
+    var hs    = (a.horas != null && a.horas !== 'null') ? parseFloat(a.horas) : null;
+    var panos = (a.panos != null && a.panos !== 'null') ? parseFloat(a.panos) : null;
+    acciones.forEach(function(t) {
+      var tarea = vozNormalizarTarea(t);
+      if (!tarea) return;
+      if (vozAgregarTarea(ctx.zona, ctx.pieza, tarea, nivel, hs, panos)) {
+        nuevas++;
+        var tag = tarea + (tarea === 'Reparar' ? ' (' + nivel.charAt(0) + ')' : '');
+        msgs.push(ctx.pieza.nombre + ' — ' + tag);
+      }
     });
   });
-  return lista;
+  if (nuevas > 0) { gridRender(); guardarBorrador(); }
+  vozSetFeedback(msgs.join(' | ') || 'Sin cambios nuevos', nuevas > 0 ? 'voz-ok' : 'voz-warn');
+}
+
+async function vozProcesarConGemini(transcript) {
+  var lista = vozGetPiezasList();
+  try {
+    var res = await apiCall({ action:'interpretarVoz', transcript:transcript, tipo:relCalcState.tipo, piezas:lista });
+    if (res && res.ok) vozAplicarRespuestaGemini(res, lista);
+    else vozFallbackLocal(transcript);
+  } catch(err) {
+    vozFallbackLocal(transcript);
+  }
+}
+
+// Fallback sin IA: parser local sobre el transcript (vozParsearYAgregar ya muta relCalcState).
+function vozFallbackLocal(transcript) {
+  var r = vozParsearYAgregar(transcript);
+  if (r.ok) {
+    gridRender(); guardarBorrador();
+    vozSetFeedback('(local) ' + r.pieza + ' — ' + r.acciones.join('+'), 'voz-ok');
+  } else {
+    vozSetFeedback(r.msg || 'No reconocí piezas. Probá de nuevo.', 'voz-warn');
+  }
+}
+
+// ── UI helpers ───────────────────────────────────────────────────
+function vozSetTranscript(txt) {
+  var el = document.getElementById('voz-transcript');
+  if (el) el.textContent = txt;
+}
+function vozSetFeedback(txt, cls) {
+  var el = document.getElementById('voz-feedback');
+  if (!el) return;
+  el.textContent = txt || '';
+  el.className = cls || '';
+}
+
+// ── Control del micrófono ────────────────────────────────────────
+function vozToggleMic() {
+  if (!vozSR) { alert('El dictado por voz requiere Chrome o Edge.'); return; }
+  if (vozEscuchando) vozDetener(); else vozIniciar();
 }
 
 function vozIniciar() {
@@ -7147,20 +7893,20 @@ function vozIniciar() {
   vozRec.interimResults = true;
   vozRec.onstart = function() {
     vozEscuchando = true;
-    btn.classList.add('escuchando'); btn.textContent = '⏹';
-    panel.classList.add('visible');
-    vozSetTranscript('Escuchando… hablame de las piezas');
+    if (btn) { btn.classList.add('escuchando'); btn.textContent = '⏹'; }
+    if (panel) panel.classList.add('visible');
+    vozSetTranscript('Escuchando… nombrá las piezas y el daño');
     vozSetFeedback('');
   };
   vozRec.onresult = function(e) {
-    var interino='', final_='';
-    for (var i=e.resultIndex; i<e.results.length; i++) {
+    var interino = '', final_ = '';
+    for (var i = e.resultIndex; i < e.results.length; i++) {
       if (e.results[i].isFinal) final_ += e.results[i][0].transcript;
       else interino += e.results[i][0].transcript;
     }
-    vozSetTranscript(final_||interino||'…');
+    vozSetTranscript(final_ || interino || '…');
     if (final_) {
-      vozSetFeedback('⏳ Procesando con IA...', '');
+      vozSetFeedback('⏳ Procesando…', '');
       vozProcesarConGemini(final_);
     }
   };
@@ -7168,8 +7914,8 @@ function vozIniciar() {
     vozSetFeedback('Error de micrófono: ' + e.error, 'voz-warn');
     vozDetener();
   };
-  vozRec.onend = function() { if (vozEscuchando) vozRec.start(); };
-  vozRec.start();
+  vozRec.onend = function() { if (vozEscuchando) { try { vozRec.start(); } catch(e){} } };
+  try { vozRec.start(); } catch(e) { vozSetFeedback('No se pudo iniciar el micrófono', 'voz-warn'); }
 }
 
 function vozDetener() {
@@ -7183,4 +7929,5 @@ function vozDetener() {
 
 
 </script>
-</
+</body>
+</html>

@@ -4,14 +4,81 @@ var ARCHIVO_NAME = 'Archivo';
 var USUARIOS_NAME = 'Usuarios';
 var TALLERES_NAME = 'Talleres';
 var MAILCONFIG_NAME = 'MailConfig';
+var ORION_DICT_NAME = 'ORION_Aprendizaje';
+var ORION_STATS_NAME = 'ORION_Estadisticas';
 
 // Backup automático: carpeta destino en Drive y cuántos días de copias conservar
 var BACKUP_FOLDER_NAME = 'Backups App Estudio Patitucci';
 var BACKUP_RETENCION_DIAS = 30;
 
-// Token compartido con el frontend — debe coincidir exactamente con el de index.html
-// Cambiarlo acá y en index.html al mismo tiempo si necesitás rotarlo.
-var SECRET_TOKEN = 'ep_9k2mX7vQn4pRjL8wZdA3sYtB6uCfHg0E';
+// ─── SESIONES — tokens temporales emitidos al hacer login ────────────────────
+// Reemplaza al viejo SECRET_TOKEN (que era visible en el index.html público).
+// Al loguearse con usuario+clave, el backend emite un token aleatorio con
+// vencimiento. Cada request posterior debe traerlo en data.sess (POST) o ?sess= (GET).
+var SESSION_TTL_HORAS = 12;
+
+function _crearSesion(nombre, rol) {
+  var tok = generarToken32() + generarToken32(); // 64 caracteres aleatorios
+  var exp = Date.now() + SESSION_TTL_HORAS * 3600 * 1000;
+  var val = JSON.stringify({n: nombre, r: rol, exp: exp});
+  PropertiesService.getScriptProperties().setProperty('sess_' + tok, val);
+  // Cache para lecturas rápidas (máx 6 hs; después cae a Properties)
+  try { CacheService.getScriptCache().put('sess_' + tok, val, 21600); } catch (e) {}
+  return {sess: tok, exp: exp, rol: rol};
+}
+
+// Devuelve {n: nombre, r: rol, exp} si la sesión es válida y vigente; null si no.
+function _getSesion(tok) {
+  if (!tok || typeof tok !== 'string' || tok.length < 40) return null;
+  var raw = null;
+  try { raw = CacheService.getScriptCache().get('sess_' + tok); } catch (e) {}
+  if (!raw) raw = PropertiesService.getScriptProperties().getProperty('sess_' + tok);
+  if (!raw) return null;
+  var s;
+  try { s = JSON.parse(raw); } catch (e) { return null; }
+  if (!s || !s.exp || Date.now() > s.exp) { _borrarSesion(tok); return null; }
+  return s;
+}
+
+function _borrarSesion(tok) {
+  if (!tok) return;
+  try { PropertiesService.getScriptProperties().deleteProperty('sess_' + tok); } catch (e) {}
+  try { CacheService.getScriptCache().remove('sess_' + tok); } catch (e) {}
+}
+
+// Borra de Properties las sesiones ya vencidas. Se llama en cada login exitoso.
+function _limpiarSesionesVencidas() {
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var keys = props.getKeys();
+    var ahora = Date.now();
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i].indexOf('sess_') !== 0) continue;
+      try {
+        var s = JSON.parse(props.getProperty(keys[i]) || '{}');
+        if (!s.exp || ahora > s.exp) props.deleteProperty(keys[i]);
+      } catch (e) { props.deleteProperty(keys[i]); }
+    }
+  } catch (e) {}
+}
+
+// Respuesta estándar ante sesión inválida. El frontend detecta code:'SESSION'.
+function _respSesionInvalida() {
+  return resp({ok: false, code: 'SESSION', msg: 'Sesión vencida o inválida. Volvé a ingresar.'});
+}
+
+// Lee (y completa si falta) la columna Rol de la hoja Usuarios. 'admin' | 'inspector'.
+function _rolUsuario(sheet, rows, i) {
+  if (String((rows[0] && rows[0][2]) || '') !== 'Rol') {
+    try { sheet.getRange(1, 3).setValue('Rol'); } catch (e) {}
+  }
+  var rol = String((rows[i] && rows[i][2]) || '').trim().toLowerCase();
+  if (rol !== 'admin' && rol !== 'inspector') {
+    rol = (rows[i][0] === 'Administrador') ? 'admin' : 'inspector';
+    try { sheet.getRange(i + 1, 3).setValue(rol); } catch (e) {}
+  }
+  return rol;
+}
 
 // Únicos usuarios autorizados a ver fotos y carpetas de inspecciones en Drive
 var DRIVE_VIEWERS = [
@@ -224,13 +291,26 @@ function doPost(e) {
     if (action === 'tallerConfirmaTurno')  return _withLock(function(){ return tallerConfirmaTurno(data); });
     if (action === 'tallerRegistraEtapa')  return _withLock(function(){ return tallerRegistraEtapa(data); });
     if (action === 'uploadFotoVerif')      return uploadFotoVerif(data);
-    // El formulario de contacto público no requiere token
-    if (action !== 'contacto' && data.token !== SECRET_TOKEN) {
-      return resp({ok: false, msg: 'No autorizado'});
-    }
+    // El formulario de contacto público no requiere autenticación
+    if (action === 'contacto') return enviarContacto(data);
+    // Login: público (protegido por clave + rate limit). Emite el token de sesión.
     if (action === 'login') return loginUsuario(data);
+
+    // ── Todo lo que sigue requiere una sesión válida ──
+    var ses = _getSesion(data.sess);
+    if (!ses) return _respSesionInvalida();
+    // El nombre autenticado pisa lo que diga el cliente (anti-suplantación en audit log)
+    if (data.usuario) data.usuario = ses.n;
+
+    if (action === 'logout') { _borrarSesion(data.sess); return resp({ok: true}); }
+
+    // Acciones destructivas: solo rol admin
+    if ((action === 'eliminar' || action === 'archivar') && ses.r !== 'admin') {
+      return resp({ok: false, msg: 'Solo el administrador puede realizar esta acción.'});
+    }
+
     // Acciones que escriben en el Sheet → serializadas con _withLock
-    if (action === 'cambiarClave') return _withLock(function(){ return cambiarClave(data); });
+    if (action === 'cambiarClave') { data.nombre = ses.n; return _withLock(function(){ return cambiarClave(data); }); }
     if (action === 'guardar') return _withLock(function(){ return guardarInspeccion(data); });
     if (action === 'actualizar') return _withLock(function(){ return actualizarInspeccion(data); });
     if (action === 'editar') return _withLock(function(){ return actualizarInspeccion(data); });
@@ -238,7 +318,6 @@ function doPost(e) {
     if (action === 'listar') return listarInspecciones();
     if (action === 'recordatorio') return enviarRecordatorio(data);
     if (action === 'archivar') return _withLock(function(){ return archivarInspecciones(data); });
-    if (action === 'contacto') return enviarContacto(data);
     if (action === 'generarTokenTaller') return _withLock(function(){ return generarTokenTaller(data); });
     if (action === 'revocarTokenTaller') return _withLock(function(){ return revocarTokenTaller(data); });
     if (action === 'uploadFoto') return uploadFotoSingle(data);
@@ -249,12 +328,16 @@ function doPost(e) {
     if (action === 'iniciarVerifSinRepuestos') return _withLock(function(){ return iniciarVerifSinRepuestos(data); });
     if (action === 'subirOrdenCompra') return subirOrdenCompra(data);
     if (action === 'confirmarTurnoVerif') return _withLock(function(){ return confirmarTurnoVerif(data); });
-    if (action === 'tallerConfirmaTurno') return _withLock(function(){ return tallerConfirmaTurno(data); });
-    if (action === 'tallerRegistraEtapa') return _withLock(function(){ return tallerRegistraEtapa(data); });
-    if (action === 'uploadFotoVerif') return uploadFotoVerif(data);
     if (action === 'aprobarVerif') return _withLock(function(){ return aprobarVerif(data); });
     if (action === 'reenviarSolicitudTurno') return _withLock(function(){ return reenviarSolicitudTurno(data); });
     if (action === 'notificarPiezaSugerida') return notificarPiezaSugerida(data);
+    // ── Fase B: aprendizaje y estadísticas del importador ORION ──
+    if (action === 'orionRegistrarImport') return _withLock(function(){ return orionRegistrarImport(data); });
+    if (action === 'orionGetDiccionario') return orionGetDiccionario(data);
+    if (action === 'orionGetPendientes') return orionGetPendientes(data);
+    if (action === 'orionAprobarSinonimo') return _withLock(function(){ return orionAprobarSinonimo(data); });
+    if (action === 'orionGetSugerenciasBaremo') return orionGetSugerenciasBaremo(data);
+    if (action === 'parsearOrion') return parsearOrionConGemini(data);
     if (action === 'interpretarVoz') return interpretarVoz(data);
     // Templates de mails
     if (action === 'getMailTemplates')    return getMailTemplates();
@@ -278,8 +361,8 @@ function doGet(e) {
   var action = e && e.parameter && e.parameter.action;
   if (action === 'getVerifTaller') return getVerifTaller(e.parameter.verifToken);
 
-  var token = e && e.parameter && e.parameter.token;
-  if (token !== SECRET_TOKEN) return resp({ok: false, msg: 'No autorizado'});
+  var ses = _getSesion(e && e.parameter && e.parameter.sess);
+  if (!ses) return _respSesionInvalida();
   if (action === 'getArchivadas') return getArchivadas();
   if (action === 'getFile') return getFilePorId(e.parameter.fileId);
   return listarInspecciones();
@@ -1502,19 +1585,19 @@ function getUsuariosSheet() {
   if (!sheet) {
     // Crear hoja con usuarios por defecto si no existe
     sheet = ss.insertSheet(USUARIOS_NAME);
-    sheet.appendRow(['Nombre', 'Clave']);
+    sheet.appendRow(['Nombre', 'Clave', 'Rol']);
     var defaults = [
-      ['Administrador', '123456'],
-      ['Ignacio',       '123456'],
-      ['Matías',        '123456'],
-      ['Valentino',     '123456'],
-      ['Sebastián',     '123456'],
-      ['Mariano',       '123456'],
-      ['Bruno',         '123456'],
-      ['Majo',          '123456'],
-      ['Ivan',          '123456']
+      ['Administrador', '123456', 'admin'],
+      ['Ignacio',       '123456', 'inspector'],
+      ['Matías',        '123456', 'inspector'],
+      ['Valentino',     '123456', 'inspector'],
+      ['Sebastián',     '123456', 'inspector'],
+      ['Mariano',       '123456', 'inspector'],
+      ['Bruno',         '123456', 'inspector'],
+      ['Majo',          '123456', 'inspector'],
+      ['Ivan',          '123456', 'inspector']
     ];
-    defaults.forEach(function(row) { sheet.appendRow([row[0], _formatoHash(row[1])]); });
+    defaults.forEach(function(row) { sheet.appendRow([row[0], _formatoHash(row[1]), row[2]]); });
     // Proteger la hoja para que no se edite manualmente por error
     var protection = sheet.protect().setDescription('Usuarios — solo editar via app');
     protection.setWarningOnly(true);
@@ -1541,7 +1624,11 @@ function loginUsuario(data) {
         if (!_esHasheada(rows[i][1])) {
           try { sheet.getRange(i + 1, 2).setValue(_formatoHash(clave)); } catch (e) {}
         }
-        return resp({ok: true, nombre: nombre});
+        // Emitir token de sesión (12 hs) y devolver el rol del usuario
+        var rol = _rolUsuario(sheet, rows, i);
+        _limpiarSesionesVencidas();
+        var s = _crearSesion(nombre, rol);
+        return resp({ok: true, nombre: nombre, rol: rol, sess: s.sess, exp: s.exp});
       } else {
         return resp({ok: false, msg: 'Contraseña incorrecta.'});
       }
@@ -2225,7 +2312,8 @@ var HONORARIOS_TARIFA = {
   'Por fotos':            4000,
   'Ampliaciones de calle':8000,
   'Inspecciones Calle':   10000,
-  'Posible DT':           12000
+  'Posible DT':           12000,
+  'Pericial':             0
 };
 
 // Formatea número como moneda argentina: $10.000
@@ -2337,7 +2425,7 @@ function _enviarResumenesMensuales_DISABLED() {
 function notificarPiezaSugerida(data) {
   try {
     var dest = (typeof mailPorCompania === 'function' && data && data.cia)
-      ? mailPorCompania(data.cia) : 'inspeccionespatitucci@gmail.com';
+      ? mailPorCompania(data.cia) : 'patitucci.mp@gmail.com';
     var cuerpo = 'ESTUDIO PATITUCCI\n\nUn inspector sugirió una pieza nueva.\n\n'
       + 'Pieza: ' + ((data && data.pieza) || '-') + '\n'
       + 'Zona: ' + ((data && data.zona) || '-') + '\n'
@@ -2406,5 +2494,335 @@ function interpretarVoz(data) {
     return resp({ok: true, resultado: resultado});
   } catch(e) {
     return resp({ok: false, msg: 'Error interpretarVoz: ' + e.toString()});
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  FASE B — Aprendizaje y estadísticas del Importador de Informe ORION
+//  Diccionario con aprobación del admin + registro de tiempos/superficies.
+//  Hojas: ORION_Aprendizaje (sinónimos) y ORION_Estadisticas (por pieza).
+// ════════════════════════════════════════════════════════════════════
+
+function _getOrionDictSheet() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName(ORION_DICT_NAME);
+  if (!sh) {
+    sh = ss.insertSheet(ORION_DICT_NAME);
+    sh.appendRow(['nombreOrion','nombreCatalogo','zona','tipoVehiculo','estado','vecesVisto','fechaPrimero','fechaUltimo','aprobadoPor']);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+function _getOrionStatsSheet() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName(ORION_STATS_NAME);
+  if (!sh) {
+    sh = ss.insertSheet(ORION_STATS_NAME);
+    sh.appendRow(['fecha','siniestro','tipoVehiculo','nombreOrion','nombreCatalogo','tarea','nivelDano','tiempoOrion','tStd','superficie','panos','matcheada','esNueva']);
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+
+// Registra un import: estadísticas por pieza + acumula no reconocidas como "pendiente".
+function orionRegistrarImport(data) {
+  try {
+    var piezas = (data && data.piezas) || [];
+    if (!piezas.length) return resp({ok: true, registradas: 0});
+    var stats = _getOrionStatsSheet();
+    var dict  = _getOrionDictSheet();
+    var fecha = new Date();
+    var sin   = _str(data.siniestro, 60);
+    var tipo  = _str(data.tipoVehiculo, 60);
+
+    var dRows  = dict.getDataRange().getValues();
+    var dIndex = {}; // nombreOrion(lower) -> nº de fila (o -1 si recién creada en este batch)
+    for (var i = 1; i < dRows.length; i++) { dIndex[String(dRows[i][0]).toLowerCase()] = i + 1; }
+
+    var statBatch = [];
+    piezas.forEach(function(p) {
+      statBatch.push([fecha, sin, tipo, _str(p.nombreOrion,120), _str(p.nombreCatalogo,120),
+        _str(p.tarea,20), _str(p.nivelDano,20), Number(p.tiempoOrion)||0, Number(p.tStd)||0,
+        Number(p.superficie)||0, Number(p.panos)||0, p.matcheada ? 'SI' : 'NO', p.esNueva ? 'SI' : 'NO']);
+      if (p.esNueva) {
+        var key = String(p.nombreOrion || '').toLowerCase();
+        if (dIndex[key] && dIndex[key] > 0) {
+          var r = dIndex[key];
+          dict.getRange(r, 6).setValue((Number(dict.getRange(r, 6).getValue()) || 0) + 1);
+          dict.getRange(r, 8).setValue(fecha);
+        } else if (!dIndex[key]) {
+          dict.appendRow([_str(p.nombreOrion,120), '', '', tipo, 'pendiente', 1, fecha, fecha, '']);
+          dIndex[key] = -1;
+        }
+      }
+    });
+    if (statBatch.length) {
+      stats.getRange(stats.getLastRow() + 1, 1, statBatch.length, statBatch[0].length).setValues(statBatch);
+    }
+    return resp({ok: true, registradas: statBatch.length});
+  } catch (e) {
+    return resp({ok: false, msg: 'orionRegistrarImport: ' + e});
+  }
+}
+
+// Devuelve los sinónimos APROBADOS para que el frontend los sume al matcheo.
+function orionGetDiccionario(data) {
+  try {
+    var dict = _getOrionDictSheet();
+    var rows = dict.getDataRange().getValues();
+    var out  = [];
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][4]).toLowerCase() === 'aprobado' && rows[i][1]) {
+        out.push({nombreOrion: rows[i][0], nombreCatalogo: rows[i][1], zona: rows[i][2], tipoVehiculo: rows[i][3]});
+      }
+    }
+    return resp({ok: true, diccionario: out});
+  } catch (e) {
+    return resp({ok: false, msg: 'orionGetDiccionario: ' + e});
+  }
+}
+
+// Lista las piezas pendientes de aprobación (admin), ordenadas por frecuencia.
+function orionGetPendientes(data) {
+  if (!data || data.usuario !== 'Administrador') return resp({ok: false, msg: 'Sin permiso.'});
+  try {
+    var dict = _getOrionDictSheet();
+    var rows = dict.getDataRange().getValues();
+    var out  = [];
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][4]).toLowerCase() === 'pendiente') {
+        out.push({fila: i + 1, nombreOrion: rows[i][0], tipoVehiculo: rows[i][3],
+                  vecesVisto: Number(rows[i][5]) || 0, fechaUltimo: rows[i][7]});
+      }
+    }
+    out.sort(function(a, b) { return (b.vecesVisto || 0) - (a.vecesVisto || 0); });
+    return resp({ok: true, pendientes: out});
+  } catch (e) {
+    return resp({ok: false, msg: 'orionGetPendientes: ' + e});
+  }
+}
+
+// Aprueba (mapea a pieza/zona del catálogo) o rechaza una pieza pendiente.
+function orionAprobarSinonimo(data) {
+  if (!data || data.usuario !== 'Administrador') return resp({ok: false, msg: 'Sin permiso.'});
+  try {
+    var dict = _getOrionDictSheet();
+    var fila = Number(data.fila) || 0;
+    if (fila < 2) return resp({ok: false, msg: 'Fila inválida.'});
+    if (data.rechazar) {
+      dict.getRange(fila, 5).setValue('rechazado');
+      dict.getRange(fila, 9).setValue(_str(data.usuario, 60));
+      return resp({ok: true});
+    }
+    var nc = _str(data.nombreCatalogo, 120), zona = _str(data.zona, 60);
+    if (!nc || !zona) return resp({ok: false, msg: 'Falta pieza de catálogo o zona.'});
+    dict.getRange(fila, 2).setValue(nc);
+    dict.getRange(fila, 3).setValue(zona);
+    dict.getRange(fila, 5).setValue('aprobado');
+    dict.getRange(fila, 9).setValue(_str(data.usuario, 60));
+    return resp({ok: true});
+  } catch (e) {
+    return resp({ok: false, msg: 'orionAprobarSinonimo: ' + e});
+  }
+}
+
+// Reporte a demanda: sugerencias de baremo (promedio ORION estable por pieza/tipo/tarea).
+function orionGetSugerenciasBaremo(data) {
+  if (!data || data.usuario !== 'Administrador') return resp({ok: false, msg: 'Sin permiso.'});
+  try {
+    var minN = Number(data && data.minN) || 5;
+    var stats = _getOrionStatsSheet();
+    var rows  = stats.getDataRange().getValues();
+    var agg = {};
+    for (var i = 1; i < rows.length; i++) {
+      var nc = rows[i][4]; if (!nc) continue;
+      var tarea = rows[i][5], tipo = rows[i][2];
+      var t = Number(rows[i][7]) || 0; if (t <= 0) continue;
+      var key = nc + '||' + tipo + '||' + tarea;
+      if (!agg[key]) agg[key] = {nombre: nc, tipo: tipo, tarea: tarea, vals: []};
+      agg[key].vals.push(t);
+    }
+    var out = [];
+    Object.keys(agg).forEach(function(k) {
+      var a = agg[k]; if (a.vals.length < minN) return;
+      var n = a.vals.length;
+      var sum = a.vals.reduce(function(x, y) { return x + y; }, 0);
+      var avg = sum / n;
+      var varc = a.vals.reduce(function(x, y) { return x + (y - avg) * (y - avg); }, 0) / n;
+      var sd = Math.sqrt(varc);
+      var cv = avg > 0 ? sd / avg : 1;
+      if (cv > 0.25) return; // solo sugerencias consistentes
+      out.push({pieza: a.nombre, tipoVehiculo: a.tipo, tarea: a.tarea, n: n,
+                promedio: Math.round(avg * 100) / 100, desvio: Math.round(sd * 100) / 100,
+                cv: Math.round(cv * 100) / 100});
+    });
+    out.sort(function(a, b) { return b.n - a.n; });
+    return resp({ok: true, sugerencias: out, minN: minN});
+  } catch (e) {
+    return resp({ok: false, msg: 'orionGetSugerenciasBaremo: ' + e});
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  ORION IA — Parseo de informe pericial con Gemini
+//  Recibe texto plano del PDF (extraído por pdf.js en el frontend)
+//  y devuelve JSON compatible con oCargar() del frontend.
+// ════════════════════════════════════════════════════════
+function parsearOrionConGemini(data) {
+  try {
+    var texto = _str(data.texto, 30000);
+    if (!texto) return resp({ok: false, msg: 'Texto del informe vacío.'});
+
+    var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_KEY');
+    if (!apiKey) return resp({ok: false, msg: 'GEMINI_KEY no configurada en el proyecto GAS.'});
+
+    var prompt =
+      'Sos un sistema especializado en extraer datos de informes periciales CESVICOM/ORION de Argentina.\n' +
+      'Analizá el siguiente texto y devolvé ÚNICAMENTE un objeto JSON (sin markdown, sin texto extra, sin explicaciones).\n\n' +
+      'ESTRUCTURA DEL INFORME ORION:\n' +
+      '• "1 - Sustitución": piezas a sustituir. Línea típica: "Nombre Pieza  X,XX  X,XX" (dos tiempos en hs)\n' +
+      '• "2 - Reparación": piezas a reparar. Línea: "Nombre Pieza  Fuerte|Leve|Mediano|Grave  X,XX  X,XX  X,XX"\n' +
+      '• "4 - Varios": operaciones especiales (banco estiraje, alineación, módulos, etc.). Línea: "Nombre  X,XX  X,XX"\n' +
+      '• "6 - Conceptos mecánicos": mecánica/electricidad. Línea: "Nombre  X,XX  X,XX"\n' +
+      '• "7 - Pintura": línea: "Nombre Pieza  Sustitución|Fuerte|Leve|Mediano|Grave  X,XX  X,XX  X,XX" (primer número = superficie en m²)\n' +
+      '• "Observaciones grales": buscar patrones como "Paños 6x 150 mil", "Chapa 4x 130 mil", "Mecánica ... 24 mil"\n\n' +
+      'FORMATO JSON A DEVOLVER (exactamente esta estructura):\n' +
+      '{\n' +
+      '  "piezas": [\n' +
+      '    {"nombre": "Capot", "tarea": "Sustituir", "nivelDano": "", "tiempoUsado": 5.30}\n' +
+      '  ],\n' +
+      '  "pintura": [\n' +
+      '    {"nombre": "Capot", "superficie": 1.82}\n' +
+      '  ],\n' +
+      '  "operaciones": [\n' +
+      '    {"nombre": "Puesta en bancada", "tipo": "varios", "horas": 2.50, "costo": 0},\n' +
+      '    {"nombre": "Estiraje", "tipo": "varios", "horas": 2.00, "costo": 0}\n' +
+      '  ],\n' +
+      '  "costos": {\n' +
+      '    "panosEstimados": 6,\n' +
+      '    "costoPanoPintura": 150000,\n' +
+      '    "diasEstimados": 4,\n' +
+      '    "costoDiaChapa": 130000,\n' +
+      '    "costoHoraMecanica": 24000\n' +
+      '  }\n' +
+      '}\n\n' +
+      'REGLAS IMPORTANTES:\n' +
+      '1. piezas[].tarea: exactamente "Sustituir" (sección 1) o "Reparar" (sección 2)\n' +
+      '2. piezas[].nivelDano: "fuerte", "leve", "mediano", "grave" o "" (vacío para sustitución)\n' +
+      '3. piezas[].tiempoUsado: primer tiempo de la línea en horas (número real ORION, con decimales). Usar el tiempo de campo real, no el T.std.\n' +
+      '4. pintura[].superficie: primer número decimal de la línea de sección 7 (metros cuadrados)\n' +
+      '5. operaciones[].tipo: "varios" para sección 4, "mecanica" para sección 6\n' +
+      '6. costos: en Observaciones, "Paños 6x 150 mil" → panosEstimados=6, costoPanoPintura=150000. "Chapa 4x 130 mil" → diasEstimados=4, costoDiaChapa=130000. Siempre multiplicar el valor "X mil" por 1000.\n' +
+      '7. Si un dato de costos no aparece en Observaciones, poner null (no cero).\n' +
+      '8. Ignorar: encabezados de columna, líneas que empiecen con "Total", "Página", "Tiempo", "T.Std".\n' +
+      '9. Incluir TODAS las piezas/items del informe sin omitir ninguno.\n' +
+      '10. Los números en el informe usan coma decimal (ej: "1,82" = 1.82). Convertir a punto decimal en el JSON.\n' +
+      '11. El banco de estiraje va SIEMPRE como ítems separados tal cual aparecen en la sección 4 (ej: "Puesta en bancada" y "Estiraje"), cada uno con su campo "horas". NUNCA fusionarlos en un solo ítem ni inventar campos distintos de nombre/tipo/horas/costo.\n' +
+      '12. En "4 - Varios" NO incluir como operaciones los ítems de materiales "Pequeños Materiales" ni "Selladores y Ceras de Cavidades" (ni variantes): ya están contemplados en el total de mano de obra del informe. Omitirlos por completo.\n\n' +
+      'TEXTO DEL INFORME:\n' + texto;
+
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey;
+    var payload = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.0,
+        maxOutputTokens: 8192,
+        thinkingConfig: { thinkingBudget: 0 }
+      }
+    };
+    var response = UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+    var code = response.getResponseCode();
+    var body;
+    try { body = JSON.parse(response.getContentText()); }
+    catch (e) { return resp({ok: false, msg: 'Respuesta inválida de Gemini (HTTP ' + code + ')'}); }
+    if (code !== 200) {
+      var errMsg = (body.error && body.error.message) ? body.error.message : 'Error HTTP ' + code;
+      return resp({ok: false, msg: 'Gemini API: ' + errMsg});
+    }
+    var rawText;
+    try {
+      var cands = body.candidates;
+      if (!cands || !cands[0] || !cands[0].content || !cands[0].content.parts || !cands[0].content.parts[0]) {
+        return resp({ok: false, msg: 'Gemini no devolvió contenido legible.'});
+      }
+      rawText = cands[0].content.parts[0].text;
+    } catch (e) { return resp({ok: false, msg: 'Error leyendo respuesta de Gemini.'}); }
+    if (!rawText) return resp({ok: false, msg: 'Gemini devolvió respuesta vacía.'});
+
+    // Limpiar posible markdown que Gemini agrega a veces
+    var clean = rawText.trim()
+      .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '');
+
+    var parsed;
+    try { parsed = JSON.parse(clean); }
+    catch (e) { return resp({ok: false, msg: 'Gemini devolvió JSON inválido. Inicio: ' + clean.substring(0, 300)}); }
+
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.piezas)) {
+      return resp({ok: false, msg: 'Estructura de respuesta inesperada de Gemini.'});
+    }
+
+    // Sanitizar y normalizar cada campo para evitar errores en el frontend
+    parsed.piezas = (parsed.piezas || []).map(function (p) {
+      return {
+        nombre: String(p.nombre || '').trim(),
+        tarea: (String(p.tarea || '') === 'Reparar') ? 'Reparar' : 'Sustituir',
+        nivelDano: String(p.nivelDano || '').toLowerCase().trim(),
+        tiempoUsado: Number(p.tiempoUsado) || 0,
+        tiempoOrion: Number(p.tiempoUsado) || 0,
+        tStd: 0
+      };
+    }).filter(function (p) { return p.nombre.length > 0; });
+
+    parsed.pintura = (parsed.pintura || []).map(function (pt) {
+      return {
+        nombre: String(pt.nombre || '').trim(),
+        superficie: Number(pt.superficie) || 0,
+        panos: 0
+      };
+    }).filter(function (pt) { return pt.nombre.length > 0; });
+
+    var _opsRaw = parsed.operaciones || [];
+    parsed.operaciones = [];
+    _opsRaw.forEach(function (o) {
+      var nombre = String(o.nombre || '').trim();
+      if (!nombre) return;
+      if (/peque(ñ|n)os?\s+materiales|selladores|ceras?\s+de\s+cavidad/i.test(nombre)) return; // materiales ya incluidos en el Total M.O.+Mat.
+      var horas = Number(o.horas) || 0;
+      var pm = Number(o.puestaMedicion) || 0;
+      var te = Number(o.tiempoEstiraje) || 0;
+      // Rescate: si Gemini fusionó el banco de estiraje con campos propios en vez de "horas", separarlo en dos ítems
+      if (!horas && (pm || te)) {
+        if (pm) parsed.operaciones.push({nombre: 'Puesta en bancada', tipo: 'varios', horas: pm, costo: 0});
+        if (te) parsed.operaciones.push({nombre: 'Estiraje', tipo: 'varios', horas: te, costo: 0});
+        return;
+      }
+      parsed.operaciones.push({
+        nombre: nombre,
+        tipo: (String(o.tipo || '') === 'mecanica') ? 'mecanica' : 'varios',
+        horas: horas,
+        costo: Number(o.costo) || 0
+      });
+    });
+
+    var c = parsed.costos || {};
+    parsed.costos = {
+      panosEstimados:    (c.panosEstimados    != null && c.panosEstimados    !== '') ? Number(c.panosEstimados)    : null,
+      costoPanoPintura:  (c.costoPanoPintura  != null && c.costoPanoPintura  !== '') ? Number(c.costoPanoPintura)  : null,
+      diasEstimados:     (c.diasEstimados     != null && c.diasEstimados     !== '') ? Number(c.diasEstimados)     : null,
+      costoDiaChapa:     (c.costoDiaChapa     != null && c.costoDiaChapa     !== '') ? Number(c.costoDiaChapa)     : null,
+      costoHoraMecanica: (c.costoHoraMecanica != null && c.costoHoraMecanica !== '') ? Number(c.costoHoraMecanica) : null
+    };
+
+    parsed.esOrion = true;
+
+    return resp({ok: true, parsed: parsed});
+  } catch (e) {
+    return resp({ok: false, msg: 'parsearOrionConGemini: ' + e});
   }
 }
