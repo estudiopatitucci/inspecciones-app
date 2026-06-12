@@ -6973,22 +6973,21 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     var cPano=gv('omt-cpano');
     var cMec =gv('omt-cmec');
     var piezas=relCalcState.piezas||[];
-    // 1. Distribuir paños a piezas Pintar (proporcional por superficie guardada)
+    // 1. Distribuir paños a piezas Pintar — reparto EXACTO en medios paños:
+    //    piso 0,5 por pieza y el excedente por mayor resto según superficie. Suma == paños ingresados
+    //    (salvo que el piso lo supere). Fix 12/jun/2026: antes el mínimo 0,5 + redondeo inflaba el total.
     if(panos>0){
       var pintP=piezas.filter(function(p){return hasTarea(p,'Pintar');});
-      var totSup=pintP.reduce(function(s,p){return s+(p._superficie||0);},0);
-      if(totSup>0 && pintP.length>0){
-        var assigned=0;
-        pintP.forEach(function(p,i){
-          if(i<pintP.length-1){
-            var share=Math.max(0.5,Math.round((p._superficie||0)/totSup*panos*2)/2);
-            p.panos=share; assigned+=share;
-          }
-        });
-        pintP[pintP.length-1].panos=Math.max(0.5,Math.round((panos-assigned)*2)/2);
-      } else if(pintP.length>0){
-        var eq=Math.max(0.5,Math.round(panos/pintP.length*2)/2);
-        pintP.forEach(function(p){p.panos=eq;});
+      if(pintP.length>0){
+        var H=Math.max(Math.round(panos*2), pintP.length);
+        var extra=H-pintP.length;
+        var totSup=pintP.reduce(function(s,p){return s+(p._superficie||0);},0);
+        var ideals=pintP.map(function(p){ return totSup>0 ? (p._superficie||0)/totSup*extra : extra/pintP.length; });
+        var halves=ideals.map(function(x){return Math.floor(x);});
+        var rem=extra-halves.reduce(function(s,x){return s+x;},0);
+        var order=ideals.map(function(x,i){return {i:i, r:x-Math.floor(x)};}).sort(function(a,b){return b.r-a.r || a.i-b.i;});
+        for(var k=0;k<rem;k++) halves[order[k%order.length].i]++;
+        pintP.forEach(function(p,i){ p.panos=(1+halves[i])/2; });
       }
     }
     // 2. Reconciliar hs de chapa con una operación de diferencia (sin repartir entre piezas).
