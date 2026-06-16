@@ -6624,13 +6624,17 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     var c=cat.find(function(x){return x.norm===nq;}); if(c) return {c:c,via:'exacto'};
     var sn=oResolverSinon(cat)[nq];
     if(sn){ c=cat.find(function(x){return x.norm===sn;}); if(c) return {c:c,via:'sinónimo'}; }
-    var wq=nq.split(' ').filter(function(w){return w.length>2;}), best=null, bs=0;
+    // Fuzzy con desempate por "sustantivo cabeza": ante empate de score gana el candidato cuyo
+    // primer token significativo coincide con el de la consulta (parante→parante, no manija).
+    var wq=nq.split(' ').filter(function(w){return w.length>2;}), qh=wq[0]||'', best=null, bs=0, bh=false;
     for(var i=0;i<cat.length;i++){
       var cc=cat[i]; if(lq && cc.lado && cc.lado!==lq) continue;
       var wc=cc.norm.split(' ');
       var com=wq.filter(function(w){return wc.indexOf(w)!==-1;}).length;
       var sc=com/Math.max(wq.length,1);
-      if(sc>bs){bs=sc;best=cc;}
+      var wcs=wc.filter(function(w){return w.length>2;});
+      var hm=(wcs[0]||'')===qh;
+      if(sc>bs || (sc===bs && hm && !bh)){bs=sc;bh=hm;best=cc;}
     }
     return bs>=0.70?{c:best,via:'fuzzy'}:null;
   }
@@ -6779,16 +6783,40 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     var cat=oCatalogo(relCalcState.tipo);
     var nuevas=[], piezasOut=[], seen={};
     function pushPieza(zona,pieza,tarea,nivel,hs,panos,sup){
-      var k=zona+'|'+pieza+'|'+tarea; if(seen[k]) return; seen[k]=true;
-      piezasOut.push({_id:0, zona:zona, pieza:pieza, tarea:tarea, nivelDano:nivel||'', hsTrabajo:hs||0, panos:panos||0, _superficie:sup||0});
+      var k=zona+'|'+pieza+'|'+tarea; if(seen[k]) return null; seen[k]=true;
+      var row={_id:0, zona:zona, pieza:pieza, tarea:tarea, nivelDano:nivel||'', hsTrabajo:hs||0, panos:panos||0, _superficie:sup||0};
+      piezasOut.push(row); return row;
     }
     // Sustituir / Reparar — tiempos baremo (sin escalar; el inspector ajusta en el modal)
+    // Claims por pieza de catálogo: si dos líneas ORION distintas matchean la MISMA pieza
+    // (señal de mismatch del fuzzy, ej. cerradura→puerta o S+R simultáneos), gana la de mejor
+    // vía (exacto > sinónimo > fuzzy) y la perdedora va a "Otras piezas" verbatim — nunca se
+    // descarta una línea en silencio.
+    var _rankVia={exacto:2,'sinónimo':1,fuzzy:0};
+    var claimSR={};
     parsed.piezas.forEach(function(p){
       var m=oMatch(p.nombre,cat);
       if(m){
+        var pk=m.c.zona+'|'+m.c.nombre, rk=_rankVia[m.via]||0, cl=claimSR[pk];
+        if(cl){
+          if(cl.nombre===p.nombre && cl.row.tarea===p.tarea) return; // línea duplicada
+          if(rk>cl.rank){
+            // La nueva línea matchea mejor: degradar la fila previa a "Otras piezas" con su nombre ORION
+            delete seen[pk+'|'+cl.row.tarea];
+            cl.row.zona='Otras piezas'; cl.row.pieza=cl.nombre;
+            seen['Otras piezas|'+cl.nombre+'|'+cl.row.tarea]=true;
+            nuevas.push(cl.p);
+          } else {
+            // Match igual o peor que el claim vigente: esta línea va a "Otras piezas" verbatim
+            nuevas.push(p);
+            pushPieza('Otras piezas', p.nombre, p.tarea, (p.nivelDano?oCap(p.nivelDano):''), p.tiempoUsado||0, 0, 0);
+            return;
+          }
+        }
         var baremo=(p.tarea==='Reparar')?m.c.hsR:m.c.hs;
         var hs=(p.tiempoUsado>0)?p.tiempoUsado:(baremo||0); // tiempo ORION tal cual (refleja el informe)
-        pushPieza(m.c.zona, m.c.nombre, p.tarea, (p.nivelDano?oCap(p.nivelDano):''), hs, 0, 0);
+        var row=pushPieza(m.c.zona, m.c.nombre, p.tarea, (p.nivelDano?oCap(p.nivelDano):''), hs, 0, 0);
+        if(row) claimSR[pk]={rank:rk, nombre:p.nombre, row:row, p:p};
       } else {
         nuevas.push(p);
         pushPieza('Otras piezas', p.nombre, p.tarea, (p.nivelDano?oCap(p.nivelDano):''), p.tiempoUsado||0, 0, 0);
@@ -7780,7 +7808,10 @@ var VOZ_ALIASES = {
   'espejo':'espejo retrovisor','retrovisor':'espejo retrovisor',
   'porton':'porton trasero','baul':'tapa de baul','maletero':'tapa de baul',
   'luneta':'luneta trasera','zocalo':'zocalo exterior',
-  'techo':'panel de techo','pilar':'parante','columna':'parante'
+  'techo':'panel de techo','pilar':'parante','columna':'parante',
+  'guardaplastico':'guardaplast','guardaplasticos':'guardaplast',
+  'parachoque':'paragolpes','parachoques':'paragolpes',
+  'estribo':'zocalo exterior'
 };
 
 var VOZ_VERBOS = new Set(['sustituir','cambiar','reemplazar','reemplaza','cambia','sustituye','cambio',
@@ -7839,7 +7870,12 @@ function vozDetectarPanos(n) {
 function vozBuscarPieza(queryRaw) {
   var tipo = relCalcState.tipo;
   var gridData = CALC_DATA_GRID[tipo] || {};
-  var q = vozQuitarVerbos(vozExpandirAliases(vozNorm(queryRaw)));
+  // "guarda plast" -> "guardaplast" antes de expandir alias (evita que 'guarda' -> 'guardabarros')
+  var q0 = vozNorm(queryRaw).replace(/guarda\s*plast/g, 'guardaplast');
+  var q = vozQuitarVerbos(vozExpandirAliases(q0));
+  var qTokens = q.split(' ').filter(function(w){ return w.length>2; });
+  // Lado dicho por el inspector (el error mas comun es confundirlo)
+  var qDer = /(^|\s)der/.test(q), qIzq = /(^|\s)izq/.test(q);
   var mejor = null, top = 0;
   Object.keys(gridData).forEach(function(zona) {
     var piezas = gridData[zona] || [];
@@ -7850,12 +7886,18 @@ function vozBuscarPieza(queryRaw) {
       if (pn === qn) score = 1;
       else if (pn.indexOf(qn)>=0 || qn.indexOf(pn)>=0) score = 0.9;
       else {
-        var pw=pn.split(' '); var qw=qn.split(' ').filter(function(w){ return w.length>2; });
+        var pw=pn.split(' '); var qw=qTokens;
         if (qw.length) {
           var m=qw.filter(function(w){ return pw.some(function(pw2){ return pw2.indexOf(w)>=0||w.indexOf(pw2)>=0; }); });
           score = m.length/Math.max(pw.length,qw.length);
         }
       }
+      // Penalizar lado OPUESTO: si dijo "derecho" no debe caer en una pieza "izquierdo" (y viceversa)
+      var pDer = /(^|\s)der/.test(pn), pIzq = /(^|\s)izq/.test(pn);
+      if ((qDer && pIzq) || (qIzq && pDer)) score = 0;
+      // Bonus si el sustantivo principal (1ra palabra del nombre) fue dicho: desempata guardaplast vs guardabarros
+      var head = pn.split(' ')[0];
+      if (head.length>3 && qTokens.some(function(w){ return w.indexOf(head)>=0 || head.indexOf(w)>=0; })) score += 0.15;
       if (score > top) { top = score; mejor = {zona:zona, pieza:p}; }
     });
   });
