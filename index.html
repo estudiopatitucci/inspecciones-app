@@ -78,7 +78,7 @@
 <link rel="stylesheet" href="./styles.css">
 <script>
 (function(){
-  if(location.search.indexOf("taller=")!==-1){
+  if(location.search.indexOf("taller=")!==-1||location.search.indexOf("cotiza=")!==-1){
     var st=document.createElement("style");
     st.textContent="#landing-page,#screen-login{display:none!important}";
     document.head.appendChild(st);
@@ -606,6 +606,13 @@
                 <button class="btn-secondary btn-sm" style="margin-top:8px" onclick="nuevaIaCancelar()">Cerrar</button>
               </div>
             </div>
+          </div>
+
+          <div class="card" id="bloque-pericial" style="display:none;border:1px solid rgba(28,110,164,.4)">
+            <p class="section-title">⚡ Carga directa (Provincia Pericial)</p>
+            <p style="font-size:13px;color:var(--text2);margin-bottom:12px">Genera la inspección a nombre de <strong>Mariano</strong>, abre el calculador con el Informe ORION ya importado y la deja <strong style="color:var(--green)">Cerrada</strong> al guardar. Todo en un paso.</p>
+            <button class="btn-primary" style="background:#1c6ea4" onclick="guardarPericialRelevar()">⚡ Generar y cargar relevamiento</button>
+            <div id="msg-pericial" class="msg" style="display:block;margin-top:8px"></div>
           </div>
 
           <div class="card">
@@ -1317,6 +1324,27 @@
   </div>
   <div style="flex:1;padding:20px;max-width:680px;margin:0 auto;width:100%">
     <div id="taller-content"></div>
+  </div>
+</div>
+
+<!-- PORTAL PROVEEDOR (cotizacion de repuestos) -->
+<div id="screen-cotizador" style="display:none;flex-direction:column;min-height:100vh">
+  <div class="topbar">
+    <div class="topbar-logo">Estudio <span>Patitucci</span></div>
+    <div style="flex:1"></div>
+    <span style="font-size:12px;color:#1c6ea4;font-weight:500">&#x1F527; Cotizacion de repuestos</span>
+  </div>
+  <div style="flex:1;padding:20px;max-width:720px;margin:0 auto;width:100%">
+    <div id="cotiz-prov-content"></div>
+  </div>
+</div>
+
+<!-- MODAL COTIZADOR (admin) -->
+<div id="modal-cotiz" class="modal-overlay" onclick="if(event.target===this)cerrarModalCotiz()">
+  <div class="modal-box" style="max-width:860px">
+    <button class="modal-close" onclick="cerrarModalCotiz()">&#10005;</button>
+    <h3 id="modal-cotiz-titulo">Cotizacion de repuestos</h3>
+    <div id="modal-cotiz-cuerpo"></div>
   </div>
 </div>
 
@@ -2171,6 +2199,7 @@ function abrirModal(id){
   if(rel&&rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length&&(i.Compania||'').toLowerCase().indexOf('auto reclamo')!==-1)html+='<button class="btn-sm" style="background:rgba(28,110,164,.12);color:#1c6ea4;border:1px solid rgba(28,110,164,.3)" onclick="presupuestoClienteAbrir(\''+esc(i.ID)+'\')">🧾 Presupuesto Cliente</button>';
   html+='<button class="btn-sm" style="background:rgba(37,211,102,.12);color:#25d366;border:1px solid rgba(37,211,102,.3)" onclick="compartirWhatsApp(\''+esc(i.ID)+'\')">💬 WhatsApp</button>';
   if(rel&&rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length)html+='<button class="btn-sm" style="background:rgba(220,38,38,.12);color:#dc2626;border:1px solid rgba(220,38,38,.3)" onclick="exportarParaOrion(\''+esc(i.ID)+'\')">🤖 Agente IA</button>';
+  if(rel&&rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length)html+='<button class="btn-sm" style="background:rgba(28,110,164,.12);color:#1c6ea4;border:1px solid rgba(28,110,164,.3)" onclick="abrirCotizador(\''+esc(i.ID)+'\')">🔩 Cotizar repuestos</button>';
   if(i.Estado==='Pendientes de carga'||i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.3)" onclick="enviarATaller(\''+esc(i.ID)+'\')">&#x1F517; Enviar a taller</button>';
   if(i.Estado==='Esperando taller')html+='<button class="btn-sm" style="background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.3)" onclick="revocarTaller(\''+esc(i.ID)+'\')">&#x1F6AB; Anular link</button>';
   // Botones módulo verificación
@@ -2744,10 +2773,11 @@ async function procesarPDF(file){
 
     let datos;
     if(ciaActual==='rivadavia') datos=extraerRivadavia(txt,_rvDanosDen,_rvDanos);
-    else if(ciaActual==='pericial'){ var _plines=(window.__orionExtraerLineas? await window.__orionExtraerLineas(pdf): []); datos=extraerProvinciaPericial(_plines); }
+    else if(ciaActual==='pericial'){ var _plines=(window.__orionExtraerLineas? await window.__orionExtraerLineas(pdf): []); datos=extraerProvinciaPericial(_plines); window._periLines=_plines; }
     else datos=extraerProvincia(txt);
     llenarFormulario(datos);
     hide('pdf-loading');hide('paso-pdf');show('paso-form');
+    if(s('bloque-pericial'))s('bloque-pericial').style.display=(ciaActual==='pericial')?'block':'none';
     s('paso-form-titulo').textContent='Revisá los datos — editá lo que necesites';
   }catch(err){hide('pdf-loading');s('pdf-error').textContent='Error al leer PDF: '+err.message;}
 }
@@ -3020,7 +3050,7 @@ function limpiarForm(){
   var manana=new Date(); manana.setDate(manana.getDate()+1);
   var mm=String(manana.getMonth()+1).padStart(2,'0'), dd=String(manana.getDate()).padStart(2,'0');
   if(s('f-finsp')) s('f-finsp').value=manana.getFullYear()+'-'+mm+'-'+dd;
-  hide('bloque-mail');s('mail-prev').value='';
+  hide('bloque-mail');s('mail-prev').value='';if(s('bloque-pericial'))s('bloque-pericial').style.display='none';
   document.querySelectorAll('#insp-btns .insp-btn').forEach(function(b){b.className='insp-btn';});
   inspActual=null;if(s('msg-guard'))s('msg-guard').textContent='';
   // Resetear estado IA nueva IP
@@ -4002,6 +4032,7 @@ function cerrarRel(){
   // R4 — limpiar modo campo al salir del relevamiento
   var pr=s('panel-rel');if(pr)pr.classList.remove('modo-campo');
   var btn=s('btn-modo-campo');if(btn)btn.classList.remove('activo');
+  if(typeof _relAdminPericial!=='undefined'&&_relAdminPericial){_volverAdminDesdePericial();return;}
   hide('panel-rel');inspTab('abiertas');actualizarBadgesInspector();
 }
 
@@ -4560,10 +4591,10 @@ function validarCamposRel(){
 
 async function enviarRel(){
   var km=s('rel-km').value.trim(),danos=s('rel-danos').value.trim(),msg=s('msg-rel');
-  if(!km){msg.className='msg err';msg.textContent='Kilometraje obligatorio.';return;}
-  var errCampos=validarCamposRel();
-  if(errCampos){msg.className='msg err';msg.textContent=errCampos;return;}
-  if(!fotosPendientes.length){msg.className='msg err';msg.textContent='Subí al menos una foto JPG.';return;}
+  if(!km&&!_relAdminPericial){msg.className='msg err';msg.textContent='Kilometraje obligatorio.';return;}
+  if(!_relAdminPericial){var errCampos=validarCamposRel();
+  if(errCampos){msg.className='msg err';msg.textContent=errCampos;return;}}
+  if(!fotosPendientes.length&&!_relAdminPericial){msg.className='msg err';msg.textContent='Subí al menos una foto JPG.';return;}
   // Estas verificaciones solo aplican online: sin conexión las fotos no pudieron subirse a Drive
   // y se encolan con sus dataUrl para subirse al reconectar.
   if(navigator.onLine){
@@ -4597,7 +4628,10 @@ async function enviarRel(){
   }
   try{
     var i=inspecciones.find(function(x){return x.ID==relId;});
-    var res=await apiCall({action:'actualizar',id:relId,relevamiento:rel,estado:'Pendiente de verificar'});
+    var _estadoFinal=_relAdminPericial?'Cerradas':'Pendiente de verificar';
+    var _payloadRel={action:'actualizar',id:relId,relevamiento:rel,estado:_estadoFinal};
+    if(_relAdminPericial){var _h=(i&&i.Historial?i.Historial.slice():[]);_h.push({estado:'Cerradas',fecha:new Date().toLocaleString('es-AR'),usuario:'Administrador'});_payloadRel.historial=_h;}
+    var res=await apiCall(_payloadRel);
     // Si el GAS devolvió fotosLinks / cantFotos / carpetaUrl, incorporarlos al rel local
     if(res&&res.relevamiento){
       if(res.relevamiento.fotosLinks) rel.fotosLinks=res.relevamiento.fotosLinks;
@@ -4610,10 +4644,10 @@ async function enviarRel(){
     }
     // Siempre guardar la cantidad aunque no lleguen links
     if(!rel.cantFotos) rel.cantFotos=fotosPendientes.length;
-    if(i){i.Relevamiento=rel;i.Estado='Pendiente de verificar';}
+    if(i){i.Relevamiento=rel;i.Estado=_estadoFinal;}
     try{localStorage.removeItem('bdr_'+relId);}catch(e){}
     epDbDelete(relId).catch(function(){});
-    ocultarProgresoSubida();msg.className='msg ok';msg.textContent='✓ Relevamiento enviado. La inspección pasó a "Pendiente de verificar".';
+    ocultarProgresoSubida();msg.className='msg ok';msg.textContent=_relAdminPericial?'✓ Relevamiento cargado. La inspección quedó Cerrada.':'✓ Relevamiento enviado. La inspección pasó a "Pendiente de verificar".';
     toast('Relevamiento enviado correctamente.','ok');
     setTimeout(function(){cerrarRel();},1500);
   }catch(e){
@@ -5526,6 +5560,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Comprobar si es un link de taller
   var tallerParam=(new URLSearchParams(window.location.search)).get('taller');
   if(tallerParam){iniciarVistaTaller(tallerParam);return;}
+  var cotizaParam=(new URLSearchParams(window.location.search)).get('cotiza');
+  if(cotizaParam){iniciarVistaCotizador(cotizaParam);return;}
   // Sesión vigente (menos de 12 hs): entrar directo sin pedir la clave
   var v=_sessLeer();
   if(v){
@@ -7270,6 +7306,12 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
   // Exponer parser determinístico para el importador de IP (Provincia Pericial)
   window.__orionExtraerLineas = oExtraerLineas;
   window.__orionParse = oParse;
+  window.orionImportarLineas = function(lines){
+    if(!lines||!lines.length){ toast('No hay datos del informe para importar.','err'); return; }
+    if(!window.relCalcState || !relCalcState.tipo){ toast('Seleccioná el tipo de vehículo antes de importar.','err'); return; }
+    try{ var parsed=oParse(lines); oMostrarRevision(parsed, oCargar); }
+    catch(err){ toast('Error al importar el informe: '+(err&&err.message?err.message:err),'err'); }
+  };
 })();
 
 
@@ -8322,6 +8364,298 @@ function vozDetener() {
   if (panel) panel.classList.remove('visible');
 }
 
+
+
+// ═══════════════ COTIZADOR DE REPUESTOS (frontend) ═══════════════
+var _cotizState=null,_cotizPedidoActual=null,_cotizProvToken=null,_cotizProvPedido=null;
+
+// ---- ADMIN: abrir panel de armado ----
+function abrirCotizador(id){
+  var i=inspecciones.find(function(x){return x.ID==id;});if(!i)return;
+  var rel=i.Relevamiento;if(typeof rel==='string'){try{rel=JSON.parse(rel);}catch(e){rel=null;}}
+  var vistos={},piezas=[];
+  if(rel&&rel.calculador&&rel.calculador.piezas){
+    rel.calculador.piezas.forEach(function(p){
+      if(p.tarea==='Sustituir'&&p.pieza){
+        var k=(p.zona||'')+'|'+p.pieza;
+        if(vistos[k])return;vistos[k]=1;
+        piezas.push({pieza:p.pieza,zona:p.zona||''});
+      }
+    });
+  }
+  _cotizState={inspId:i.ID,siniestro:i.Siniestro||'',patente:i.Patente||'',modelo:i.Modelo||'',piezas:piezas,proveedores:[{nombre:'',mail:'',tel:''}]};
+  renderCotizArmar();
+  s('modal-cotiz').classList.add('open');
+}
+
+function renderCotizArmar(){
+  var st=_cotizState;if(!st)return;
+  s('modal-cotiz-titulo').textContent='Cotizar repuestos · '+st.siniestro+' · '+st.patente;
+  var h='';
+  h+='<p style="font-size:13px;color:var(--text2);margin-bottom:14px">Revisá las piezas a cotizar y cargá los repuesteros. Cada uno recibe un link propio para cargar sus precios.</p>';
+  h+='<p class="section-title">Piezas a cotizar</p>';
+  h+='<div id="cotiz-piezas-list">'+_cotizPiezasHTML()+'</div>';
+  h+='<div style="display:flex;gap:6px;margin:8px 0 18px"><input type="text" id="cotiz-nueva-pieza" placeholder="Agregar otra pieza..." style="flex:1" onkeydown="if(event.key===\'Enter\')cotizAddPieza()"/><button class="btn-secondary btn-sm" onclick="cotizAddPieza()">+ Agregar</button></div>';
+  h+='<p class="section-title">Repuesteros</p>';
+  h+='<div id="cotiz-provs-list">'+_cotizProvsHTML()+'</div>';
+  h+='<button class="btn-secondary btn-sm" style="margin:8px 0 18px" onclick="cotizAddProv()">+ Agregar repuestero</button>';
+  h+='<div id="cotiz-armar-msg" class="msg" style="display:block;margin-bottom:8px"></div>';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+  h+='<button class="btn-primary btn-sm" onclick="cotizGenerar()">🔗 Generar pedido y links</button>';
+  h+='<button class="btn-secondary btn-sm" onclick="cotizVerComparativa()">📊 Ver cotizaciones recibidas</button>';
+  h+='<button class="btn-secondary btn-sm" onclick="cerrarModalCotiz()" style="margin-left:auto">Cerrar</button>';
+  h+='</div>';
+  s('modal-cotiz-cuerpo').innerHTML=h;
+}
+function _cotizPiezasHTML(){
+  var st=_cotizState;
+  if(!st.piezas.length)return '<p style="font-size:12px;color:var(--text3);margin-bottom:6px">No hay piezas a sustituir detectadas. Agregá al menos una.</p>';
+  return st.piezas.map(function(p,idx){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">'
+      +'<span style="flex:1;font-size:13px">'+esc(p.pieza)+(p.zona?' <span style="color:var(--text3);font-size:11px">· '+esc(p.zona)+'</span>':'')+'</span>'
+      +'<button class="btn-sm" style="background:rgba(229,83,83,.12);color:var(--red);border:1px solid rgba(229,83,83,.3)" onclick="cotizDelPieza('+idx+')">✕</button>'
+      +'</div>';
+  }).join('');
+}
+function _cotizProvsHTML(){
+  return _cotizState.proveedores.map(function(p,idx){
+    return '<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap;align-items:center">'
+      +'<input type="text" placeholder="Nombre *" value="'+esc(p.nombre||'')+'" oninput="_cotizState.proveedores['+idx+'].nombre=this.value" style="flex:1;min-width:120px"/>'
+      +'<input type="email" placeholder="Mail (opcional)" value="'+esc(p.mail||'')+'" oninput="_cotizState.proveedores['+idx+'].mail=this.value" style="flex:1;min-width:120px"/>'
+      +'<input type="text" placeholder="Tel (opcional)" value="'+esc(p.tel||'')+'" oninput="_cotizState.proveedores['+idx+'].tel=this.value" style="width:110px"/>'
+      +'<button class="btn-sm" style="background:rgba(229,83,83,.12);color:var(--red);border:1px solid rgba(229,83,83,.3)" onclick="cotizDelProv('+idx+')">✕</button>'
+      +'</div>';
+  }).join('');
+}
+function cotizAddPieza(){var el=s('cotiz-nueva-pieza');var v=(el.value||'').trim();if(!v)return;_cotizState.piezas.push({pieza:v,zona:''});el.value='';s('cotiz-piezas-list').innerHTML=_cotizPiezasHTML();}
+function cotizDelPieza(idx){_cotizState.piezas.splice(idx,1);s('cotiz-piezas-list').innerHTML=_cotizPiezasHTML();}
+function cotizAddProv(){_cotizState.proveedores.push({nombre:'',mail:'',tel:''});s('cotiz-provs-list').innerHTML=_cotizProvsHTML();}
+function cotizDelProv(idx){_cotizState.proveedores.splice(idx,1);if(!_cotizState.proveedores.length)_cotizState.proveedores.push({nombre:'',mail:'',tel:''});s('cotiz-provs-list').innerHTML=_cotizProvsHTML();}
+
+async function cotizGenerar(){
+  var st=_cotizState,msg=s('cotiz-armar-msg');
+  var provs=st.proveedores.filter(function(p){return (p.nombre||'').trim();});
+  if(!st.piezas.length){msg.className='msg err';msg.textContent='Agregá al menos una pieza.';return;}
+  if(!provs.length){msg.className='msg err';msg.textContent='Cargá al menos un repuestero con nombre.';return;}
+  msg.className='msg';msg.textContent='Generando...';
+  try{
+    var res=await apiCall({action:'crearPedidoCotizacion',inspeccionId:st.inspId,siniestro:st.siniestro,patente:st.patente,modelo:st.modelo,piezas:st.piezas,proveedores:provs});
+    if(!res||!res.ok){msg.className='msg err';msg.textContent=res&&res.msg?res.msg:'Error al generar.';return;}
+    _cotizRenderLinks(res.proveedores||[],res.mailsEnviados||0);
+  }catch(e){msg.className='msg err';msg.textContent='Error de conexión.';}
+}
+function _cotizRenderLinks(provs,mails){
+  var h='<p class="section-title">✓ Pedido generado</p>';
+  if(mails)h+='<p style="font-size:12px;color:var(--green);margin-bottom:10px">📧 '+mails+' mail(s) enviado(s) automáticamente.</p>';
+  h+='<p style="font-size:13px;color:var(--text2);margin-bottom:10px">Compartí el link de cada repuestero:</p>';
+  provs.forEach(function(p){
+    h+='<div style="border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px">';
+    h+='<div style="font-weight:600;font-size:13px;margin-bottom:6px">'+esc(p.nombre)+'</div>';
+    h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+    h+='<input type="text" readonly value="'+esc(p.link)+'" style="flex:1;min-width:180px;font-size:11px" onclick="this.select()"/>';
+    h+='<button class="btn-secondary btn-sm" onclick="cotizCopiar('+"'"+esc(p.link)+"'"+',this)">📋 Copiar</button>';
+    h+='<a class="btn-sm" style="background:rgba(37,211,102,.12);color:#25d366;border:1px solid rgba(37,211,102,.3);text-decoration:none" target="_blank" href="https://wa.me/?text='+encodeURIComponent('Hola '+p.nombre+', te paso el link para cotizar repuestos: '+p.link)+'">💬 WhatsApp</a>';
+    h+='</div></div>';
+  });
+  h+='<div style="display:flex;gap:8px;margin-top:12px"><button class="btn-primary btn-sm" onclick="cotizVerComparativa()">📊 Ver cotizaciones</button><button class="btn-secondary btn-sm" onclick="cerrarModalCotiz()" style="margin-left:auto">Cerrar</button></div>';
+  s('modal-cotiz-cuerpo').innerHTML=h;
+}
+function cotizCopiar(link,btn){try{navigator.clipboard.writeText(link);if(btn){var t=btn.textContent;btn.textContent='✓ Copiado';setTimeout(function(){btn.textContent=t;},1500);}}catch(e){}}
+
+// ---- ADMIN: comparativa ----
+async function cotizVerComparativa(){
+  var st=_cotizState;
+  s('modal-cotiz-titulo').textContent='Cotizaciones · '+(st?st.siniestro:'');
+  s('modal-cotiz-cuerpo').innerHTML='<div class="loading"><div class="spinner"></div>Cargando cotizaciones...</div>';
+  try{
+    var res=await apiCall({action:'getCotizaciones',inspeccionId:st.inspId});
+    if(!res||!res.ok){s('modal-cotiz-cuerpo').innerHTML='<p class="msg err">Error al cargar.</p>';return;}
+    _cotizRenderComparativa(res.pedidos||[]);
+  }catch(e){s('modal-cotiz-cuerpo').innerHTML='<p class="msg err">Error de conexión.</p>';}
+}
+function _cotizRenderComparativa(pedidos){
+  if(!pedidos.length){s('modal-cotiz-cuerpo').innerHTML='<p style="font-size:13px;color:var(--text2)">Todavía no hay pedidos para esta inspección.</p><div style="margin-top:12px"><button class="btn-secondary btn-sm" onclick="renderCotizArmar()">← Volver a armar</button></div>';return;}
+  pedidos.sort(function(a,b){return (b.creadaEn||'').localeCompare(a.creadaEn||'');});
+  var ped=pedidos[0];_cotizPedidoActual=ped;
+  var col=ped.estado==='Adjudicado'?'var(--green)':ped.estado==='Cancelado'?'var(--red)':'var(--accent)';
+  var h='';
+  h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">';
+  h+='<span style="font-size:12px;color:var(--text2)">Estado: <strong style="color:'+col+'">'+esc(ped.estado)+'</strong></span>';
+  if(pedidos.length>1)h+='<span style="font-size:11px;color:var(--text3)">('+pedidos.length+' pedidos · mostrando el último)</span>';
+  h+='</div>';
+  var cargados=ped.proveedores.filter(function(p){return p.cotizacion&&p.cotizacion.items&&p.cotizacion.items.length;});
+  if(!cargados.length){
+    h+='<p style="font-size:13px;color:var(--text2);margin-bottom:10px">Aún no hay cotizaciones cargadas. Repuesteros del pedido:</p>';
+    ped.proveedores.forEach(function(p){h+='<div style="font-size:12px;padding:4px 0">• '+esc(p.nombre)+' — <span style="color:var(--text3)">'+(p.estado==='cargado'?'cargó':'pendiente')+'</span></div>';});
+    h+='<div style="margin-top:12px"><button class="btn-secondary btn-sm" onclick="renderCotizArmar()">← Volver</button></div>';
+    s('modal-cotiz-cuerpo').innerHTML=h;return;
+  }
+  var totales={};
+  cargados.forEach(function(p){var t=0;p.cotizacion.items.forEach(function(it){if(it.precio)t+=Number(it.precio)||0;});totales[p.id]=t;});
+  var minTotal=Math.min.apply(null,cargados.map(function(p){return totales[p.id]||Infinity;}));
+  h+='<div class="tabla-wrap"><table style="font-size:12px"><thead><tr><th>Pieza</th>';
+  cargados.forEach(function(p){h+='<th style="text-align:center">'+esc(p.nombre)+(totales[p.id]===minTotal?' <span title="Más barato" style="color:var(--green)">★</span>':'')+'</th>';});
+  h+='</tr></thead><tbody>';
+  ped.piezas.forEach(function(pz){
+    h+='<tr><td style="font-weight:500">'+esc(pz.pieza)+'</td>';
+    var precios=cargados.map(function(p){var it=_cotizFindItem(p,pz.pieza);return it&&it.precio!=null&&it.precio!==''?Number(it.precio):null;});
+    var minP=Math.min.apply(null,precios.filter(function(x){return x!=null;}).concat([Infinity]));
+    cargados.forEach(function(p){
+      var it=_cotizFindItem(p,pz.pieza);
+      if(it&&it.precio!=null&&it.precio!==''){
+        var es=Number(it.precio)===minP;
+        h+='<td style="text-align:center'+(es?';background:rgba(46,204,113,.12);font-weight:700;color:var(--green)':'')+'">$'+_cotizFmt(it.precio)+'<br><span style="font-size:10px;color:var(--text3)">'+esc(it.tipo||'')+(it.plazo?' · '+esc(it.plazo)+'d':'')+'</span></td>';
+      }else{h+='<td style="text-align:center;color:var(--text3)">—</td>';}
+    });
+    h+='</tr>';
+  });
+  h+='<tr style="border-top:2px solid var(--border)"><td style="font-weight:700">TOTAL</td>';
+  cargados.forEach(function(p){var es=totales[p.id]===minTotal;h+='<td style="text-align:center;font-weight:700'+(es?';color:var(--green)':'')+'">$'+_cotizFmt(totales[p.id])+'</td>';});
+  h+='</tr></tbody></table></div>';
+  cargados.forEach(function(p){if(p.cotizacion.obsGeneral)h+='<div style="font-size:11px;color:var(--text2);margin-top:6px"><strong>'+esc(p.nombre)+':</strong> '+esc(p.cotizacion.obsGeneral)+'</div>';});
+  h+='<div style="margin-top:16px">';
+  if(ped.estado==='Adjudicado'){
+    var gan=ped.proveedores.find(function(p){return p.id===ped.ganadorId;});
+    h+='<p style="font-size:13px;color:var(--green);font-weight:600">🏆 Adjudicado a: '+esc(gan?gan.nombre:'-')+'</p>';
+  }else if(ped.estado==='Abierto'){
+    h+='<p class="section-title">Adjudicar a:</p><div style="display:flex;gap:6px;flex-wrap:wrap">';
+    cargados.forEach(function(p){h+='<button class="btn-primary btn-sm" onclick="cotizAdjudicar('+"'"+esc(p.id)+"'"+')">🏆 '+esc(p.nombre)+'</button>';});
+    h+='</div>';
+  }
+  h+='</div>';
+  h+='<div style="display:flex;gap:8px;margin-top:14px"><button class="btn-secondary btn-sm" onclick="renderCotizArmar()">← Volver a armar</button><button class="btn-secondary btn-sm" onclick="cerrarModalCotiz()" style="margin-left:auto">Cerrar</button></div>';
+  s('modal-cotiz-cuerpo').innerHTML=h;
+}
+function _cotizFindItem(prov,pieza){if(!prov.cotizacion||!prov.cotizacion.items)return null;return prov.cotizacion.items.find(function(it){return it.pieza===pieza;})||null;}
+function _cotizFmt(n){n=Number(n)||0;return n.toLocaleString('es-AR');}
+async function cotizAdjudicar(provId){
+  var ped=_cotizPedidoActual;if(!ped)return;
+  var prov=ped.proveedores.find(function(p){return p.id===provId;});
+  var nombre=prov?prov.nombre:'';
+  if(!confirm('¿Adjudicar el pedido a '+nombre+'? Esto cierra el pedido y los repuesteros ya no podrán modificar precios.'))return;
+  try{
+    var res=await apiCall({action:'adjudicarCotizacion',pedidoId:ped.id,proveedorId:provId});
+    if(!res||!res.ok){toast(res&&res.msg?res.msg:'Error al adjudicar','err');return;}
+    toast('Pedido adjudicado a '+nombre,'ok');
+    cotizVerComparativa();
+  }catch(e){}
+}
+function cerrarModalCotiz(){s('modal-cotiz').classList.remove('open');}
+
+// ---- PÚBLICO: vista del proveedor (?cotiza=TOKEN) ----
+async function iniciarVistaCotizador(token){
+  _cotizProvToken=token;
+  var lp=document.getElementById('landing-page');if(lp)lp.style.display='none';
+  hide('screen-login');
+  var ls=s('screen-loading');ls.style.display='flex';
+  var lmsg=document.getElementById('loading-msg');if(lmsg)lmsg.textContent='Cargando pedido...';
+  try{
+    var res=await _fetchTimeout(API+'?cotiza='+encodeURIComponent(token),{},30000);
+    var data=await res.json();
+    ls.style.display='none';
+    if(!data.ok){_cotizProvError(data.msg||'Link inválido o expirado.');return;}
+    _cotizProvPedido=data;
+    _cotizProvRender(data);
+  }catch(e){ls.style.display='none';_cotizProvError('Error de conexión. Verificá tu internet e intentá de nuevo.');}
+}
+function _cotizProvError(msg){
+  var sc=s('screen-cotizador');sc.style.display='flex';
+  s('cotiz-prov-content').innerHTML='<div style="text-align:center;padding:40px 20px"><div style="font-size:48px;margin-bottom:16px">⚠️</div><h2 style="font-size:20px;font-weight:600;margin-bottom:10px;color:var(--red)">No se puede acceder</h2><p style="font-size:14px;color:var(--text2);max-width:340px;margin:0 auto">'+esc(msg)+'</p></div>';
+}
+function _cotizProvRender(data){
+  var sc=s('screen-cotizador');sc.style.display='flex';sc.style.flexDirection='column';
+  var ped=data.pedido,prov=data.proveedor;
+  var prev={};if(prov.cotizacion&&prov.cotizacion.items){prov.cotizacion.items.forEach(function(it){prev[it.pieza]=it;});}
+  var dis=data.cerrado?' disabled':'';
+  var h='';
+  h+='<h2 style="font-size:18px;font-weight:600;margin-bottom:4px">Hola '+esc(prov.nombre)+'</h2>';
+  h+='<p style="font-size:13px;color:var(--text2);margin-bottom:10px">Cargá tu cotización para las siguientes piezas.</p>';
+  h+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:16px;font-size:13px">';
+  h+='<div><strong>Siniestro:</strong> '+esc(ped.siniestro||'-')+'</div>';
+  h+='<div><strong>Patente:</strong> '+esc(ped.patente||'-')+'</div>';
+  h+='<div><strong>Vehículo:</strong> '+esc(ped.modelo||'-')+'</div></div>';
+  if(data.cerrado){
+    h+='<div style="background:rgba(229,83,83,.1);border:1px solid rgba(229,83,83,.3);border-radius:8px;padding:12px;font-size:13px;color:var(--red);margin-bottom:14px">';
+    h+=data.adjudicado?(data.esGanador?'✓ ¡Tu cotización fue la seleccionada! El estudio se contactará con vos.':'Este pedido ya fue adjudicado a otro proveedor. Gracias por cotizar.'):'Este pedido fue cerrado por el estudio.';
+    h+='</div>';
+  }
+  ped.piezas.forEach(function(pz,idx){
+    var pv=prev[pz.pieza]||{};
+    h+='<div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px">';
+    h+='<div style="font-weight:600;font-size:14px;margin-bottom:8px">'+esc(pz.pieza)+(pz.zona?' <span style="color:var(--text3);font-size:11px;font-weight:400">· '+esc(pz.zona)+'</span>':'')+'</div>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap">';
+    h+='<div style="flex:1;min-width:110px"><label style="font-size:11px;color:var(--text2)">Precio $</label><input type="number" id="cz-precio-'+idx+'" value="'+(pv.precio!=null&&pv.precio!==''?esc(pv.precio):'')+'"'+dis+' style="width:100%"/></div>';
+    h+='<div style="flex:1;min-width:90px"><label style="font-size:11px;color:var(--text2)">Plazo (días)</label><input type="text" id="cz-plazo-'+idx+'" value="'+esc(pv.plazo||'')+'"'+dis+' style="width:100%"/></div>';
+    h+='<div style="flex:1;min-width:120px"><label style="font-size:11px;color:var(--text2)">Tipo</label><select id="cz-tipo-'+idx+'"'+dis+' style="width:100%"><option value="">—</option>'+['Original','Alternativo','Usado'].map(function(t){return '<option'+(pv.tipo===t?' selected':'')+'>'+t+'</option>';}).join('')+'</select></div>';
+    h+='</div>';
+    h+='<input type="text" id="cz-obs-'+idx+'" placeholder="Observación (opcional)" value="'+esc(pv.obs||'')+'"'+dis+' style="width:100%;margin-top:8px"/>';
+    h+='</div>';
+  });
+  h+='<div style="margin:10px 0"><label style="font-size:12px;color:var(--text2)">Observación general (opcional)</label><textarea id="cz-obsgral" rows="2"'+dis+' style="width:100%">'+esc(prov.cotizacion&&prov.cotizacion.obsGeneral?prov.cotizacion.obsGeneral:'')+'</textarea></div>';
+  if(!data.cerrado){
+    h+='<div id="cz-msg" class="msg" style="display:block;margin-bottom:8px"></div>';
+    h+='<button class="btn-primary" style="width:100%;padding:13px;font-size:15px" onclick="cotizProvEnviar()">Enviar cotización</button>';
+    h+='<p style="font-size:11px;color:var(--text3);text-align:center;margin-top:8px">Podés volver a entrar con este mismo link para corregir mientras el pedido esté abierto.</p>';
+  }
+  s('cotiz-prov-content').innerHTML=h;
+}
+async function cotizProvEnviar(){
+  var data=_cotizProvPedido;if(!data)return;
+  var items=data.pedido.piezas.map(function(pz,idx){return{pieza:pz.pieza,precio:s('cz-precio-'+idx).value,plazo:s('cz-plazo-'+idx).value,tipo:s('cz-tipo-'+idx).value,obs:s('cz-obs-'+idx).value};});
+  var msg=s('cz-msg');msg.className='msg';msg.textContent='Enviando...';
+  var btn=document.querySelector('#cotiz-prov-content .btn-primary');if(btn)btn.disabled=true;
+  try{
+    var r=await _fetchTimeout(API,{method:'POST',body:JSON.stringify({action:'guardarCotizacion',cotizaToken:_cotizProvToken,items:items,obsGeneral:s('cz-obsgral').value})},30000);
+    var res=await r.json();
+    if(!res||!res.ok){msg.className='msg err';msg.textContent=res&&res.msg?res.msg:'Error al enviar.';if(btn)btn.disabled=false;return;}
+    s('cotiz-prov-content').innerHTML='<div style="text-align:center;padding:50px 20px"><div style="font-size:54px;margin-bottom:16px">✅</div><h2 style="font-size:20px;font-weight:600;margin-bottom:10px;color:var(--green)">¡Cotización enviada!</h2><p style="font-size:14px;color:var(--text2);max-width:360px;margin:0 auto">Gracias. El estudio recibió tus precios. Podés cerrar esta ventana.</p></div>';
+  }catch(e){msg.className='msg err';msg.textContent='Error de conexión.';if(btn)btn.disabled=false;}
+}
+
+
+// ═══════════ CARGA DIRECTA PROVINCIA PERICIAL (admin) ═══════════
+// Crea la inspección, abre el calculador con el Informe ORION ya
+// importado y la deja Cerrada al guardar. Inspector fijo: Mariano.
+var _relAdminPericial=null;
+async function guardarPericialRelevar(){
+  var sin=g('f-sin'),pat=g('f-pat'),msg=s('msg-pericial');
+  if(!sin){msg.className='msg err';msg.textContent='Nº siniestro obligatorio.';return;}
+  if(!pat){msg.className='msg err';msg.textContent='Patente obligatoria.';return;}
+  if(!_guardarIgnorarDup){var _dups=_checkDuplicado(sin,pat.toUpperCase());if(_dups.length){_mostrarAlertaDuplicado(_dups,guardarPericialRelevar);return;}}
+  _guardarIgnorarDup=false;
+  msg.className='msg';msg.textContent='Creando inspección...';
+  try{
+    var res=await apiCall({action:'guardar',sin:sin,cia:g('f-cia'),tipo:g('f-tipo'),finsp:g('f-finsp'),fsin:g('f-fsin'),pat:pat.toUpperCase(),mod:g('f-mod'),anio:g('f-anio'),chasis:g('f-chasis'),motor:g('f-motor'),km:g('f-km'),aseg:g('f-aseg'),tel:g('f-tel'),dir:g('f-dir'),localidad:g('f-localidad'),danos:g('f-danos'),danosDen:g('f-danos-den'),inspector:'Mariano',mail:(INSP_MAILS['Mariano']||''),estado:'Pendientes de carga',mailEnviado:false,enviarMail:false,historial:[{estado:'Pendientes de carga',fecha:new Date().toLocaleString('es-AR'),usuario:'Administrador'}]});
+    if(!res||!res.ok){msg.className='msg err';msg.textContent='Error: '+(res&&res.msg?res.msg:'no se pudo crear');return;}
+    var nuevoId=res.id;
+    await cargarInspecciones();
+    var nueva=nuevoId?inspecciones.find(function(x){return String(x.ID)===String(nuevoId);}):inspecciones.find(function(x){return String(x.Siniestro).trim()===String(sin).trim();});
+    if(!nueva){msg.className='msg err';msg.textContent='Inspección creada pero no encontrada. Recargá el panel.';return;}
+    msg.textContent='';
+    var lines=(window._periLines||[]).slice();
+    limpiarForm();volverPDF();
+    _entrarRelAdminPericial(nueva.ID,lines);
+  }catch(e){msg.className='msg err';msg.textContent='Error de conexión.';}
+}
+function _entrarRelAdminPericial(id,lines){
+  _relAdminPericial={inspId:id};
+  var sa=s('screen-admin');if(sa)sa.style.display='none';
+  var si=s('screen-inspector');if(si){si.style.display='flex';si.style.flexDirection='column';}
+  var sb=document.getElementById('insp-sidebar');if(sb)sb.style.display='none';
+  abrirRel(id);
+  if(lines&&lines.length&&window.orionImportarLineas){
+    setTimeout(function(){try{window.orionImportarLineas(lines);}catch(e){}},400);
+  }
+}
+function _volverAdminDesdePericial(){
+  _relAdminPericial=null;
+  hide('panel-rel');
+  var si=s('screen-inspector');if(si)si.style.display='none';
+  var sb=document.getElementById('insp-sidebar');if(sb)sb.style.display='';
+  var sa=s('screen-admin');if(sa){sa.style.display='flex';sa.style.flexDirection='column';}
+  cargarInspecciones();
+  adminTab('cerradas');
+}
 
 </script>
 </body>

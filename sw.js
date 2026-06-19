@@ -1,5 +1,5 @@
 // ── Service Worker — Estudio Patitucci ──────────────────────────────────────
-const CACHE_NAME = 'ep-v22';
+const CACHE_NAME = 'ep-v23';
 
 const STATIC_ASSETS = [
   './styles.css',
