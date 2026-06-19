@@ -5135,11 +5135,19 @@ function generarPDFCompleto(id){
     var totalHsMecPDF=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a+(p.hsTrabajo||p.horas||0):a;},0);
     var totalPanos=calc.piezas.reduce(function(a,p){return a+(hasTarea(p,'Pintar')?(p.panos||1):hasTarea(p,'Difuminar')?0.5:0);},0);
     var _hpd=relHsPorDia(i.Compania, calc.operaciones);
-    var diasTotal=totalHsChapaPDF>0?Math.ceil(totalHsChapaPDF/_hpd*2)/2:0;
+    var _esPericial=(calc.operaciones||[]).some(function(o){return (o.operacion||'')==='Diferencia entre baremo y cotización real';});
+    var _opChapaHs=(calc.operaciones||[]).reduce(function(a,o){
+      if(o.operacion==='Banco de estiraje') return a+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
+      if(o.operacion==='Desmontaje y montaje de accesorios') return a+(o.horas||0);
+      if(o.operacion==='Diferencia entre baremo y cotización real') return a+(o.horas||0);
+      return a;
+    },0);
+    var _totChapaConOp=totalHsChapaPDF+_opChapaHs;
+    var diasTotal=_totChapaConOp>0?Math.ceil(_totChapaConOp/_hpd*2)/2:0;
     // Costos
     var costoDia=calc.costoDiaChapa||0,costoHMec=calc.costoHoraMecánica||0,costoPano=calc.costoPanoPintura||0;
     var costoChapa=diasTotal*costoDia;
-    var costoMecPDF=totalHsMecPDF*costoHMec;
+    var costoMecPDF=_esPericial?0:totalHsMecPDF*costoHMec;
     var costoPintura=totalPanos*costoPano;
     var totalOp=(calc.operaciones||[]).reduce(function(a,o){return a+(o.costo||0);},0);
     var costoTotal=costoChapa+costoMecPDF+costoPintura+totalOp;
@@ -6063,7 +6071,8 @@ function relActualizarCosto(){
   var _hpd = relHsPorDia((inspecciones.find(function(x){return x.ID==relId;})||{}).Compania, relOpState);
   var dias = Math.ceil(totalHsChapaConOp / _hpd * 2) / 2;
   var costoChapa = dias * relCostoDiaChapa;
-  var costoMec = totalHsMec * relCostoHoraMecánica;
+  var _esPericialLive = relOpState.some(function(o){return o.operacion==='Diferencia entre baremo y cotización real';});
+  var costoMec = _esPericialLive ? 0 : totalHsMec * relCostoHoraMecánica;
   var costoPintura = totalPanos * relCostoPanoPintura;
   var total = costoChapa + costoMec + costoPintura + totalCostoOps;
 
@@ -6079,7 +6088,7 @@ function relActualizarCosto(){
   if(s('rel-c-dias')) s('rel-c-dias').textContent = dias.toString();
   if(s('rel-c-chapa-val')) s('rel-c-chapa-val').textContent = fmt(costoChapa);
   var mecRow = s('rel-c-mec-row');
-  if(mecRow){ mecRow.style.display = totalHsMec > 0 ? 'flex' : 'none'; }
+  if(mecRow){ mecRow.style.display = (totalHsMec > 0 && !_esPericialLive) ? 'flex' : 'none'; }
   if(s('rel-c-hs-mec')) s('rel-c-hs-mec').textContent = Math.round(totalHsMec*100)/100;
   if(s('rel-c-mec-val')) s('rel-c-mec-val').textContent = fmt(costoMec);
   if(s('rel-c-panos')) s('rel-c-panos').textContent = totalPanos;
@@ -6937,7 +6946,7 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
        (mm=obs.match(/(\d+)\s*pa[ñn]os?\s*[x\*]\s*\$?\s*([\d.,]+)\s*(mil)?/i))){ costos.panosEstimados=parseInt(mm[1],10); costos.costoPanoPintura=milS(mm[2],mm[3]); }
     // Chapa/días: "Chapa 4x 130 mil", "5 dias x $130", "días 4 * 130 mil"
     if((mm=obs.match(/(?:chapa|d[íi]as?)\s*:?\s*(\d+)\s*[x\*]\s*\$?\s*([\d.,]+)\s*(mil)?/i)) ||
-       (mm=obs.match(/(\d+)\s*d[íi]as?\s*[x\*]\s*\$?\s*([\d.,]+)\s*(mil)?/i))){ costos.diasEstimados=parseInt(mm[1],10); costos.costoDiaChapa=milS(mm[2],mm[3]); }
+       (mm=obs.match(/(\d+)\s*(?:d[íi]as?|chapa)\s*[x\*]\s*\$?\s*([\d.,]+)\s*(mil)?/i))){ costos.diasEstimados=parseInt(mm[1],10); costos.costoDiaChapa=milS(mm[2],mm[3]); }
     if((mm=obs.match(/mec[áa]nica[^\n]*?[x\*]\s*\$?\s*([\d.,]+)\s*(mil)?/i))){ costos.costoHoraMecanica=milS(mm[1],mm[2]); }
     // "Mecanica 4 hs * 60 mil" — capturar horas estimadas de mecánica
     if((mm=obs.match(/mec[áa]nica\s+(\d+(?:[.,]\d+)?)\s*hs?/i))){ costos.hsMecanicaEstimadas=parseFloat(mm[1].replace(',','.')); }
