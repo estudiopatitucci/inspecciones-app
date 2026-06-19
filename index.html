@@ -367,6 +367,21 @@
   </div>
 </div>
 
+<!-- SELECCION DE COMPANIA -->
+<div id="screen-cia" style="display:none;min-height:100vh;align-items:center;justify-content:center">
+  <div class="login-box">
+    <div class="login-logo"><h1>Estudio <span>Patitucci</span></h1><p id="cia-bienvenida">Eleg&iacute; la compa&ntilde;&iacute;a</p></div>
+    <div class="card" style="text-align:center">
+      <p style="font-size:14px;color:var(--text2);margin-bottom:18px">&iquest;Con qu&eacute; compa&ntilde;&iacute;a vas a trabajar?</p>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <button class="btn-primary" style="width:100%;padding:16px;font-size:16px;font-weight:600" onclick="elegirCia('provincia')">Provincia<span style="display:block;font-size:11px;font-weight:400;opacity:.85;margin-top:2px">Provincia Seguros + Auto Reclamo</span></button>
+        <button class="btn-primary" style="width:100%;padding:16px;font-size:16px;font-weight:600;background:#16a34a" onclick="elegirCia('rivadavia')">Rivadavia<span style="display:block;font-size:11px;font-weight:400;opacity:.85;margin-top:2px">Seguros Rivadavia</span></button>
+      </div>
+      <button class="btn-secondary btn-sm" style="margin-top:18px" onclick="logout()">&larr; Salir</button>
+    </div>
+  </div>
+</div>
+
 <!-- ADMIN -->
 <div id="screen-admin" style="display:none;flex-direction:column;min-height:100vh">
   <div class="sidebar-backdrop" id="admin-backdrop" onclick="closeMobileSidebar('admin')"></div>
@@ -379,6 +394,7 @@
     <span style="font-size:11px;color:var(--text3)" id="last-update"></span>
     <button class="btn-secondary btn-sm" style="margin-left:10px;font-size:11px;padding:4px 10px" onclick="refrescarManual()" title="Actualizar ahora">🔄</button>
     <span style="font-size:12px;color:var(--text2);margin-left:12px" id="admin-user-label"></span>
+    <button class="btn-secondary btn-sm" id="btn-cambiar-cia" style="margin-left:10px;font-size:11px;padding:4px 10px" onclick="cambiarCompania()" title="Cambiar compa&ntilde;&iacute;a">Cambiar compa&ntilde;&iacute;a</button>
     <button class="btn-secondary btn-sm" style="margin-left:12px" onclick="logout()">Salir</button>
   </div>
   <div style="display:flex;flex:1">
@@ -1324,6 +1340,10 @@ const INSP_PUEDE_CAMBIAR_ESTADO = ['Mariano','Valentino','Bruno'];
 // Contraseñas gestionadas 100% en el backend (GAS + Google Sheets "Usuarios")
 // Ya no se usan defaults locales ni localStorage para claves.
 let usuarioActual=null,inspActual=null,inspecciones=[],relId=null,editId=null,fotosPendientes=[],notifVistas={},ciaActual='rivadavia',fotosSubiendo=0;
+let ciaActiva=null,_pendingUser=null;
+function matchCia(comp){if(!ciaActiva)return true;comp=(comp||'').toLowerCase();if(ciaActiva==='rivadavia')return comp.indexOf('rivadavia')!==-1;return comp.indexOf('rivadavia')===-1;}
+function _inspVis(){return inspecciones.filter(function(i){return matchCia(i.Compania);});}
+function ciaLabel(){return ciaActiva==='rivadavia'?'Rivadavia':ciaActiva==='provincia'?'Provincia':'';}
 let autoRefreshTimer=null;
 const PLAZO_HRS=48;
 
@@ -1479,12 +1499,20 @@ async function doLogin(){
 
 // Configura las pantallas post-login. La usan doLogin y la reanudación de sesión.
 async function _entrarApp(nombre){
+  _pendingUser=nombre;
+  var _sc=s('screen-cia');_sc.style.display='flex';_sc.style.alignItems='center';_sc.style.justifyContent='center';
+  if(s('cia-bienvenida'))s('cia-bienvenida').textContent='Hola '+nombre;
+}
+async function elegirCia(cia){
+  ciaActiva=cia;
+  hide('screen-cia');
+  var nombre=_pendingUser;
   const ls=s('screen-loading');ls.style.display='flex';
   s('loading-msg').textContent='Cargando inspecciones...';
   if(nombre==='Administrador'){
     usuarioActual='Administrador';
     const sa=s('screen-admin');sa.style.display='flex';sa.style.flexDirection='column';
-    s('admin-user-label').textContent='Administrador';
+    s('admin-user-label').textContent='Administrador \u00b7 '+ciaLabel();
     await cargarInspecciones();
     ls.style.display='none';
     adminTab('dashboard');
@@ -1492,7 +1520,7 @@ async function _entrarApp(nombre){
   } else {
     usuarioActual=nombre;
     const si=s('screen-inspector');si.style.display='flex';si.style.flexDirection='column';
-    s('insp-user-label').textContent=nombre;
+    s('insp-user-label').textContent=nombre+' \u00b7 '+ciaLabel();
     s('perfil-nombre').textContent=nombre;
     s('perfil-avatar').textContent=nombre[0].toUpperCase();
     s('perfil-mail').textContent=INSP_MAILS[nombre]||'-';
@@ -1515,6 +1543,15 @@ function logout(){
   // Volver a la landing pública
   document.getElementById('landing-page').classList.remove('hidden');
   window.scrollTo(0,0);
+}
+
+function cambiarCompania(){
+  if(usuarioActual!=='Administrador')return;
+  _pendingUser='Administrador';
+  s('screen-admin').style.display='none';
+  if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
+  var _sc=s('screen-cia');_sc.style.display='flex';_sc.style.alignItems='center';_sc.style.justifyContent='center';
+  if(s('cia-bienvenida'))s('cia-bienvenida').textContent='Hola Administrador';
 }
 
 async function cambiarPassAdmin(){
@@ -1554,6 +1591,7 @@ function adminTab(t){
     const sec=s('asec-'+x);if(sec)sec.style.display=t===x?'block':'none';
   });
   if(t==='dashboard')renderDashboard();
+  if(t==='nueva')aplicarRestriccionCiaNueva();
   if(t==='busqueda'){var gs=s('global-search');if(gs){gs.value='';gs.focus();}var gr=s('global-search-results');if(gr)gr.innerHTML='<p style="color:var(--text2);font-size:14px;text-align:center;padding:32px 0">Escribí para buscar en todas las inspecciones.</p>';}
   if(t==='pendientes')renderTablaAdmin('pendientes');
   if(t==='taller')renderTalleres();
@@ -1585,6 +1623,7 @@ async function cargarInspecciones(){
 }
 
 function actualizarBadgesAdmin(){
+  var inspecciones=_inspVis();
   const pend=inspecciones.filter(i=>i.Estado==='Pendientes de carga').length;
   const rev=inspecciones.filter(i=>i.Estado==='Pendiente de verificar').length;
   const resol=inspecciones.filter(i=>i.Estado==='Pendientes de resolver').length;
@@ -1604,6 +1643,7 @@ function actualizarBadgesAdmin(){
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 // ─── SECCIÓN TALLER ────────────────────────────────────────────────────────
 function renderTalleres(){
+  var inspecciones=_inspVis();
   var lista=inspecciones.filter(function(i){return i.Estado==='Esperando taller';});
   var cont=s('tabla-taller');
   if(!lista.length){
@@ -1631,6 +1671,7 @@ function renderTalleres(){
 }
 
 function renderDashboard(){
+  var inspecciones=_inspVis();
   const total=inspecciones.length;
   const asig=inspecciones.filter(i=>i.Estado==='Pendientes de carga').length;
   const rev=inspecciones.filter(i=>i.Estado==='Pendiente de verificar'||i.Estado==='Pendientes de resolver').length;
@@ -1849,7 +1890,7 @@ function renderBusqueda(){
   var q=(s('global-search')&&s('global-search').value||'').trim().toLowerCase();
   var cont=s('global-search-results');
   if(!q){cont.innerHTML='<p style="color:var(--text2);font-size:14px;text-align:center;padding:32px 0">Escribí para buscar en todas las inspecciones.</p>';return;}
-  var todos=inspecciones.filter(function(i){return((i.Siniestro||'')+(i.Patente||'')+(i.Asegurado||'')+(i.Localidad||'')).toLowerCase().includes(q);});
+  var todos=inspecciones.filter(function(i){return matchCia(i.Compania)&&((i.Siniestro||'')+(i.Patente||'')+(i.Asegurado||'')+(i.Localidad||'')).toLowerCase().includes(q);});
   if(!todos.length){cont.innerHTML='<div class="loading">Sin resultados para "'+esc(q)+'".</div>';return;}
   todos.sort(function(a,b){return(b.FechaInsp||'').localeCompare(a.FechaInsp||'');});
   function hl(str){
@@ -1893,6 +1934,7 @@ function renderTablaAdmin(tipo){
   const fDesde=s('fil-desde-'+sf)?s('fil-desde-'+sf).value||'':'';
   const fHasta=s('fil-hasta-'+sf)?s('fil-hasta-'+sf).value||'':'';
   let lista=inspecciones.filter(filtros[tipo]).filter(function(i){
+    if(ciaActiva&&!matchCia(i.Compania))return false;
     const txt=((i.Siniestro||'')+(i.Patente||'')+(i.Asegurado||'')+(i.Localidad||'')).toLowerCase();
     if(!txt.includes(filtro))return false;
     if(fInsp&&i.Inspector!==fInsp)return false;
@@ -2306,6 +2348,7 @@ function exportarFacturacion(){
   var desde=s('fil-desde-cerr')?s('fil-desde-cerr').value||'':'';
   var hasta=s('fil-hasta-cerr')?s('fil-hasta-cerr').value||'':'';
   var lista=inspecciones.filter(function(i){
+    if(ciaActiva&&!matchCia(i.Compania))return false;
     if(i.Estado!=='Cerradas')return false;
     if(cia&&i.Compania!==cia)return false;
     if(desde&&i.FechaInsp&&i.FechaInsp<desde)return false;
@@ -2349,6 +2392,7 @@ function exportarFacturacion(){
 }
 
 function exportarExcel(){
+  var inspecciones=_inspVis();
   if(!inspecciones.length){alert('No hay inspecciones.');return;}
   try{
     const filas=inspecciones.map(function(i){return{
@@ -2404,6 +2448,7 @@ function renderArchivo(){
   var fDesde=s('fil-desde-arch')?.value||'';
   var fHasta=s('fil-hasta-arch')?.value||'';
   var lista=inspeccionesArchivadas.filter(function(i){
+    if(ciaActiva&&!matchCia(i.Compania))return false;
     var txt=((i.Siniestro||'')+(i.Patente||'')+(i.Asegurado||'')+(i.Localidad||'')).toLowerCase();
     if(!txt.includes(filtro))return false;
     if(fInsp&&i.Inspector!==fInsp)return false;
@@ -2485,6 +2530,7 @@ async function archivarAhora(){
 }
 
 function renderStats(){
+  var inspecciones=_inspVis();
   var total=inspecciones.length;
   var venc=inspecciones.filter(function(i){return esVencida(i);}).length;
   var porEstado={'Pendientes de carga':0,'Pendiente de verificar':0,'Pendientes de resolver':0,Cerradas:0};
@@ -2578,6 +2624,19 @@ function renderStats(){
 }
 
 // ─── PDF ──────────────────────────────────────────────────────────────────────
+function aplicarRestriccionCiaNueva(){
+  var esRiv=ciaActiva==='rivadavia';
+  if(s('cia-riv'))s('cia-riv').style.display=esRiv?'':'none';
+  if(s('cia-prov'))s('cia-prov').style.display=esRiv?'none':'';
+  if(s('cia-peri'))s('cia-peri').style.display=esRiv?'none':'';
+  var sel=s('f-cia');
+  if(sel){
+    var opts=esRiv?['Seguros Rivadavia']:['Provincia Seguros','Auto Reclamo'];
+    sel.innerHTML='<option value="">Seleccionar...</option>'+opts.map(function(o){return '<option>'+o+'</option>';}).join('');
+    if(opts.length===1)sel.value=opts[0];
+  }
+  selCia(esRiv?'rivadavia':'provincia');
+}
 function selCia(cia){
   ciaActual=cia;
   ['riv','prov','peri','auto'].forEach(function(x){var b=s('cia-'+x); if(b) b.className='insp-btn';});
@@ -3254,6 +3313,7 @@ async function _cargarInspeccionesOffline(){
 }
 
 function actualizarBadgesInspector(){
+  var inspecciones=_inspVis();
   const ab=inspecciones.filter(function(i){return i.Estado==='Pendientes de carga';}).length;
   const carga=inspecciones.filter(function(i){return i.Estado==='Pendiente de verificar';}).length;
   const rev=inspecciones.filter(function(i){return i.Estado==='Pendientes de resolver';}).length;
@@ -3285,7 +3345,7 @@ function renderSeccionInsp(tipo){
     revision:function(i){return i.Estado==='Pendientes de resolver';},
     cerradas:function(i){return i.Estado==='Cerradas';}
   };
-  var lista=inspecciones.filter(filtros[tipo]);
+  var lista=_inspVis().filter(filtros[tipo]);
   var contenedor=s('lista-'+tipo);if(!contenedor)return;
   var vac=s('vacio-'+tipo);
   if(!lista.length){contenedor.innerHTML='';if(vac)vac.style.display='block';return;}
