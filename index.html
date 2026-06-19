@@ -6684,6 +6684,23 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
   }
   function oCap(s){ s=String(s||''); return s? s.charAt(0).toUpperCase()+s.slice(1).toLowerCase() : ''; }
   function oPanos(sup){ if(sup==null)return 0; if(sup<=0.50)return 0.5; if(sup<1.0)return 1.0; return 1.5; }
+  // Reglas fijas de panos por tipo de pieza (SOLO importador Provincia pericial / ORION).
+  // Devuelve los panos fijos segun se repare o sustituya, o null si la pieza usa reparto por superficie.
+  function oPanosFijos(p, piezas){
+    var n=oNorm(p.pieza||''); if(!n) return null;
+    var sust=hasTarea(p,'Sustituir') || !!p._sustPint;
+    if(!sust && !hasTarea(p,'Reparar')){
+      var sib=(piezas||[]).find(function(x){ return x!==p && x.zona===p.zona && x.pieza===p.pieza && (hasTarea(x,'Sustituir')||hasTarea(x,'Reparar')); });
+      if(sib) sust=hasTarea(sib,'Sustituir');
+    }
+    if(/^paragolpes\b/.test(n)) return 2;                               // del. y tras.: 2 (R y S)
+    if(/^capot\b/.test(n)) return sust?3:2;                             // capot: 2 R / 3 S
+    if(/^puerta (delantero|trasero)\b/.test(n)) return sust?2:1;        // 4 puertas: 1 R / 2 S
+    if(/^porton\b/.test(n) || /^tapa de baul\b/.test(n)) return sust?3:2; // porton/baul: 2 R / 3 S
+    if(/^guardabarro trasero\b/.test(n) || /^lateral de caja\b/.test(n)) return sust?2:1; // guardab. tras./lat. caja: 1 R / 2 S
+    if(/^guardabarro delantero\b/.test(n)) return 1;                    // guardab. del.: 1 (R y S)
+    return null;
+  }
 
   // ---- Catálogo plano del tipo de vehículo seleccionado ----
   function oCatalogo(tipo){
@@ -6790,7 +6807,7 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
       if(/^(chapa|mecánica|electricidad|pintura|materiales|varios|total)\b/i.test(s)) return;
       var m=s.match(/^([ØA$TS]\s+)?(.+?)\s+(Sustitución|Fuerte|Leve|Mediano|Grave)\s+(\d+,\d+)\s+(\d+,\d+)\s+(\d+,\d+)$/i);
       if(!m) return;
-      pintura.push({nombre:m[2].trim(), panos:oPanos(oNum(m[4])), superficie:oNum(m[4])});
+      pintura.push({nombre:m[2].trim(), panos:oPanos(oNum(m[4])), superficie:oNum(m[4]), sust:/sustituc/i.test(m[3])});
     });
 
     var operaciones=[];
@@ -6911,7 +6928,7 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     // Pintura — paños en 0 (inspector los ingresa en el modal), superficie guardada para distribución proporcional
     parsed.pintura.forEach(function(pt){
       var m=oMatch(pt.nombre,cat);
-      if(m){ pushPieza(m.c.zona, m.c.nombre, 'Pintar', '', 0, 0, pt.superficie||0); return; }
+      if(m){ var _pr=pushPieza(m.c.zona, m.c.nombre, 'Pintar', '', 0, 0, pt.superficie||0); if(_pr) _pr._sustPint=!!pt.sust; return; }
       // Otras piezas: fusionar Pintar en la fila de chapa con el mismo nombre (no duplicar R+P)
       var _ex=piezasOut.find(function(x){return x.zona==='Otras piezas' && x.pieza===pt.nombre && (hasTarea(x,'Reparar')||hasTarea(x,'Sustituir'));});
       if(_ex){
@@ -7094,14 +7111,23 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
       var pintP=piezas.filter(function(p){return hasTarea(p,'Pintar');});
       if(pintP.length>0){
         var H=Math.max(Math.round(panos*2), pintP.length);
-        var extra=H-pintP.length;
-        var totSup=pintP.reduce(function(s,p){return s+(p._superficie||0);},0);
-        var ideals=pintP.map(function(p){ return totSup>0 ? (p._superficie||0)/totSup*extra : extra/pintP.length; });
-        var halves=ideals.map(function(x){return Math.floor(x);});
-        var rem=extra-halves.reduce(function(s,x){return s+x;},0);
-        var order=ideals.map(function(x,i){return {i:i, r:x-Math.floor(x)};}).sort(function(a,b){return b.r-a.r || a.i-b.i;});
-        for(var k=0;k<rem;k++) halves[order[k%order.length].i]++;
-        pintP.forEach(function(p,i){ p.panos=(1+halves[i])/2; });
+        // Reglas fijas por pieza (Provincia pericial): paragolpes, capot, puertas, porton/baul y
+        // guardabarros toman panos fijos; el resto reparte por superficie los panos que sobran del total.
+        var fixH=pintP.map(function(p){ var f=oPanosFijos(p,piezas); return (f!=null)?Math.round(f*2):null; });
+        var halves=pintP.map(function(p,i){ return (fixH[i]!=null)?fixH[i]:1; });
+        var varIdx=[], fixSum=0;
+        pintP.forEach(function(p,i){ if(fixH[i]!=null) fixSum+=fixH[i]; else varIdx.push(i); });
+        if(varIdx.length>0){
+          var extra=H-fixSum-varIdx.length; if(extra<0) extra=0;
+          var totSup=varIdx.reduce(function(s,i){return s+(pintP[i]._superficie||0);},0);
+          var ideals=varIdx.map(function(i){ return totSup>0 ? (pintP[i]._superficie||0)/totSup*extra : extra/varIdx.length; });
+          var add=ideals.map(function(x){return Math.floor(x);});
+          var rem=extra-add.reduce(function(s,x){return s+x;},0);
+          var order=ideals.map(function(x,k){return {k:k, r:x-Math.floor(x)};}).sort(function(a,b){return b.r-a.r || a.k-b.k;});
+          for(var z=0;z<rem;z++) add[order[z%order.length].k]++;
+          varIdx.forEach(function(i,k){ halves[i]=1+add[k]; });
+        }
+        pintP.forEach(function(p,i){ p.panos=halves[i]/2; });
       }
     }
     // 2. Reconciliar hs de chapa con una operación de diferencia (sin repartir entre piezas).
