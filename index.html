@@ -8025,13 +8025,15 @@ function gridUpdateTotal(){
     if(hasTarea(p,'Difuminar')) return a+0.5;
     return a;
   },0);
+  var _esPeriG=relOpState.some(function(o){return o.operacion==='Diferencia entre baremo y cotización real';});
+  var panosShow=(_esPeriG&&window.relPanosDeclarados>0)?window.relPanosDeclarados:panos;
   var gran=Math.round((total+totalOpHs)*100)/100;
   var _hpd=relHsPorDia((inspecciones.find(function(x){return x.ID==relId;})||{}).Compania, relOpState);
   var dias=gran>0?Math.ceil(gran/_hpd*2)/2:0;
   var dLabel=dias===1?'1 día':dias+' días';
   el.innerHTML=gran+' <span style="font-size:14px;font-weight:400">hs</span>'
     +(gran>0?'&nbsp;<span style="font-size:13px;font-weight:400;color:var(--text2)">('+dLabel+')</span>':'')
-    +(panos?'&nbsp;&nbsp;<span style="font-size:14px;color:var(--text2)">· '+panos+' paños</span>':'');
+    +(panosShow?'&nbsp;&nbsp;<span style="font-size:14px;color:var(--text2)">· '+panosShow+' paños</span>':'');
 }
 
 // ── init accordion cuando se carga un relevamiento guardado ──
