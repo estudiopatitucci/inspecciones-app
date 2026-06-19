@@ -368,16 +368,42 @@
 </div>
 
 <!-- SELECCION DE COMPANIA -->
-<div id="screen-cia" style="display:none;min-height:100vh;align-items:center;justify-content:center">
-  <div class="login-box">
-    <div class="login-logo"><h1>Estudio <span>Patitucci</span></h1><p id="cia-bienvenida">Eleg&iacute; la compa&ntilde;&iacute;a</p></div>
-    <div class="card" style="text-align:center">
-      <p style="font-size:14px;color:var(--text2);margin-bottom:18px">&iquest;Con qu&eacute; compa&ntilde;&iacute;a vas a trabajar?</p>
-      <div style="display:flex;flex-direction:column;gap:12px">
-        <button class="btn-primary" style="width:100%;padding:16px;font-size:16px;font-weight:600" onclick="elegirCia('provincia')">Provincia<span style="display:block;font-size:11px;font-weight:400;opacity:.85;margin-top:2px">Provincia Seguros + Auto Reclamo</span></button>
-        <button class="btn-primary" style="width:100%;padding:16px;font-size:16px;font-weight:600;background:#16a34a" onclick="elegirCia('rivadavia')">Rivadavia<span style="display:block;font-size:11px;font-weight:400;opacity:.85;margin-top:2px">Seguros Rivadavia</span></button>
-      </div>
-      <button class="btn-secondary btn-sm" style="margin-top:18px" onclick="logout()">&larr; Salir</button>
+<div id="screen-cia" style="display:none;min-height:100vh;align-items:center;justify-content:center;padding:20px">
+  <style>
+    #screen-cia .cia-card{background:var(--bg2,#161b26);border:1px solid var(--border,#262c3a);border-radius:22px;padding:32px 26px 26px;max-width:430px;width:100%;box-shadow:0 26px 70px rgba(0,0,0,.5)}
+    #screen-cia .cia-av{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:23px;font-weight:700;color:#fff;background:linear-gradient(135deg,#4f7cff,#7b5cff);margin:0 auto 16px;box-shadow:0 8px 22px rgba(79,124,255,.45)}
+    #screen-cia .cia-opt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;border:1px solid var(--border,#262c3a);border-radius:15px;padding:15px 18px;background:var(--bg3,#1c2230);cursor:pointer;transition:transform .14s ease,border-color .14s ease,box-shadow .14s ease}
+    #screen-cia .cia-opt:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.4)}
+    #screen-cia .cia-opt:active{transform:translateY(0)}
+    #screen-cia .cia-prov:hover{border-color:#4f7cff}
+    #screen-cia .cia-riv:hover{border-color:#16a34a}
+    #screen-cia .cia-ic{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0}
+    #screen-cia .cia-prov .cia-ic{background:rgba(79,124,255,.16);color:#6e9bff}
+    #screen-cia .cia-riv .cia-ic{background:rgba(22,163,74,.18);color:#3ecd77}
+    #screen-cia .cia-tt{display:block;font-size:16px;font-weight:700;color:var(--text,#fff);line-height:1.15}
+    #screen-cia .cia-sb{display:block;font-size:12px;color:var(--text2,#9aa3b5);margin-top:3px}
+    #screen-cia .cia-arrow{margin-left:auto;color:var(--text3,#5a6478);font-size:17px;font-weight:600}
+    #screen-cia .cia-opt:hover .cia-arrow{color:var(--text,#fff)}
+  </style>
+  <div class="cia-card">
+    <div class="cia-av" id="cia-avatar">A</div>
+    <h1 style="font-size:22px;font-weight:700;text-align:center;margin:0 0 3px;color:var(--text,#fff)">Estudio <span style="color:#4f7cff">Patitucci</span></h1>
+    <p id="cia-bienvenida" style="text-align:center;font-size:13px;color:var(--text2,#9aa3b5);margin:0 0 24px">Hola</p>
+    <p style="text-align:center;font-size:11px;color:var(--text3,#5a6478);text-transform:uppercase;letter-spacing:.1em;margin:0 0 14px">Eleg&iacute; la compa&ntilde;&iacute;a</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <button class="cia-opt cia-prov" onclick="elegirCia('provincia')">
+        <span class="cia-ic">&#x1F3E2;</span>
+        <span><span class="cia-tt">Provincia</span><span class="cia-sb">Provincia Seguros</span></span>
+        <span class="cia-arrow">&rarr;</span>
+      </button>
+      <button class="cia-opt cia-riv" onclick="elegirCia('rivadavia')">
+        <span class="cia-ic">&#x1F3E2;</span>
+        <span><span class="cia-tt">Rivadavia</span><span class="cia-sb">Seguros Rivadavia</span></span>
+        <span class="cia-arrow">&rarr;</span>
+      </button>
+    </div>
+    <div style="text-align:center;margin-top:22px">
+      <button onclick="logout()" style="background:none;border:none;color:var(--text3,#5a6478);font-size:13px;cursor:pointer;padding:6px 12px">&larr; Salir</button>
     </div>
   </div>
 </div>
@@ -1529,7 +1555,7 @@ async function doLogin(){
 async function _entrarApp(nombre){
   _pendingUser=nombre;
   var _sc=s('screen-cia');_sc.style.display='flex';_sc.style.alignItems='center';_sc.style.justifyContent='center';
-  if(s('cia-bienvenida'))s('cia-bienvenida').textContent='Hola '+nombre;
+  if(s('cia-bienvenida'))s('cia-bienvenida').textContent='Hola '+nombre;if(s('cia-avatar'))s('cia-avatar').textContent=(nombre||'?').charAt(0).toUpperCase();
 }
 async function elegirCia(cia){
   ciaActiva=cia;
@@ -1579,7 +1605,7 @@ function cambiarCompania(){
   s('screen-admin').style.display='none';
   if(autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null;}
   var _sc=s('screen-cia');_sc.style.display='flex';_sc.style.alignItems='center';_sc.style.justifyContent='center';
-  if(s('cia-bienvenida'))s('cia-bienvenida').textContent='Hola Administrador';
+  if(s('cia-bienvenida'))s('cia-bienvenida').textContent='Hola Administrador';if(s('cia-avatar'))s('cia-avatar').textContent='A';
 }
 
 async function cambiarPassAdmin(){
@@ -3819,6 +3845,7 @@ function limpiarRelevamiento(){
   if(!confirm('⚠️ Estás por borrar todos los datos cargados.\n\n¿Confirmás que querés limpiar todo?')) return;
   // Resetear calculador
   relCalcState = {tipo:'', piezas:[]};
+  window.relPanosDeclarados = 0;
   relCalcIdx = 0;
   relOpState = [];
   relOpIdx = 0;
@@ -3932,6 +3959,7 @@ function abrirRel(id){
   var rel=i.Relevamiento;
   // Inicializar calculador inline
   relCalcState = {tipo:'', piezas:[]};
+  window.relPanosDeclarados = 0;
   relCalcIdx = 0;
   relOpState = [];
   relOpIdx = 0;
@@ -3943,6 +3971,7 @@ function abrirRel(id){
   if(s('rel-costo-pano')) s('rel-costo-pano').value='';
   if(rel&&rel.calculador){
     relCalcState = {tipo:rel.calculador.tipo||'', piezas:(rel.calculador.piezas||[]).map(function(p,i){return Object.assign({},p,{_id:i});})};
+    window.relPanosDeclarados = rel.calculador.panosDeclarados||0;
     relCalcIdx = relCalcState.piezas.length;
     if(rel.calculador.operaciones&&rel.calculador.operaciones.length){
       relOpState = rel.calculador.operaciones.map(function(o,i){return Object.assign({},o,{_id:i});});
@@ -4615,9 +4644,11 @@ async function enviarRel(){
   var _hpd=relHsPorDia((inspecciones.find(function(x){return x.ID==relId;})||{}).Compania, relOpState);
   var _diasChapa=Math.ceil((calcTotalHs+calcTotalOpHs)/_hpd*2)/2;
   var _costoChapa=_diasChapa*relCostoDiaChapa;
-  var _costoPintura=calcTotalPanos*relCostoPanoPintura;
+  var _esPeriRel=relOpState.some(function(o){return o.operacion==='Diferencia entre baremo y cotización real';});
+  var _panosCostoRel=(_esPeriRel&&window.relPanosDeclarados>0)?window.relPanosDeclarados:calcTotalPanos;
+  var _costoPintura=_panosCostoRel*relCostoPanoPintura;
   var _costoTotal=_costoChapa+_costoPintura+_totalOpCosto;
-  var calcData={tipo:relCalcState.tipo,piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};}),total:calcTotalHs+calcTotalOpHs,totalPanos:calcTotalPanos,costoDiaChapa:relCostoDiaChapa,costoHoraMecánica:relCostoHoraMecánica,costoPanoPintura:relCostoPanoPintura,costoTotal:_costoTotal};
+  var calcData={tipo:relCalcState.tipo,piezas:relCalcState.piezas.map(function(p){return{zona:p.zona,pieza:p.pieza,tarea:p.tarea,nivelDano:p.nivelDano,hsTrabajo:p.hsTrabajo,panos:p.panos};}),operaciones:relOpState.map(function(o){return{operacion:o.operacion,puestaMedicion:o.puestaMedicion,tiempoEstiraje:o.tiempoEstiraje,horas:o.horas,costo:o.costo,nombre:o.nombre};}),total:calcTotalHs+calcTotalOpHs,totalPanos:calcTotalPanos,costoDiaChapa:relCostoDiaChapa,costoHoraMecánica:relCostoHoraMecánica,costoPanoPintura:relCostoPanoPintura,panosDeclarados:(window.relPanosDeclarados||0),costoTotal:_costoTotal};
   var _fl=fotosPendientes.filter(function(f){return f.driveLink;}).map(function(f){return f.driveLink;});
   var tareasText = s('rel-tareas') ? s('rel-tareas').value.trim() : '';
   var rel={km,danos,calculador:calcData,taller:s('rel-taller').value.trim(),telTaller:s('rel-tel').value.trim(),mailTaller:s('rel-mail').value.trim(),cuit:s('rel-cuit').value.trim(),dirTaller:s('rel-dir-taller')?s('rel-dir-taller').value.trim():'',locTaller:s('rel-loc-taller')?s('rel-loc-taller').value.trim():'',fotosLinks:_fl,cantFotos:_fl.length,fechaEnvio:new Date().toISOString(),tareasARealizar:tareasText,tipoHonorario:s('rel-tipo-honorario')?s('rel-tipo-honorario').value:''};
@@ -5148,7 +5179,8 @@ function generarPDFCompleto(id){
     var costoDia=calc.costoDiaChapa||0,costoHMec=calc.costoHoraMecánica||0,costoPano=calc.costoPanoPintura||0;
     var costoChapa=diasTotal*costoDia;
     var costoMecPDF=_esPericial?0:totalHsMecPDF*costoHMec;
-    var costoPintura=totalPanos*costoPano;
+    var _panosCosto=(_esPericial&&calc.panosDeclarados>0)?calc.panosDeclarados:totalPanos;
+    var costoPintura=_panosCosto*costoPano;
     var totalOp=(calc.operaciones||[]).reduce(function(a,o){return a+(o.costo||0);},0);
     var costoTotal=costoChapa+costoMecPDF+costoPintura+totalOp;
     // Operaciones especiales
@@ -5182,7 +5214,7 @@ function generarPDFCompleto(id){
       +'<tbody>'
       +(costoDia?'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:5px 8px">Chapa</td><td style="padding:5px 8px;color:#555">'+diasTotal+' días × $'+fmt(costoDia)+'</td><td style="padding:5px 8px;text-align:right;font-weight:600">$'+fmt(costoChapa)+'</td></tr>':'')
       +(costoHMec&&totalHsMecPDF?'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:5px 8px">Mecánica</td><td style="padding:5px 8px;color:#555">'+totalHsMecPDF+' hs × $'+fmt(costoHMec)+'</td><td style="padding:5px 8px;text-align:right;font-weight:600">$'+fmt(costoMecPDF)+'</td></tr>':'')
-      +(costoPano?'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:5px 8px">Pintura</td><td style="padding:5px 8px;color:#555">'+totalPanos+' paños × $'+fmt(costoPano)+'</td><td style="padding:5px 8px;text-align:right;font-weight:600">$'+fmt(costoPintura)+'</td></tr>':'')
+      +(costoPano?'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:5px 8px">Pintura</td><td style="padding:5px 8px;color:#555">'+_panosCosto+' paños × $'+fmt(costoPano)+'</td><td style="padding:5px 8px;text-align:right;font-weight:600">$'+fmt(costoPintura)+'</td></tr>':'')
       +(totalOp?'<tr style="border-bottom:1px solid #e8e8e8"><td style="padding:5px 8px">Operaciones</td><td style="padding:5px 8px;color:#555">—</td><td style="padding:5px 8px;text-align:right;font-weight:600">$'+fmt(totalOp)+'</td></tr>':'')
       +'</tbody>'
       +'<tfoot><tr style="background:#1a1a6e;color:#fff;font-weight:700">'
@@ -6073,7 +6105,8 @@ function relActualizarCosto(){
   var costoChapa = dias * relCostoDiaChapa;
   var _esPericialLive = relOpState.some(function(o){return o.operacion==='Diferencia entre baremo y cotización real';});
   var costoMec = _esPericialLive ? 0 : totalHsMec * relCostoHoraMecánica;
-  var costoPintura = totalPanos * relCostoPanoPintura;
+  var _panosCostoLive = (_esPericialLive && window.relPanosDeclarados>0) ? window.relPanosDeclarados : totalPanos;
+  var costoPintura = _panosCostoLive * relCostoPanoPintura;
   var total = costoChapa + costoMec + costoPintura + totalCostoOps;
 
   var desglose = s('rel-costo-desglose');
@@ -6091,7 +6124,7 @@ function relActualizarCosto(){
   if(mecRow){ mecRow.style.display = (totalHsMec > 0 && !_esPericialLive) ? 'flex' : 'none'; }
   if(s('rel-c-hs-mec')) s('rel-c-hs-mec').textContent = Math.round(totalHsMec*100)/100;
   if(s('rel-c-mec-val')) s('rel-c-mec-val').textContent = fmt(costoMec);
-  if(s('rel-c-panos')) s('rel-c-panos').textContent = totalPanos;
+  if(s('rel-c-panos')) s('rel-c-panos').textContent = _panosCostoLive;
   if(s('rel-c-pano-val')) s('rel-c-pano-val').textContent = fmt(costoPintura);
   var opsRow = s('rel-c-ops-row');
   if(opsRow) opsRow.style.display = totalCostoOps > 0 ? 'flex' : 'none';
@@ -7204,6 +7237,7 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     var gv=function(id){ return parseFloat(document.getElementById(id).value)||0; };
     var dias =gv('omt-dias');
     var panos=gv('omt-panos');
+    window.relPanosDeclarados=panos;
     var hsMec=gv('omt-mec');
     var cDia =gv('omt-cdia');
     var cPano=gv('omt-cpano');
