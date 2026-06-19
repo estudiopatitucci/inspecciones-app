@@ -1934,7 +1934,7 @@ function renderTablaAdmin(tipo){
 
 // ─── MODAL ────────────────────────────────────────────────────────────────────
 // ── Render detallado del calculador para el panel admin ──
-function renderResumenCalcAdmin(calc){
+function renderResumenCalcAdmin(calc, compania){
   var piezas = calc.piezas || [];
   var ops    = calc.operaciones || [];
   var tipo   = calc.tipo || '';
@@ -1997,7 +1997,8 @@ function renderResumenCalcAdmin(calc){
     return a;
   },0);
   var gran = totHs + totOpHs;
-  var dias = gran>0 ? Math.ceil(gran/4*2)/2 : 0;
+  var _hpd = relHsPorDia(compania, ops);
+  var dias = gran>0 ? Math.ceil(gran/_hpd*2)/2 : 0;
   var costoChapa = calc.costoChapa||0, costoPano = calc.costoPano||0;
   var totalCosto = (dias*costoChapa)+(totPanos*costoPano);
 
@@ -2055,7 +2056,7 @@ function abrirModal(id){
     if(rel.fechaEnvio)html+='<div><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px">Fecha envío</span><strong style="color:var(--text)">'+formatFecha(rel.fechaEnvio)+'</strong></div>';
     html+='</div>';
     if(rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length){
-      html+=renderResumenCalcAdmin(rel.calculador);
+      html+=renderResumenCalcAdmin(rel.calculador, i.Compania);
       // ── Tareas a realizar ──
       var tareasAdmin = rel.tareasARealizar || '';
       if(tareasAdmin){
@@ -3496,7 +3497,7 @@ function verDetalleInsp(id){
     html+='<div style="margin-bottom:8px"><span style="font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">Observaciones del inspector</span>';
     html+='<div style="background:var(--bg3);border-radius:6px;padding:8px;font-size:13px;color:var(--text);line-height:1.5">'+esc(rel.danos||'-')+'</div></div>';
     if(rel.calculador&&rel.calculador.piezas&&rel.calculador.piezas.length){
-      html+=renderResumenCalcAdmin(rel.calculador);
+      html+=renderResumenCalcAdmin(rel.calculador, i.Compania);
     // ── Tareas a realizar ──
     var tareasAdmin = rel.tareasARealizar || '';
     if(tareasAdmin){
@@ -4520,7 +4521,8 @@ async function enviarRel(){
   },0);
   var calcTotalPanos=relCalcState.piezas.reduce(function(acc,p){if(hasTarea(p,'Pintar'))return acc+(p.panos||0);if(hasTarea(p,'Difuminar'))return acc+0.5;return acc;},0);
   var _totalOpCosto=relOpState.reduce(function(acc,o){return acc+(o.costo||0);},0);
-  var _diasChapa=Math.ceil((calcTotalHs+calcTotalOpHs)/4*2)/2;
+  var _hpd=relHsPorDia((inspecciones.find(function(x){return x.ID==relId;})||{}).Compania, relOpState);
+  var _diasChapa=Math.ceil((calcTotalHs+calcTotalOpHs)/_hpd*2)/2;
   var _costoChapa=_diasChapa*relCostoDiaChapa;
   var _costoPintura=calcTotalPanos*relCostoPanoPintura;
   var _costoTotal=_costoChapa+_costoPintura+_totalOpCosto;
@@ -4866,7 +4868,8 @@ function presupuestoClienteAbrir(id){
   var totalHsChapa=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a:a+(p.hsTrabajo||p.horas||0);},0);
   var totalHsMec=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a+(p.hsTrabajo||p.horas||0):a;},0);
   var totalPanos=calc.piezas.reduce(function(a,p){return a+(hasTarea(p,'Pintar')?(p.panos||1):hasTarea(p,'Difuminar')?0.5:0);},0);
-  var diasTotal=totalHsChapa>0?Math.ceil(totalHsChapa/4*2)/2:0;
+  var _hpd=relHsPorDia(i.Compania, calc.operaciones);
+  var diasTotal=totalHsChapa>0?Math.ceil(totalHsChapa/_hpd*2)/2:0;
   var costoChapa=diasTotal*(calc.costoDiaChapa||0);
   var costoMec=totalHsMec*(calc['costoHoraMecánica']||0);
   var costoPintura=totalPanos*(calc.costoPanoPintura||0);
@@ -5037,7 +5040,8 @@ function generarPDFCompleto(id){
     var totalHsChapaPDF=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a:a+(p.hsTrabajo||p.horas||0);},0);
     var totalHsMecPDF=calc.piezas.reduce(function(a,p){return ZMEC.indexOf(p.zona||'')!==-1?a+(p.hsTrabajo||p.horas||0):a;},0);
     var totalPanos=calc.piezas.reduce(function(a,p){return a+(hasTarea(p,'Pintar')?(p.panos||1):hasTarea(p,'Difuminar')?0.5:0);},0);
-    var diasTotal=totalHsChapaPDF>0?Math.ceil(totalHsChapaPDF/4*2)/2:0;
+    var _hpd=relHsPorDia(i.Compania, calc.operaciones);
+    var diasTotal=totalHsChapaPDF>0?Math.ceil(totalHsChapaPDF/_hpd*2)/2:0;
     // Costos
     var costoDia=calc.costoDiaChapa||0,costoHMec=calc.costoHoraMecánica||0,costoPano=calc.costoPanoPintura||0;
     var costoChapa=diasTotal*costoDia;
@@ -5922,6 +5926,14 @@ var relOrionTotalMO = 0; // Total Mano de Obra y Materiales del informe ORION (c
 // Zonas cuyas horas se cobran como mecánica (por hora), no como chapa (por día)
 var ZONAS_MECANICA_COSTO = ['Mecánica / Vano Motor','Mecánica','Tren Delantero y Tracción','Tren Delantero y Tracción 4x4','Tren Delantero y Suspensión','Tren Trasero'];
 
+function relHsPorDia(compania, operaciones){
+  // Informe pericial ORION importado => 4 hs/dia (las piezas ya vienen escaladas a dias*4).
+  var tienePericial=(operaciones||[]).some(function(o){return o&&o.operacion==='Diferencia entre baremo y cotización real';});
+  if(tienePericial) return 4;
+  var c=String(compania||'').toLowerCase();
+  if(c.indexOf('rivadavia')!==-1||c.indexOf('provincia')!==-1) return 8; // Rivadavia y Provincia: 8 hs = 1 dia
+  return 4; // Auto Reclamo y default: 4 hs = 1 dia
+}
 function relSetCosto(tipo, valor){
   if(tipo==='chapa') relCostoDiaChapa = parseFloat(valor)||0;
   else if(tipo==='mecanica') relCostoHoraMecánica = parseFloat(valor)||0;
@@ -5952,7 +5964,8 @@ function relActualizarCosto(){
   },0);
   var totalCostoOps = relOpState.reduce(function(acc,o){return acc+(o.costo||0);},0);
 
-  var dias = Math.ceil(totalHsChapaConOp / 4 * 2) / 2;
+  var _hpd = relHsPorDia((inspecciones.find(function(x){return x.ID==relId;})||{}).Compania, relOpState);
+  var dias = Math.ceil(totalHsChapaConOp / _hpd * 2) / 2;
   var costoChapa = dias * relCostoDiaChapa;
   var costoMec = totalHsMec * relCostoHoraMecánica;
   var costoPintura = totalPanos * relCostoPanoPintura;
@@ -6018,7 +6031,8 @@ function relGenerarTareas(){
     if(o.operacion==='Diferencia entre baremo y cotización real') return a+(o.horas||0);
     return a;
   },0);
-  var dias = Math.ceil((totalHsChapa + totalHsMec + totalOpHs) / 4 * 2) / 2;
+  var _hpd = relHsPorDia((inspecciones.find(function(x){return x.ID==relId;})||{}).Compania, ops);
+  var dias = Math.ceil((totalHsChapa + totalHsMec + totalOpHs) / _hpd * 2) / 2;
   var totalPanos = piezas.reduce(function(a,p){
     if(hasTarea(p,'Pintar'))    return a+(p.panos||0);
     if(hasTarea(p,'Difuminar')) return a+0.5;
@@ -6455,8 +6469,8 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     'Paragolpes Tras. (Con Impresion)':'Paragolpes trasero',
     'Paragolpes Tras. (Sin Impresion)':'Paragolpes trasero',
     'Paragolpes Tras. Central':'Paragolpes trasero',
-    'Paragolpes Tras Lat Der.':'Paragolpes trasero',
-    'Paragolpes Tras Lat Izq.':'Paragolpes trasero',
+    'Paragolpes Tras Lat Der.':'Paragolpes trasero derecho',
+    'Paragolpes Tras Lat Izq.':'Paragolpes trasero izquierdo',
     // Paragolpes delantero con lado (Ka, etc.)
     'Paragolpes Del. Der.':'Paragolpes delantero',
     'Paragolpes Del. Izq.':'Paragolpes delantero',
@@ -6473,13 +6487,13 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     // Piso trasero
     'Piso Trasero':'Piso de baúl',
     // Óptica principal (prefijo "A Jgo faros" de Mercedes/formatos especiales)
-    'A Jgo faros (Optica izq)':'Óptica principal izquierda',
-    'A Jgo faros (Optica der)':'Óptica principal derecha',
+    'Jgo faros (Optica izq)':'Óptica principal izquierda',
+    'Jgo faros (Optica der)':'Óptica principal derecha',
     // Carcasa electroventilador
     'Carcasa de Electroventilador':'Electroventilador completo (Carenado y aspas)',
     // Marco / parrilla delantera
     'Marco de la Rejilla de Aireacion':'Rejilla frontal superior (Central)',
-    'A Parilla frente con emblema':'Rejilla frontal superior (Central)',
+    'Parilla frente con emblema':'Rejilla frontal superior (Central)',
     // ── nuevos (Fase A++ — 17 PDFs) ─────────────────────────────────────
     // Suspensión delantera
     'Bieleta de Suspension Del. Der.':'Bieleta de barra estabilizadora derecha',
@@ -6503,10 +6517,10 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     // Parante exterior / delantero
     'Parante Exterior Sup. Del. Der.':'Parante delantero derecho',
     'Parante Exterior Sup. Del. Izq.':'Parante delantero izquierdo',
-    'A PARANTE PLASTICO DE PUERTA DEL IZQ':'Parante delantero izquierdo',
-    'A PARANTE PLASTICO DE PUERTA DEL DER':'Parante delantero derecho',
-    'A PARANTE PLASTICO DE PUERTA TRAS IZQ':'Parante central izquierdo',
-    'A PARANTE PLASTICO DE PUERTA TRAS DER':'Parante central derecho',
+    'PARANTE PLASTICO DE PUERTA DEL IZQ':'Parante delantero izquierdo',
+    'PARANTE PLASTICO DE PUERTA DEL DER':'Parante delantero derecho',
+    'PARANTE PLASTICO DE PUERTA TRAS IZQ':'Parante central izquierdo',
+    'PARANTE PLASTICO DE PUERTA TRAS DER':'Parante central derecho',
     // Carcasa / cubierta de espejo retrovisor
     'Cubierta Espejo Retr. Der.':'Carcasa de espejo retrovisor derecho',
     'Cubierta Espejo Retr. Izq.':'Carcasa de espejo retrovisor izquierdo',
@@ -6525,8 +6539,8 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     'Porta Masa Derecho':'Portamaza delantero derecho',
     'Porta Masa Izquierdo':'Portamaza delantero izquierdo',
     // Bagueta = Moldura de guardabarro
-    'A BAGUETA DE GUARD DEL DER':'Moldura de guardabarro delantero derecho',
-    'A BAGUETA DE GUARD DEL IZQ':'Moldura de guardabarro delantero izquierdo',
+    'BAGUETA DE GUARD DEL DER':'Moldura de guardabarro delantero derecho',
+    'BAGUETA DE GUARD DEL IZQ':'Moldura de guardabarro delantero izquierdo',
     // Manija exterior — abreviaturas PDD/PDI/PTD/PTI
     'Manija Apertura Ext. PDD (parte ext.)':'Manija exterior de puerta delantera derecha',
     'Manija Apertura Ext. PDI (parte ext.)':'Manija exterior de puerta delantera izquierda',
@@ -6550,7 +6564,71 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     'Travesaño inferior de radiador':'Travesaño inferior de panel frontal',
     // Soportes de paragolpes (abrev. PPE = paragolpes)
     'Soportes Izq de PPE Del':'Soporte de paragolpes delantero izquierdo',
-    'Soportes Der de PPE Del':'Soporte de paragolpes delantero derecho'
+    'Soportes Der de PPE Del':'Soporte de paragolpes delantero derecho',
+    'Faro Tras.Der.':'Faro trasero derecho fijo (En carrocería)',
+    'Faro Tras.Izq.':'Faro trasero izquierdo fijo (En carrocería)',
+    'Absorbedor de Golpes Delantero Der.':'Absorbedor de impacto interno de paragolpes',
+    'Absorbedor de Golpes Delantero Izq.':'Absorbedor de impacto interno de paragolpes',
+    'Faros Aux Der':'Faro auxiliar derecho (Antiniebla)',
+    'Faros Aux izq':'Faro auxiliar izquierdo (Antiniebla)',
+    'Faros Aux Izq':'Faro auxiliar izquierdo (Antiniebla)',
+    'Moldura faro aux der':'Marco de faro auxiliar derecho',
+    'Moldura faro aux izq':'Marco de faro auxiliar izquierdo',
+    'Rejilla Inf.del Paragolpes delantero':'Rejilla frontal inferior (Central)',
+    'Rejilla inferior ppe delantero':'Rejilla frontal inferior (Central)',
+    'Grilla inferior derecha':'Rejilla frontal inferior (Central)',
+    'Grilla inferior izquierda':'Rejilla frontal inferior (Central)',
+    'Grilla radiador':'Rejilla frontal inferior (Central)',
+    'Moldura Inferior Der. Rejilla Aireacion':'Rejilla frontal inferior (Central)',
+    'Moldura Inferior Izq. Rejilla Aireacion':'Rejilla frontal inferior (Central)',
+    'Emblema Marca Rejilla Aireacion':'Rejilla frontal superior (Central)',
+    'Rejilla de Aireacion+emblema':'Rejilla frontal superior (Central)',
+    'Parrilla superior completa con emblema':'Rejilla frontal superior (Central)',
+    'Rejilla de Aireacion Der.':'Rejilla frontal superior (Central)',
+    'Rejilla de Aireacion Izq.':'Rejilla frontal superior (Central)',
+    'Brazo de Suspension Del.Der.':'Parrilla de suspensión inferior derecha',
+    'Brazo de Suspension Del.Izq.':'Parrilla de suspensión inferior izquierda',
+    'Cremayera':'Caja de dirección (Hidráulica / Eléctrica)',
+    'Bocina Doble':'Bocina',
+    'Manguera Compresor a Condensador':'Caño A/A superior',
+    'Manguera del Compresor al Evaporador':'Caño A/A inferior',
+    'Chapa Portafaros Del.Der.':'Sede / soporte de óptica derecha',
+    'Chapa Portafaros Del.Izq.':'Sede / soporte de óptica izquierda',
+    'Cierre Capot':'Cerradura de capot',
+    'Soporte Central Cierre Capot':'Cerradura de capot',
+    'ESPEJO DER. COMPLETO':'Espejo retrovisor derecho (Manual / Eléctrico)',
+    'Maquina Lev. Cristal Motor PDI':'Mecanismo levantacristal delantero izquierdo',
+    'Moldura Lateral Guard. Tras.Der.':'Moldura de guardabarro trasero derecho',
+    'Moldura Lateral Guard. Tras.Izq.':'Moldura de guardabarro trasero izquierdo',
+    'Paragolpes Tras. (Sin Pintar)':'Paragolpes trasero',
+    'Paragolpes Tras. Izq. (Sin Impresion)':'Paragolpes trasero',
+    'Paragolpes Tras. Der. (Sin Impresion)':'Paragolpes trasero',
+    'Tapa carga combustible exterior p/pintar':'Tapa de carga de combustible',
+    'Cerradura Electrica del Porton':'Cerradura de baúl / portón trasero',
+    'Emblema Marca Porton':'Emblema / logo + letras de modelo y versión',
+    'Emblema Modelo Porton':'Emblema / logo + letras de modelo y versión',
+    'Emblema Insignia del Porton':'Emblema / logo + letras de modelo y versión',
+    'Emblema Tipo Porton':'Emblema / logo + letras de modelo y versión',
+    'Panel de Cola Inferior':'Panel de cola',
+    'Traversa Del.Central':'Travesaño superior de panel frontal',
+    'Proteccion plast.Traversa Sup.Del.':'Travesaño superior de panel frontal',
+    'Sensor de Obstáculos Trasero 3':'Sensor de estacionamiento trasero central',
+    'Optica Der. [Simple] c/Lamparas':'Óptica principal derecha',
+    'Optica Izq. [Simple] c/Lamparas':'Óptica principal izquierda',
+    'Refuerzo Sup. Pasarruedas Del. Izq.':'Pasarruedas interno estructural delantero izquierdo',
+    'Electroventilador con A/A':'Electroventilador completo (Carenado y aspas)',
+    'Espejo Electrico Izq.':'Espejo retrovisor izquierdo (Manual / Eléctrico)',
+    'Espejo Electrico Der.':'Espejo retrovisor derecho (Manual / Eléctrico)',
+    'Ecu de motor':'Computadora de motor (ECU)',
+    'Moldura Paragolpes Del.':'Moldura cromada / friso de paragolpes',
+    'Moldura Sup. Paragolpes Del.':'Moldura cromada / friso de paragolpes',
+    'Rejilla del Paragolpes FASE II':'Rejilla frontal inferior (Central)',
+    'Puente inferior (soporte radiadores)':'Travesaño inferior de panel frontal',
+    'Moldura lateral GDI':'Moldura de guardabarro delantero izquierdo',
+    'Sop der ppe del':'Soporte de paragolpes delantero derecho',
+    'Soporte izq ppe del':'Soporte de paragolpes delantero izquierdo',
+    'Jgo soportes ppe delantero':'Soporte central de paragolpes',
+    'Parabrisa':'Parabrisas delantero'
   };
 
   function oNorm(s){
@@ -6562,6 +6640,11 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     t = t.replace(/"[^"]*"/g,' ');
     // 3. quitar contenido entre corchetes ([sin portalamparas],[sin impresión],[Negro]…)
     t = t.replace(/\[[^\]]*\]/g,' ');
+    t = t.replace(/\(([^)]*)\)/g, function(m,inner){ return /(izq|der|delant|tras|cabina)/.test(inner) ? ' '+inner+' ' : ' '; });
+    t = t.replace(/\bmotor\s+\d[.,]?\d*\s*(?:16v|8v|v|t|tdi|tsi|cdi|hdi)?\b/g,' ');
+    t = t.replace(/\b\d[.,]\d+\s*(?:16v|8v|v)?\b/g,' ');
+    t = t.replace(/\b\d+\s*w\b/g,' ');
+    t = t.replace(/\b[a-z]?-?\d{4,}\b/g,' ');
     // 4. expandir abreviaturas con punto (incluye sin espacio: "del.der")
     t = t.replace(/\bder\./g,' derecha ').replace(/\bizq\./g,' izquierda ')
          .replace(/\bdel\./g,' delantero ').replace(/\btras\./g,' trasero ')
@@ -6592,6 +6675,7 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     return t.replace(/\s+/g,' ').trim();
   }
   function oLado(nq){ if(/LADODER/.test(nq))return'DER'; if(/LADOIZQ/.test(nq))return'IZQ'; return null; }
+  function oPos(nq){ if(/\btrasero\b/.test(nq))return'TRAS'; if(/\bdelantero\b/.test(nq))return'DEL'; return null; }
   function oNum(s){
     s=String(s||'').trim();
     if(/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(s)) s=s.replace(/\./g,'').replace(',','.');
@@ -6611,7 +6695,7 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
                    reqPint:!!p.requierePintura, norm:oNorm(p.nombre) });
       });
     });
-    arr.forEach(function(c){ c.lado=oLado(c.norm); });
+    arr.forEach(function(c){ c.lado=oLado(c.norm); c.pos=oPos(c.norm); });
     return arr;
   }
   var SINON_N = null;
@@ -6620,7 +6704,7 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     return SINON_N;
   }
   function oMatch(nombre, cat){
-    var nq=oNorm(nombre), lq=oLado(nq);
+    var nq=oNorm(nombre), lq=oLado(nq), pq=oPos(nq);
     var c=cat.find(function(x){return x.norm===nq;}); if(c) return {c:c,via:'exacto'};
     var sn=oResolverSinon(cat)[nq];
     if(sn){ c=cat.find(function(x){return x.norm===sn;}); if(c) return {c:c,via:'sinónimo'}; }
@@ -6628,7 +6712,7 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     // primer token significativo coincide con el de la consulta (parante→parante, no manija).
     var wq=nq.split(' ').filter(function(w){return w.length>2;}), qh=wq[0]||'', best=null, bs=0, bh=false;
     for(var i=0;i<cat.length;i++){
-      var cc=cat[i]; if(lq && cc.lado && cc.lado!==lq) continue;
+      var cc=cat[i]; if(lq && cc.lado && cc.lado!==lq) continue; if(pq && cc.pos && cc.pos!==pq) continue;
       var wc=cc.norm.split(' ');
       var com=wq.filter(function(w){return wc.indexOf(w)!==-1;}).length;
       var sc=com/Math.max(wq.length,1);
@@ -6685,15 +6769,15 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
       var s=l.trim();
       // filtrar encabezados, totales y líneas de resumen que no son piezas
       if(!s||/^(página|tiempo|t\.std|niv\.|total\b|mecánica\s+mano)/i.test(s)) return;
-      var m=s.match(/^(Ø\s*)?(.+?)\s+(\d+,\d+)\s+([BAM])?\s*(\d+,\d+)$/);
+      var m=s.match(/^([ØA$TS]\s+)?(.+?)\s+(\d+,\d+)\s+([BAM])?\s*(\d+,\d+)$/);
       if(!m) return;
       var t=oNum(m[3]), ts=oNum(m[5]);
       piezas.push({nombre:m[2].trim(), tarea:'Sustituir', tiempoOrion:t, tStd:ts,
-                   tiempoUsado:(t&&t>0?t:ts), tipeada:!!m[1]});
+                   tiempoUsado:(t&&t>0?t:ts), tipeada:/Ø/.test(m[1]||'')});
     });
     bloque('rep','var_').forEach(function(l){
       var s=l.trim(); if(!s||/^(niv\.|página|tiempo)/i.test(s)) return;
-      var m=s.match(/^(T\s+)?(.+?)\s+(Fuerte|Leve|Mediano|Grave)\s+(\d+,\d+)\s+(\d+,\d+)\s+(\d+,\d+)$/i);
+      var m=s.match(/^([ØA$TS]\s+)?(.+?)\s+(Fuerte|Leve|Mediano|Grave)\s+(\d+,\d+)\s+(\d+,\d+)\s+(\d+,\d+)$/i);
       if(!m) return;
       var t=oNum(m[4]), ts=oNum(m[5]);
       piezas.push({nombre:m[2].trim(), tarea:'Reparar', nivelDano:m[3].toLowerCase(),
@@ -6704,7 +6788,7 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     bloque('pint','tot').forEach(function(l){
       var s=l.trim(); if(!s||/^(niv\.|página)/i.test(s)) return;
       if(/^(chapa|mecánica|electricidad|pintura|materiales|varios|total)\b/i.test(s)) return;
-      var m=s.match(/^(S\s+)?(.+?)\s+(Sustitución|Fuerte|Leve|Mediano|Grave)\s+(\d+,\d+)\s+(\d+,\d+)\s+(\d+,\d+)$/i);
+      var m=s.match(/^([ØA$TS]\s+)?(.+?)\s+(Sustitución|Fuerte|Leve|Mediano|Grave)\s+(\d+,\d+)\s+(\d+,\d+)\s+(\d+,\d+)$/i);
       if(!m) return;
       pintura.push({nombre:m[2].trim(), panos:oPanos(oNum(m[4])), superficie:oNum(m[4])});
     });
@@ -6716,6 +6800,7 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
       // Filtrar líneas de sust/rep que puedan haberse colado (tienen nivel de daño) y totales
       if(/\b(sustitución|sustituc|fuerte|leve|mediano|grave)\b/i.test(s)) return;
       if(/^total\b/i.test(s)) return;
+      s=s.replace(/^[ØA$TS]\s+/,'');
       var m=s.match(/^(.+?)\s+(\d+,\d+)\s+(\d+,\d+)$/);
       if(!m) return;
       operaciones.push({nombre:m[1].trim().replace(/:$/,''), tipo:'varios', horas:oNum(m[2]), costo:oNum(m[3])});
@@ -6724,6 +6809,7 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
       var s=l.trim(); if(!s||/^(tiempo|página)/i.test(s)) return;
       if(/\b(sustitución|sustituc|fuerte|leve|mediano|grave)\b/i.test(s)) return;
       if(/^total\b/i.test(s)) return;
+      s=s.replace(/^[ØA$TS]\s+/,'');
       var m=s.match(/^(.+?)\s+(\d+,\d+)\s+(\d+,\d+)$/);
       if(!m) return;
       operaciones.push({nombre:m[1].trim(), tipo:'mecanica', horas:oNum(m[2]), costo:oNum(m[3])});
@@ -7769,7 +7855,8 @@ function gridUpdateTotal(){
     return a;
   },0);
   var gran=Math.round((total+totalOpHs)*100)/100;
-  var dias=gran>0?Math.ceil(gran/4*2)/2:0;
+  var _hpd=relHsPorDia((inspecciones.find(function(x){return x.ID==relId;})||{}).Compania, relOpState);
+  var dias=gran>0?Math.ceil(gran/_hpd*2)/2:0;
   var dLabel=dias===1?'1 día':dias+' días';
   el.innerHTML=gran+' <span style="font-size:14px;font-weight:400">hs</span>'
     +(gran>0?'&nbsp;<span style="font-size:13px;font-weight:400;color:var(--text2)">('+dLabel+')</span>':'')
@@ -8006,28 +8093,64 @@ function vozResolverPieza(item, lista) {
 // Aplica la respuesta de Gemini. Backend: {ok:true, resultado:[{idx,pieza,acciones,nivel}]}.
 function vozAplicarRespuestaGemini(resp, lista) {
   var items = resp.resultado || [];
-  var nuevas = 0, msgs = [];
+  var cambios = 0, msgs = [];
   items.forEach(function(a) {
+    var intencion = vozNorm(a.intencion || 'agregar');
+    var esQuitar    = intencion.indexOf('quit')>=0 || intencion.indexOf('saca')>=0 || intencion.indexOf('borr')>=0 || intencion.indexOf('elimin')>=0 || intencion.indexOf('anul')>=0;
+    var esModificar = !esQuitar && (intencion.indexOf('modif')>=0 || intencion.indexOf('cambi')>=0);
     var ctx = vozResolverPieza(a, lista);
-    if (!ctx) { msgs.push('⚠ No encontré: ' + (a.pieza || '?')); return; }
+    if (!ctx) { msgs.push('\u26a0 No encontre: ' + (a.pieza || '?')); return; }
+
+    // ── QUITAR: elimina todas las tareas de esa pieza ──
+    if (esQuitar) {
+      var antes = relCalcState.piezas.length;
+      relCalcState.piezas = relCalcState.piezas.filter(function(x){ return !(x.zona===ctx.zona && x.pieza===ctx.pieza.nombre); });
+      if (relCalcState.piezas.length < antes) { cambios++; msgs.push('\ud83d\uddd1 Saque ' + ctx.pieza.nombre); }
+      else msgs.push('\u26a0 ' + ctx.pieza.nombre + ' no estaba cargada');
+      return;
+    }
+
+    var nivelV = a.nivel ? vozNivelDesde(a.nivel) : null;
+    var hsV    = (a.horas != null && a.horas !== 'null') ? parseFloat(a.horas) : null;
+    var panosV = (a.panos != null && a.panos !== 'null') ? parseFloat(a.panos) : null;
+
+    // ── MODIFICAR: edita una pieza ya cargada ──
+    if (esModificar) {
+      var det = [];
+      if (nivelV) {
+        var eR = gFind(ctx.zona, ctx.pieza.nombre, 'Reparar');
+        if (eR) { eR.nivelDano = nivelV; eR.hsTrabajo = ({Leve:4,Medio:6,Fuerte:8}[nivelV] || eR.hsTrabajo); det.push('nivel ' + nivelV); }
+      }
+      if (hsV != null) {
+        var eH = gFind(ctx.zona, ctx.pieza.nombre, 'Sustituir') || gFind(ctx.zona, ctx.pieza.nombre, 'Reparar');
+        if (eH) { eH.hsTrabajo = hsV; det.push(hsV + ' hs'); }
+      }
+      if (panosV != null) {
+        var eP = gFind(ctx.zona, ctx.pieza.nombre, 'Pintar') || gFind(ctx.zona, ctx.pieza.nombre, 'Sustituir');
+        if (eP) { eP.panos = panosV; det.push(panosV + ' panos'); }
+      }
+      if (det.length) { cambios++; msgs.push('\u270f ' + ctx.pieza.nombre + ': ' + det.join(', ')); }
+      else msgs.push('\u26a0 ' + ctx.pieza.nombre + ' no estaba cargada para modificar');
+      return;
+    }
+
+    // ── AGREGAR (por defecto) ──
     var acciones = Array.isArray(a.acciones) ? a.acciones : (a.acciones ? [a.acciones] : []);
     acciones = acciones.filter(function(t) { return t && vozNorm(t) !== 'ok'; });
     if (!acciones.length) return;
-    var nivel = vozNivelDesde(a.nivel);
-    var hs    = (a.horas != null && a.horas !== 'null') ? parseFloat(a.horas) : null;
-    var panos = (a.panos != null && a.panos !== 'null') ? parseFloat(a.panos) : null;
+    var nivelAdd = nivelV || 'Leve';
     acciones.forEach(function(t) {
       var tarea = vozNormalizarTarea(t);
       if (!tarea) return;
-      if (vozAgregarTarea(ctx.zona, ctx.pieza, tarea, nivel, hs, panos)) {
-        nuevas++;
-        var tag = tarea + (tarea === 'Reparar' ? ' (' + nivel.charAt(0) + ')' : '');
-        msgs.push(ctx.pieza.nombre + ' — ' + tag);
+      if (vozAgregarTarea(ctx.zona, ctx.pieza, tarea, nivelAdd, hsV, panosV)) {
+        cambios++;
+        var tag = tarea + (tarea === 'Reparar' ? ' (' + nivelAdd.charAt(0) + ')' : '');
+        msgs.push(ctx.pieza.nombre + ' \u2014 ' + tag);
       }
     });
   });
-  if (nuevas > 0) { gridRender(); guardarBorrador(); }
-  vozSetFeedback(msgs.join(' | ') || 'Sin cambios nuevos', nuevas > 0 ? 'voz-ok' : 'voz-warn');
+  if (cambios > 0) { gridRender(); gridUpdateAll(); guardarBorrador(); }
+  vozSetFeedback(msgs.join(' | ') || 'Sin cambios', cambios > 0 ? 'voz-ok' : 'voz-warn');
 }
 
 async function vozProcesarConGemini(transcript) {
