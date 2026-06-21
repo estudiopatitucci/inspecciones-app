@@ -6045,7 +6045,7 @@ var SUSTITUIR_16HS_GRID = [
   'Piso de carga de chapa acanalada'
 ];
 var SUSTITUIR_16HS = ['Lateral de caja derecho','Lateral de caja izquierdo','Guardabarro trasero derecho','Guardabarro trasero izquierdo'];
-var OP_LISTA = ['Banco de estiraje','Carga de gas aire acondicionado','Alineación y balanceo','Armado de rueda','Escaneo / reseteo de módulos','Desmontaje y montaje de accesorios','Mecánica y/o electricidad','Pegado parabrisas/luneta','Diferencia entre baremo y cotización real','Otra'];
+var OP_LISTA = ['Banco de estiraje','Carga de gas aire acondicionado','Alineación y balanceo','Armado de rueda','Escaneo / reseteo de módulos','Desmontaje y montaje de accesorios','Mecánica y/o electricidad','Pegado parabrisas/luneta','Diferencia entre baremo y cotización real','Ajuste','Otra'];
 var relCalcState = {tipo:'', piezas:[]};
 var relCalcIdx = 0;
 var openZones = {};
@@ -6383,6 +6383,9 @@ function relOpRender(){
     } else if(o.operacion==='Diferencia entre baremo y cotización real'){
       var _dh=Math.round((o.horas||0)*100)/100;
       extraFields='<span style="font-size:12px;color:var(--text2);padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px">'+(_dh>=0?'+':'')+(''+_dh).replace('.',',')+' hs · ajuste automático</span>';
+    } else if(o.operacion==='Ajuste'){
+      var _av=Math.round(o.costo||0);
+      extraFields='<span style="font-size:12px;color:var(--text2);padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px">'+(_av<0?'−':'+')+'$'+Math.abs(_av).toLocaleString('es-AR')+' · ajuste a informe</span>';
     } else if(o.operacion==='Alineación y balanceo'||o.operacion==='Armado de rueda'||o.operacion==='Escaneo / reseteo de módulos'||o.operacion==='Carga de gas aire acondicionado'||o.operacion==='Mecánica y/o electricidad'||o.operacion==='Pegado parabrisas/luneta'){
       extraFields='<div style="position:relative;display:inline-flex;align-items:center">'
         +'<span style="position:absolute;left:8px;font-size:13px;color:var(--text3);pointer-events:none">$</span>'
@@ -7272,7 +7275,7 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     // 2. Reconciliar hs de chapa con una operación de diferencia (sin repartir entre piezas).
     //    Las piezas conservan su tiempo ORION; el delta hasta días×4 va a una sola línea trazable.
     var OP_DIF='Diferencia entre baremo y cotización real';
-    var _ops=(window.relOpState||[]).filter(function(o){return o.operacion!==OP_DIF;});
+    var _ops=(window.relOpState||[]).filter(function(o){return o.operacion!==OP_DIF && o.operacion!=='Ajuste';});
     if(dias>0){
       var tgt=dias*4;
       var totChP=piezas.reduce(function(s,p){return ZONAS_MECANICA_COSTO.indexOf(p.zona)===-1?s+(p.hsTrabajo||0):s;},0);
@@ -7298,6 +7301,36 @@ function otraSetPanos(id,v){ var e=relCalcState.piezas.find(function(x){return x
     if(cDia>0){window.relCostoDiaChapa=cDia; var e1=s('rel-costo-chapa'); if(e1)e1.value=cDia;}
     if(cMec>0){window.relCostoHoraMecánica=cMec; var e2=s('rel-costo-mecanica'); if(e2)e2.value=cMec;}
     if(cPano>0){window.relCostoPanoPintura=cPano; var e3=s('rel-costo-pano'); if(e3)e3.value=cPano;}
+    // 5. Ajuste para que el Total estimado coincida EXACTO con el del informe ORION.
+    //    Replica la formula del panel de costos y agrega una operacion 'Ajuste' con el delta.
+    try{
+      var _ajPiezas=relCalcState.piezas||[];
+      var _ajHsChapa=_ajPiezas.reduce(function(a,p){return ZONAS_MECANICA_COSTO.indexOf(p.zona)!==-1?a:a+(p.hsTrabajo||0);},0);
+      var _ajOpHs=window.relOpState.reduce(function(a,o){
+        if(o.operacion==='Banco de estiraje') return a+(o.puestaMedicion||0)+(o.tiempoEstiraje||0);
+        if(o.operacion==='Desmontaje y montaje de accesorios') return a+(o.horas||0);
+        if(o.operacion===OP_DIF) return a+(o.horas||0);
+        return a;
+      },0);
+      var _ajHpd=relHsPorDia((inspecciones.find(function(x){return x.ID==relId;})||{}).Compania, window.relOpState);
+      var _ajDias=Math.ceil((_ajHsChapa+_ajOpHs)/_ajHpd*2)/2;
+      var _ajChapa=_ajDias*(window.relCostoDiaChapa||0);
+      var _ajHsMec=_ajPiezas.reduce(function(a,p){return ZONAS_MECANICA_COSTO.indexOf(p.zona)!==-1?a+(p.hsTrabajo||0):a;},0);
+      var _ajEsPeri=window.relOpState.some(function(o){return o.operacion===OP_DIF;});
+      var _ajMec=_ajEsPeri?0:_ajHsMec*(window.relCostoHoraMecánica||0);
+      var _ajPanos=(_ajEsPeri&&window.relPanosDeclarados>0)?window.relPanosDeclarados:_ajPiezas.reduce(function(a,p){if(hasTarea(p,'Pintar'))return a+(p.panos||0);if(hasTarea(p,'Difuminar'))return a+0.5;return a;},0);
+      var _ajPint=_ajPanos*(window.relCostoPanoPintura||0);
+      var _ajOps=window.relOpState.reduce(function(a,o){return a+(o.costo||0);},0);
+      var _ajTot=_ajChapa+_ajMec+_ajPint+_ajOps;
+      var _ajOmo=Number(window.relOrionTotalMO)||0;
+      if(_ajOmo>0){
+        var _ajDelta=Math.round(_ajOmo-_ajTot);
+        if(Math.abs(_ajDelta)>=1){
+          var _ajId=window.relOpIdx||0; window.relOpIdx=_ajId+1;
+          window.relOpState.push({_id:_ajId, operacion:'Ajuste', puestaMedicion:0, tiempoEstiraje:0, horas:0, costo:_ajDelta, nombre:''});
+        }
+      }
+    }catch(_ajErr){}
     var parts=[];
     if(dias>0) parts.push(dias+' días');
     if(panos>0) parts.push(panos+' paños');
