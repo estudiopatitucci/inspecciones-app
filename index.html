@@ -5423,54 +5423,67 @@ async function descargarTodasLasFotos(cacheKey){
 
   if(!items.length){toast('Los links de Drive no están disponibles','warn');return;}
 
-  // Selector de carpeta (requiere gesto del usuario — llamar primero)
-  var folder=null;
-  if(window.showDirectoryPicker){
-    try{folder=await window.showDirectoryPicker({mode:'readwrite'});}
-    catch(e){if(e.name==='AbortError')return;}
-  }
-  if(!folder){toast('Tu navegador no soporta selector de carpeta','warn');return;}
+  toast('Descargando '+items.length+' foto'+(items.length>1?'s':'')+'...','ok');
 
-  toast('Descargando '+items.length+' foto'+(items.length>1?'s':'')+' en paralelo...','ok');
-
-  // Función para bajar un archivo vía GAS (evita CORS de Drive)
-  function base64ToBlob(b64,mime){
-    var bin=atob(b64),len=bin.length,buf=new ArrayBuffer(len),view=new Uint8Array(buf);
+  // Bajar un archivo vía GAS (evita CORS de Drive) -> bytes
+  function base64ToUint8(b64){
+    var bin=atob(b64),len=bin.length,view=new Uint8Array(len);
     for(var i=0;i<len;i++)view[i]=bin.charCodeAt(i);
-    return new Blob([buf],{type:mime});
+    return view;
   }
   async function fetchViaGAS(item){
     var url=API+'?sess='+encodeURIComponent(SESS||'')+'&action=getFile&fileId='+item.id;
     var r=await fetch(url);
     var data=await r.json();
     if(!data.ok)throw new Error(data.msg||'error GAS');
-    return{blob:base64ToBlob(data.base64,data.mimeType||'image/jpeg'),name:item.name};
+    return{bytes:base64ToUint8(data.base64),name:item.name};
   }
 
   // Descargar todos en paralelo
   var results=await Promise.allSettled(items.map(fetchViaGAS));
-
-  // Escribir a la carpeta elegida
-  var ok=0,fail=0,errMsg='';
+  var files=[],fail=0,errMsg='';
   for(var j=0;j<results.length;j++){
-    var res=results[j];
-    if(res.status==='fulfilled'){
-      try{
-        var fh=await folder.getFileHandle(res.value.name,{create:true});
-        var w=await fh.createWritable();
-        await w.write(res.value.blob);await w.close();
-        ok++;
-      }catch(we){fail++;if(!errMsg)errMsg='Error al escribir: '+we.message;}
-    }else{
-      fail++;
-      if(!errMsg)errMsg=res.reason?res.reason.message:'Error desconocido';
-    }
+    if(results[j].status==='fulfilled')files.push(results[j].value);
+    else{fail++;if(!errMsg)errMsg=results[j].reason?results[j].reason.message:'Error desconocido';}
   }
-  if(ok>0){
-    toast(ok+' foto'+(ok>1?'s':'')+' guardada'+(ok>1?'s':'')+' en la carpeta elegida'+(fail?' · '+fail+' fallaron':''),'ok');
-  }else{
-    toast('No se pudo guardar ninguna foto. '+(errMsg||'Verificá que el GAS esté redespleguado.'),'error');
+  if(!files.length){
+    toast('No se pudo descargar ninguna foto. '+(errMsg||'Verificá que el GAS esté redespleguado.'),'error');
     console.error('[descargarFotos] Error:',errMsg,results);
+    return;
+  }
+
+  // ---- Armar ZIP (método store, sin compresión) 100% nativo ----
+  var CRC_TBL=(function(){var t=[];for(var n=0;n<256;n++){var c=n;for(var k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}return t;})();
+  function crc32(buf){var c=0xFFFFFFFF;for(var i=0;i<buf.length;i++)c=CRC_TBL[(c^buf[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+  function u16(n){return [n&0xFF,(n>>>8)&0xFF];}
+  function u32(n){return [n&0xFF,(n>>>8)&0xFF,(n>>>16)&0xFF,(n>>>24)&0xFF];}
+  function strBytes(s){var a=[];for(var i=0;i<s.length;i++)a.push(s.charCodeAt(i)&0xFF);return a;}
+
+  var parts=[],central=[],offset=0,centralSize=0;
+  for(var f=0;f<files.length;f++){
+    var nameB=strBytes(files[f].name),data=files[f].bytes,crc=crc32(data),sz=data.length;
+    var lh=[].concat(u32(0x04034b50),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(sz),u32(sz),u16(nameB.length),u16(0),nameB);
+    var lhU8=new Uint8Array(lh);
+    parts.push(lhU8);parts.push(data);
+    var ch=[].concat(u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(sz),u32(sz),u16(nameB.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset),nameB);
+    central.push(new Uint8Array(ch));centralSize+=ch.length;
+    offset+=lhU8.length+data.length;
+  }
+  var centralOffset=offset;
+  for(var c2=0;c2<central.length;c2++)parts.push(central[c2]);
+  var eocd=[].concat(u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(centralSize),u32(centralOffset),u16(0));
+  parts.push(new Uint8Array(eocd));
+
+  var blob=new Blob(parts,{type:'application/zip'});
+  var u=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=u;a.download='fotos.zip';document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(u);a.remove();},2000);
+
+  if(fail){
+    toast(files.length+' foto'+(files.length>1?'s':'')+' en el ZIP · '+fail+' fallaron','warn');
+  }else{
+    toast('ZIP con '+files.length+' foto'+(files.length>1?'s':'')+' descargado','ok');
   }
 }
 
