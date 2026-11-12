@@ -144,6 +144,17 @@ h2{font-size:clamp(1.45rem,3vw,1.9rem);color:var(--ink);line-height:1.2;letter-s
 .inf-grid figure:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(15,23,42,.14)}
 .inf-grid a{display:block}
 .inf-grid img{display:block;width:100%;height:auto}
+/* Modelo de informe protegido: sin descarga, sin guardar imagen, sin imprimir */
+#modelo-informe{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.inf-img{display:block;width:100%;aspect-ratio:745/1053;border:0;padding:0;margin:0;cursor:zoom-in;background:#fff center/cover no-repeat;-webkit-touch-callout:none;-webkit-user-drag:none;transition:filter .25s}
+.inf-prot .inf-img,.inf-prot .inf-lb-img{filter:blur(14px)}
+.inf-lb{position:fixed;inset:0;z-index:200;background:rgba(2,8,23,.88);display:none;align-items:center;justify-content:center;padding:1rem;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.inf-lb.on{display:flex}
+.inf-lb-img{width:min(92vw,calc(88vh*745/1053));aspect-ratio:745/1053;background:#fff center/contain no-repeat;border-radius:6px;box-shadow:0 20px 60px rgba(0,0,0,.5);transition:filter .25s}
+.inf-lb-x{position:absolute;top:12px;right:16px;width:44px;height:44px;border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:1.6rem;cursor:pointer}
+.inf-lb-nav{position:absolute;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:1.5rem;cursor:pointer}
+.inf-lb-prev{left:12px}.inf-lb-next{right:12px}
+@media print{#modelo-informe .inf-grid,#modelo-informe .inf-actions,.inf-lb{display:none!important}#modelo-informe .wrap::after{content:'El modelo de informe no está disponible para imprimir.';display:block;margin-top:1rem;font-style:italic}}
 .inf-grid figcaption{font-size:.85rem;color:var(--muted);padding:.55rem .75rem;border-top:1px solid var(--line)}
 .inf-actions{margin-top:1.5rem;display:flex;flex-wrap:wrap;gap:.75rem;align-items:center}
 .inf-note{font-size:.88rem;color:var(--muted)}
@@ -295,13 +306,12 @@ footer strong{color:#94a3b8}
     <h2>Así es el informe que vas a recibir</h2>
     <p class="sec-intro">Este es el modelo en blanco que usamos: datos del vehículo, daños verificados pieza por pieza con su justificación, costo de reparación y registro fotográfico. En cada caso se completa con los datos y las fotos de tu vehículo.</p>
     <div class="inf-grid">
-      <figure><a href="modelo-informe.pdf" target="_blank" rel="noopener"><img src="informe-pag-1.jpg" alt="Modelo de informe, página 1: datos del vehículo, alcance y detalle de daños por pieza" loading="lazy" width="745" height="1053"></a><figcaption>1 · Datos, alcance y daños por pieza</figcaption></figure>
-      <figure><a href="modelo-informe.pdf" target="_blank" rel="noopener"><img src="informe-pag-2.jpg" alt="Modelo de informe, página 2: costo de reparación con repuestos y mano de obra" loading="lazy" width="745" height="1053"></a><figcaption>2 · Costo de reparación</figcaption></figure>
-      <figure><a href="modelo-informe.pdf" target="_blank" rel="noopener"><img src="informe-pag-3.jpg" alt="Modelo de informe, página 3: registro fotográfico numerado" loading="lazy" width="745" height="1053"></a><figcaption>3 · Registro fotográfico</figcaption></figure>
+      <figure><button type="button" class="inf-img" data-pag="1" role="img" aria-label="Modelo de informe, página 1: datos del vehículo, alcance y detalle de daños por pieza" style="background-image:url('informe-pag-1.jpg?v=2')"></button><figcaption>1 · Datos, alcance y daños por pieza</figcaption></figure>
+      <figure><button type="button" class="inf-img" data-pag="2" role="img" aria-label="Modelo de informe, página 2: costo de reparación con repuestos y mano de obra" style="background-image:url('informe-pag-2.jpg?v=2')"></button><figcaption>2 · Costo de reparación</figcaption></figure>
+      <figure><button type="button" class="inf-img" data-pag="3" role="img" aria-label="Modelo de informe, página 3: registro fotográfico numerado" style="background-image:url('informe-pag-3.jpg?v=2')"></button><figcaption>3 · Registro fotográfico</figcaption></figure>
     </div>
     <div class="inf-actions">
-      <a class="btn btn-out" href="modelo-informe.pdf" target="_blank" rel="noopener">Ver el modelo completo (PDF)</a>
-      <span class="inf-note">Modelo en blanco, sin datos de ningún caso real.</span>
+      <span class="inf-note">Tocá una página para verla en grande. Modelo en blanco, sin datos de ningún caso real.</span>
     </div>
   </div>
 </section>
@@ -700,6 +710,37 @@ footer strong{color:#94a3b8}
     el.style.transitionDelay=Math.min(sib.indexOf(el),5)*70+'ms';
     el.classList.add('fx-rv'); io.observe(el);
   });
+})();
+</script>
+<script id="inf-prot">
+// Protección del modelo de informe: visor propio, sin guardar/arrastrar/imprimir; se desenfoca si la ventana pierde el foco
+(function(){
+  var sec=document.getElementById('modelo-informe'); if(!sec) return;
+  var lb=document.createElement('div'); lb.className='inf-lb'; lb.setAttribute('aria-hidden','true');
+  lb.innerHTML='<button type="button" class="inf-lb-x" aria-label="Cerrar">×</button><button type="button" class="inf-lb-nav inf-lb-prev" aria-label="Anterior">‹</button><div class="inf-lb-img" role="img"></div><button type="button" class="inf-lb-nav inf-lb-next" aria-label="Siguiente">›</button>';
+  document.body.appendChild(lb);
+  var img=lb.querySelector('.inf-lb-img'), pag=1;
+  function ver(n){ pag=((n-1+3)%3)+1; img.style.backgroundImage="url('informe-pag-"+pag+".jpg?v=2')"; img.setAttribute('aria-label','Modelo de informe, página '+pag); }
+  function abrir(n){ ver(n); lb.classList.add('on'); }
+  function cerrar(){ lb.classList.remove('on'); }
+  Array.prototype.forEach.call(sec.querySelectorAll('.inf-img'),function(b){ b.addEventListener('click',function(){ abrir(+b.getAttribute('data-pag')); }); });
+  lb.addEventListener('click',function(e){ if(e.target===lb||e.target.classList.contains('inf-lb-x')) cerrar(); });
+  lb.querySelector('.inf-lb-prev').addEventListener('click',function(){ ver(pag-1); });
+  lb.querySelector('.inf-lb-next').addEventListener('click',function(){ ver(pag+1); });
+  function dentro(t){ return t&&t.closest&&(t.closest('#modelo-informe')||t.closest('.inf-lb')); }
+  ['contextmenu','dragstart','selectstart','copy'].forEach(function(ev){ document.addEventListener(ev,function(e){ if(dentro(e.target)) e.preventDefault(); }); });
+  document.addEventListener('keydown',function(e){
+    var k=(e.key||'').toLowerCase();
+    if(lb.classList.contains('on')){ if(k==='escape') cerrar(); if(k==='arrowright') ver(pag+1); if(k==='arrowleft') ver(pag-1); }
+    if((e.ctrlKey||e.metaKey)&&(k==='s'||k==='p')){ e.preventDefault(); }
+  });
+  // Impr Pant / herramientas de recorte: al perder el foco, el informe se desenfoca
+  var root=document.documentElement;
+  function prot(on){ root.classList.toggle('inf-prot',on); }
+  window.addEventListener('blur',function(){ prot(true); });
+  window.addEventListener('focus',function(){ prot(false); });
+  document.addEventListener('visibilitychange',function(){ prot(document.hidden); });
+  document.addEventListener('keyup',function(e){ if(e.key==='PrintScreen'){ prot(true); try{ navigator.clipboard&&navigator.clipboard.writeText(''); }catch(_){} setTimeout(function(){ prot(false); },1500); } });
 })();
 </script>
 </body>
