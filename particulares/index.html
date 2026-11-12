@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Valoración de daños de vehículos para particulares | Estudio Patitucci</title>
+<meta name="description" content="Valoración independiente de los daños de tu auto, con informe técnico, fotos y justificación de cada daño. Honorarios fijos. GBA y CABA."/>
+<meta name="robots" content="index, follow"/>
+<link rel="canonical" href="https://estudiopatitucci.com.ar/particulares/"/>
+<meta name="geo.region" content="AR-B"/>
+<meta http-equiv="content-language" content="es-AR"/>
+
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://estudiopatitucci.com.ar/particulares/"/>
+<meta property="og:title" content="Valoración de daños de tu vehículo, independiente y con respaldo técnico"/>
+<meta property="og:description" content="Valoración independiente de los daños de tu auto, con informe técnico, fotos y justificación de cada daño. Honorarios fijos. GBA y CABA."/>
+<meta property="og:image" content="https://estudiopatitucci.com.ar/og-banner.jpg"/>
+<meta property="og:locale" content="es_AR"/>
+<meta property="og:site_name" content="Estudio Patitucci"/>
+<meta name="twitter:card" content="summary_large_image"/>
+
+<link rel="icon" type="image/svg+xml" href="../icon.svg"/>
+<link rel="apple-touch-icon" href="../icon-192.png"/>
+<meta name="theme-color" content="#0a1628"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Service",
+  "name": "Valoración de daños de vehículos para particulares",
+  "serviceType": "Valoración de daños vehicular",
+  "description": "Valoración independiente de los daños materiales de tu vehículo, con informe técnico, fotos y justificación de cada daño. Honorarios fijos.",
+  "url": "https://estudiopatitucci.com.ar/particulares/",
+  "areaServed": [
+    {"@type": "City", "name": "Ciudad Autónoma de Buenos Aires"},
+    {"@type": "AdministrativeArea", "name": "Gran Buenos Aires"}
+  ],
+  "provider": {
+    "@type": "ProfessionalService",
+    "name": "Estudio Patitucci",
+    "url": "https://estudiopatitucci.com.ar/"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type":"Question","name":"¿Tengo que arreglar el auto en el taller donde se hace la inspección?","acceptedAnswer":{"@type":"Answer","text":"No. La valoración no te obliga a reparar en ningún taller en particular."}},
+    {"@type":"Question","name":"¿Trabajan para la aseguradora o para mí?","acceptedAnswer":{"@type":"Answer","text":"Para ninguna de las partes. El informe es el mismo sea quien sea el que lo pide."}},
+    {"@type":"Question","name":"¿El informe dice quién tuvo la culpa?","acceptedAnswer":{"@type":"Answer","text":"No. Solo valora los daños materiales y su costo de reparación."}},
+    {"@type":"Question","name":"¿Cuánto cobran? ¿Depende de cuánto me paguen?","acceptedAnswer":{"@type":"Answer","text":"Son honorarios fijos, que te informamos al confirmar el caso. No dependen del monto ni del resultado."}},
+    {"@type":"Question","name":"¿Sirve si mando fotos o un video?","acceptedAnswer":{"@type":"Answer","text":"Sí, pero la valoración incluye solo lo que se ve. Para algo completo conviene la inspección presencial."}},
+    {"@type":"Question","name":"¿Qué pasa si después aparecen más daños?","acceptedAnswer":{"@type":"Answer","text":"Se pueden valorar en una ampliación del informe."}},
+    {"@type":"Question","name":"¿Para qué me sirve el informe?","acceptedAnswer":{"@type":"Answer","text":"Para presentarlo ante quien corresponda: la otra parte, una aseguradora, una mediación o un juicio. El informe no garantiza un resultado."}}
+  ]
+}
+</script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0a1628;--navy2:#0f2140;--ink:#14213d;--text:#334155;--muted:#64748b;
+  --line:#e2e8f0;--bg:#f7f9fc;--card:#ffffff;
+  --accent:#2563eb;--accent2:#1d4ed8;--accent-soft:#eff4ff;
+  --wa:#25d366;--wa2:#1ebe5b;--ok:#15803d;--err:#b91c1c;
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 1.25rem}
+
+/* NAV */
+.nav{position:sticky;top:0;z-index:50;background:var(--navy);border-bottom:1px solid rgba(255,255,255,.08)}
+.nav .wrap{height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.brand{display:flex;align-items:center;gap:.7rem;text-decoration:none}
+.brand-logo{width:36px;height:36px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff}
+.brand-name{color:#fff;font-weight:600;line-height:1.15}
+.brand-name span{display:block;color:#94a3b8;font-weight:400;font-size:.78rem}
+.nav-cta{background:var(--accent);color:#fff;text-decoration:none;padding:.55rem 1rem;border-radius:8px;font-weight:600;font-size:.9rem;white-space:nowrap}
+.nav-cta:hover{background:var(--accent2)}
+
+/* HERO */
+.hero{background:linear-gradient(180deg,var(--navy) 0%,var(--navy2) 100%);color:#fff;padding:4rem 0 4.5rem;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 700px 380px at 15% 0%,rgba(37,99,235,.28),transparent 70%)}
+.hero .wrap{position:relative;max-width:820px}
+.tag{display:inline-block;font-size:.75rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#93c5fd;background:rgba(37,99,235,.18);border:1px solid rgba(96,165,250,.35);padding:.3rem .85rem;border-radius:100px;margin-bottom:1.25rem}
+h1{font-size:clamp(1.8rem,4.6vw,2.75rem);line-height:1.15;font-weight:800;letter-spacing:-.02em}
+.hero p.lead{color:#cbd5e1;font-size:clamp(1rem,2vw,1.13rem);margin:1.25rem 0 2rem;max-width:680px}
+.btns{display:flex;flex-wrap:wrap;gap:.75rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;padding:.85rem 1.5rem;border-radius:10px;font-weight:700;font-size:1rem;text-decoration:none;border:none;cursor:pointer;font-family:inherit;transition:background .15s,transform .15s}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 6px 22px rgba(37,99,235,.35)}
+.btn-primary:hover{background:var(--accent2)}
+.btn-wa{background:var(--wa);color:#06341a}
+.btn-wa:hover{background:var(--wa2)}
+.btn svg{flex-shrink:0}
+.hero-tel{margin-top:1.25rem;color:#94a3b8;font-size:.95rem}
+.hero-tel a{color:#fff;font-weight:600;text-decoration:none}
+
+/* SECCIONES */
+section.block{padding:4rem 0;border-bottom:1px solid var(--line)}
+section.block.alt{background:#fff}
+.sec-tag{font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:.5rem}
+h2{font-size:clamp(1.45rem,3vw,1.9rem);color:var(--ink);line-height:1.2;letter-spacing:-.01em;margin-bottom:1rem}
+.sec-intro{max-width:720px;color:var(--text)}
+
+/* NEUTRAL */
+.neutral{display:grid;grid-template-columns:auto 1fr;gap:1.5rem;align-items:start;background:var(--accent-soft);border:1px solid #c7d7fe;border-radius:16px;padding:2rem}
+.neutral-ico{width:56px;height:56px;border-radius:14px;background:var(--accent);display:flex;align-items:center;justify-content:center}
+.neutral h2{margin-bottom:.6rem}
+@media(max-width:600px){.neutral{grid-template-columns:1fr;padding:1.5rem}}
+
+/* SERVICIOS */
+.svc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1rem;margin-top:1.75rem}
+.svc{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1.5rem;position:relative}
+.svc.main{border-color:var(--accent);box-shadow:0 8px 28px rgba(37,99,235,.10)}
+.svc-badge{position:absolute;top:-11px;left:1.25rem;background:var(--accent);color:#fff;font-size:.72rem;font-weight:700;letter-spacing:.04em;padding:.2rem .65rem;border-radius:100px}
+.svc h3{color:var(--ink);font-size:1.1rem;margin-bottom:.45rem}
+.svc p{font-size:.95rem}
+.extras{margin-top:1.5rem;font-size:.93rem;color:var(--muted);background:#fff;border:1px dashed #cbd5e1;border-radius:12px;padding:1rem 1.25rem}
+.extras strong{color:var(--ink)}
+.seo-note{margin-top:1.25rem;font-size:.93rem;color:var(--muted);max-width:780px}
+
+/* PASOS */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;margin-top:1.75rem;counter-reset:st;list-style:none}
+.steps li{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1.4rem;counter-increment:st}
+.steps li::before{content:counter(st,decimal-leading-zero);display:block;font-weight:800;font-size:1.4rem;color:var(--accent);margin-bottom:.4rem}
+.steps strong{display:block;color:var(--ink);margin-bottom:.25rem}
+.steps span{font-size:.95rem}
+
+/* SABER */
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-top:1.75rem;list-style:none}
+.facts li{display:flex;gap:.85rem;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:1.2rem 1.25rem}
+.facts .chk{flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#dcfce7;color:var(--ok);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;margin-top:2px}
+.facts strong{color:var(--ink)}
+
+/* MODELO DE INFORME */
+.inf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:1.75rem}
+.inf-grid figure{background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;box-shadow:0 6px 20px rgba(15,23,42,.08);transition:transform .15s,box-shadow .15s}
+.inf-grid figure:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(15,23,42,.14)}
+.inf-grid a{display:block}
+.inf-grid img{display:block;width:100%;height:auto}
+.inf-grid figcaption{font-size:.85rem;color:var(--muted);padding:.55rem .75rem;border-top:1px solid var(--line)}
+.inf-actions{margin-top:1.5rem;display:flex;flex-wrap:wrap;gap:.75rem;align-items:center}
+.inf-note{font-size:.88rem;color:var(--muted)}
+.btn-out{background:#fff;color:var(--accent);border:1.5px solid var(--accent)}
+.btn-out:hover{background:var(--accent-soft)}
+@media(max-width:680px){.inf-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:.5rem}.inf-grid figcaption{font-size:.72rem;padding:.4rem .45rem}}
+
+/* FAQ */
+.faq{margin-top:1.5rem;display:flex;flex-direction:column;gap:.6rem;max-width:820px}
+.faq details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 1.25rem}
+.faq summary{cursor:pointer;list-style:none;padding:1rem 0;font-weight:600;color:var(--ink);display:flex;justify-content:space-between;gap:1rem}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:'+';font-size:1.3rem;line-height:1;color:var(--accent);flex-shrink:0}
+.faq details[open] summary::after{content:'−'}
+.faq details p{padding:0 0 1rem;font-size:.97rem}
+
+/* FORM */
+.form-card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:2rem;margin-top:1.75rem;box-shadow:0 10px 40px rgba(15,23,42,.06)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem 1.25rem}
+.full{grid-column:1/-1}
+@media(max-width:680px){.grid2{grid-template-columns:1fr}.form-card{padding:1.25rem}}
+.field label,.field .lbl{display:block;font-weight:600;color:var(--ink);font-size:.93rem;margin-bottom:.35rem}
+.req{color:var(--err)}
+.help{display:block;font-size:.83rem;color:var(--muted);margin-top:.3rem}
+.field input[type=text],.field input[type=tel],.field input[type=email],.field textarea,.field select{width:100%;font:inherit;font-size:16px;color:var(--ink);background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:.7rem .85rem;outline:none;transition:border .15s,box-shadow .15s}
+.field textarea{min-height:110px;resize:vertical}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.choices{display:flex;flex-wrap:wrap;gap:.5rem}
+.choices label{display:inline-flex;align-items:center;gap:.45rem;font-weight:500;color:var(--text);border:1px solid #cbd5e1;border-radius:10px;padding:.55rem .85rem;cursor:pointer;margin:0;font-size:.95rem;background:#fff}
+.choices label:has(input:checked){border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.choices input{accent-color:var(--accent);width:16px;height:16px}
+.choices.col{flex-direction:column;align-items:stretch}
+.file-box{border:1px dashed #94a3b8;border-radius:12px;padding:1rem;background:#f8fafc}
+.file-box input[type=file]{font-size:.9rem;max-width:100%}
+.thumbs{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}
+.thumbs img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.consent{display:flex;gap:.6rem;align-items:flex-start;font-size:.95rem}
+.consent input{margin-top:.25rem;width:18px;height:18px;accent-color:var(--accent);flex-shrink:0}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.form-err{color:var(--err);font-size:.93rem;margin-top:1rem;display:none}
+.form-actions{margin-top:1.5rem;display:flex;flex-wrap:wrap;gap:.75rem;align-items:center}
+.form-actions .btn[disabled]{opacity:.65;cursor:wait;transform:none}
+.form-ok{display:none;text-align:center;padding:2.5rem 1rem}
+.form-ok .big{width:64px;height:64px;border-radius:50%;background:#dcfce7;color:var(--ok);font-size:2rem;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-weight:800}
+.form-ok p{font-size:1.1rem;color:var(--ink);max-width:520px;margin:0 auto}
+
+/* CIERRE */
+.closing{background:var(--navy);color:#fff;text-align:center;padding:3.5rem 0}
+.closing h2{color:#fff}
+.closing p{color:#cbd5e1;margin-bottom:1.5rem}
+.closing .btns{justify-content:center}
+
+footer{background:#070f1f;color:#64748b;text-align:center;font-size:.85rem;padding:2rem 1.25rem 5.5rem}
+footer a{color:#94a3b8;text-decoration:none}
+footer strong{color:#94a3b8}
+
+/* WhatsApp flotante (solo celular) */
+.wa-float{display:none;position:fixed;right:16px;bottom:16px;z-index:60;width:58px;height:58px;border-radius:50%;background:var(--wa);box-shadow:0 6px 20px rgba(0,0,0,.25);align-items:center;justify-content:center}
+@media(max-width:768px){.wa-float.on{display:flex}}
+@media(min-width:769px){footer{padding-bottom:2rem}}
+
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a class="brand" href="../">
+      <div class="brand-logo">EP</div>
+      <div class="brand-name">Estudio Patitucci<span>Valoración de daños para particulares</span></div>
+    </a>
+    <a class="nav-cta" href="#consulta">Hacer una consulta</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="tag">Para particulares</div>
+    <h1>Valoración de daños de tu vehículo, independiente y con respaldo técnico</h1>
+    <p class="lead">Te decimos cuánto cuesta reparar los daños de tu auto con un informe técnico, con fotos y la justificación de cada daño, para que lo presentes ante quien corresponda. Más de 20 años de experiencia y peritos con certificación CESVI.</p>
+    <div class="btns">
+      <a class="btn btn-primary" href="#consulta">Hacer una consulta</a>
+      <a class="btn btn-wa js-wa hidden" href="#" target="_blank" rel="noopener">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.79-1.47-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.5h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.69.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35zM12.05 21.5h-.01a9.43 9.43 0 01-4.8-1.32l-.35-.2-3.57.93.95-3.48-.23-.36a9.43 9.43 0 01-1.45-5.03c0-5.2 4.24-9.44 9.46-9.44 2.53 0 4.9.99 6.69 2.78a9.38 9.38 0 012.77 6.68c0 5.21-4.24 9.44-9.46 9.44zm8.05-17.5A11.32 11.32 0 0012.05.67C5.78.67.67 5.77.67 12.05c0 2 .52 3.96 1.52 5.69L.57 23.33l5.72-1.5a11.36 11.36 0 005.76 1.47h.01c6.27 0 11.38-5.1 11.38-11.38 0-3.04-1.18-5.9-3.33-8.05z"/></svg>
+        Escribinos por WhatsApp
+      </a>
+    </div>
+    <p class="hero-tel js-tel-wrap hidden">o llamanos al <a class="js-tel" href="#"></a></p>
+  </div>
+</header>
+
+<main>
+
+<section class="block">
+  <div class="wrap">
+    <div class="neutral">
+      <div class="neutral-ico">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M5 21h14"/><path d="M4 7h16"/><path d="M4 7l-2.5 6a3 3 0 005 0L4 7z"/><path d="M20 7l-2.5 6a3 3 0 005 0L20 7z"/></svg>
+      </div>
+      <div>
+        <h2>Somos neutrales</h2>
+        <p>No trabajamos para ninguna de las partes. El informe es el mismo sea quien sea el que lo pide y contra quien sea el reclamo. No determinamos culpas ni responsabilidades: solo valoramos los daños materiales y su costo de reparación.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block alt" id="servicios">
+  <div class="wrap">
+    <div class="sec-tag">Qué hacemos</div>
+    <h2>Nuestros servicios</h2>
+    <div class="svc-grid">
+      <article class="svc main">
+        <span class="svc-badge">Servicio principal</span>
+        <h3>Valoración presencial</h3>
+        <p>Inspeccionamos el vehículo donde esté o en un taller aliado y armamos el presupuesto de reparación completo, con fotos y la justificación de cada daño. Es nuestro servicio principal.</p>
+      </article>
+      <article class="svc">
+        <h3>Valoración por fotos y videos</h3>
+        <p>Valoramos a distancia a partir del material que nos envíes. Incluye solo los daños que se ven.</p>
+      </article>
+      <article class="svc">
+        <h3>Revisión de un presupuesto</h3>
+        <p>Si ya tenés un presupuesto de un taller, lo revisamos ítem por ítem y te damos nuestro informe como segunda opinión.</p>
+      </article>
+    </div>
+    <p class="extras"><strong>Adicionales</strong> que se cobran aparte y siempre se consultan antes: desarme (con autorización firmada del titular), grúa y escaneo electrónico del vehículo (lo hace el taller).</p>
+    <p class="seo-note">Hacemos la valoración de daños vehicular que necesitás después de un choque: un presupuesto de daños por choque detallado y un informe de daños para reclamo, hecho por peritos. Es un peritaje de vehículo particular en CABA y GBA, incluida la zona sur.</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="sec-tag">Paso a paso</div>
+    <h2>Cómo trabajamos</h2>
+    <ol class="steps">
+      <li><strong>Nos contás tu caso</strong><span>por el formulario o por WhatsApp.</span></li>
+      <li><strong>Te confirmamos</strong><span>en 24/48 h hábiles si podemos tomarlo, qué servicio te conviene y los honorarios.</span></li>
+      <li><strong>Inspeccionamos</strong><span>el vehículo o analizamos el material que nos enviaste.</span></li>
+      <li><strong>Te entregamos el informe</strong><span>con la valoración de los daños, las fotos y la justificación de cada pieza.</span></li>
+    </ol>
+  </div>
+</section>
+
+<section class="block alt" id="modelo-informe">
+  <div class="wrap">
+    <div class="sec-tag">Modelo de informe</div>
+    <h2>Así es el informe que vas a recibir</h2>
+    <p class="sec-intro">Este es el modelo en blanco que usamos: datos del vehículo, daños verificados pieza por pieza con su justificación, costo de reparación y registro fotográfico. En cada caso se completa con los datos y las fotos de tu vehículo.</p>
+    <div class="inf-grid">
+      <figure><a href="modelo-informe.pdf" target="_blank" rel="noopener"><img src="informe-pag-1.jpg" alt="Modelo de informe, página 1: datos del vehículo, alcance y detalle de daños por pieza" loading="lazy" width="745" height="1053"></a><figcaption>1 · Datos, alcance y daños por pieza</figcaption></figure>
+      <figure><a href="modelo-informe.pdf" target="_blank" rel="noopener"><img src="informe-pag-2.jpg" alt="Modelo de informe, página 2: costo de reparación con repuestos y mano de obra" loading="lazy" width="745" height="1053"></a><figcaption>2 · Costo de reparación</figcaption></figure>
+      <figure><a href="modelo-informe.pdf" target="_blank" rel="noopener"><img src="informe-pag-3.jpg" alt="Modelo de informe, página 3: registro fotográfico numerado" loading="lazy" width="745" height="1053"></a><figcaption>3 · Registro fotográfico</figcaption></figure>
+    </div>
+    <div class="inf-actions">
+      <a class="btn btn-out" href="modelo-informe.pdf" target="_blank" rel="noopener">Ver el modelo completo (PDF)</a>
+      <span class="inf-note">Modelo en blanco, sin datos de ningún caso real.</span>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="sec-tag">Antes de empezar</div>
+    <h2>Lo que tenés que saber</h2>
+    <ul class="facts">
+      <li><span class="chk">✓</span><div><strong>Honorarios fijos:</strong> se acuerdan antes de empezar y no dependen del monto valorado ni del resultado del reclamo. Se abona una seña del 30 % al confirmar el caso y el 70 % restante al entregarte el informe.</div></li>
+      <li><span class="chk">✓</span><div><strong>Sin obligación de reparar:</strong> la valoración no te obliga a arreglar el auto en el taller donde se hizo la inspección ni en ningún otro.</div></li>
+      <li><span class="chk">✓</span><div><strong>Solo daños materiales:</strong> valoramos los daños del vehículo. No incluimos lesiones ni otros rubros.</div></li>
+      <li><span class="chk">✓</span><div><strong>Zona:</strong> GBA y CABA. Para otras zonas, consultá por la valoración por fotos y videos.</div></li>
+      <li><span class="chk">✓</span><div><strong>Cupos limitados:</strong> trabajamos con una cantidad de casos por semana para cuidar la calidad de cada informe.</div></li>
+    </ul>
+  </div>
+</section>
+
+<section class="block alt">
+  <div class="wrap">
+    <div class="sec-tag">Dudas comunes</div>
+    <h2>Preguntas frecuentes</h2>
+    <div class="faq">
+      <details><summary>¿Tengo que arreglar el auto en el taller donde se hace la inspección?</summary><p>No. La valoración no te obliga a reparar en ningún taller en particular.</p></details>
+      <details><summary>¿Trabajan para la aseguradora o para mí?</summary><p>Para ninguna de las partes. El informe es el mismo sea quien sea el que lo pide.</p></details>
+      <details><summary>¿El informe dice quién tuvo la culpa?</summary><p>No. Solo valora los daños materiales y su costo de reparación.</p></details>
+      <details><summary>¿Cuánto cobran? ¿Depende de cuánto me paguen?</summary><p>Son honorarios fijos, que te informamos al confirmar el caso. No dependen del monto ni del resultado.</p></details>
+      <details><summary>¿Sirve si mando fotos o un video?</summary><p>Sí, pero la valoración incluye solo lo que se ve. Para algo completo conviene la inspección presencial.</p></details>
+      <details><summary>¿Qué pasa si después aparecen más daños?</summary><p>Se pueden valorar en una ampliación del informe.</p></details>
+      <details><summary>¿Para qué me sirve el informe?</summary><p>Para presentarlo ante quien corresponda: la otra parte, una aseguradora, una mediación o un juicio. El informe no garantiza un resultado.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="consulta">
+  <div class="wrap">
+    <div class="sec-tag">Formulario</div>
+    <h2>Contanos tu caso</h2>
+    <p class="sec-intro">Completá estos datos y te respondemos en 24/48 h hábiles para confirmarte si podemos tomar tu caso, qué servicio te conviene y los honorarios.</p>
+
+    <div class="form-card">
+      <form id="form-part" novalidate>
+        <div class="grid2">
+          <div class="field">
+            <label for="f-nombre">Nombre y apellido <span class="req">*</span></label>
+            <input type="text" id="f-nombre" name="nombre" autocomplete="name" maxlength="120" required>
+          </div>
+          <div class="field">
+            <label for="f-tel">Teléfono / WhatsApp <span class="req">*</span></label>
+            <input type="tel" id="f-tel" name="telefono" autocomplete="tel" inputmode="tel" maxlength="30" required>
+          </div>
+          <div class="field full">
+            <label for="f-mail">Mail <span class="req">*</span></label>
+            <input type="email" id="f-mail" name="email" autocomplete="email" inputmode="email" maxlength="200" required>
+          </div>
+          <div class="field full">
+            <label for="f-relato">¿Qué pasó y cuándo? <span class="req">*</span></label>
+            <textarea id="f-relato" name="relato" maxlength="4000" required></textarea>
+            <span class="help">Un breve relato y la fecha aproximada.</span>
+          </div>
+          <div class="field full">
+            <span class="lbl">¿Qué necesitás valorar? <span class="req">*</span></span>
+            <div class="choices col" role="radiogroup">
+              <label><input type="radio" name="alcance" value="Solo los daños del vehículo" required> Solo los daños del vehículo</label>
+              <label><input type="radio" name="alcance" value="Daños del vehículo y otros rubros (lesiones, etc.)"> Daños del vehículo y otros rubros (lesiones, etc.)</label>
+            </div>
+          </div>
+          <div class="field full">
+            <label for="f-cias">¿Qué compañías de seguros intervienen? <span class="req">*</span></label>
+            <input type="text" id="f-cias" name="companias" maxlength="300" required>
+            <span class="help">La tuya y la del otro vehículo, si la conocés. Si no sabés, escribí "no sé".</span>
+          </div>
+          <div class="field">
+            <label for="f-veh">Vehículo <span class="req">*</span></label>
+            <input type="text" id="f-veh" name="vehiculo" maxlength="150" required>
+            <span class="help">Marca, modelo y año.</span>
+          </div>
+          <div class="field">
+            <label for="f-donde">¿Dónde está el vehículo? <span class="req">*</span></label>
+            <input type="text" id="f-donde" name="ubicacion" maxlength="200" required>
+            <span class="help">Localidad, y si está en un taller.</span>
+          </div>
+          <div class="field full">
+            <span class="lbl">¿El vehículo puede circular? <span class="req">*</span></span>
+            <div class="choices">
+              <label><input type="radio" name="circula" value="Sí" required> Sí</label>
+              <label><input type="radio" name="circula" value="No"> No</label>
+              <label><input type="radio" name="circula" value="No sé"> No sé</label>
+            </div>
+          </div>
+          <div class="field full">
+            <span class="lbl">Servicio que te interesa <span class="req">*</span></span>
+            <div class="choices">
+              <label><input type="radio" name="servicio" value="Valoración presencial" required> Valoración presencial</label>
+              <label><input type="radio" name="servicio" value="Por fotos y videos"> Por fotos y videos</label>
+              <label><input type="radio" name="servicio" value="Revisión de un presupuesto"> Revisión de un presupuesto</label>
+              <label><input type="radio" name="servicio" value="No sé"> No sé</label>
+            </div>
+          </div>
+          <div class="field full">
+            <span class="lbl">¿Ya tenés un presupuesto de reparación?</span>
+            <div class="choices">
+              <label><input type="radio" name="tienePresupuesto" value="Sí"> Sí</label>
+              <label><input type="radio" name="tienePresupuesto" value="No"> No</label>
+            </div>
+            <div class="file-box hidden" id="box-presu" style="margin-top:.75rem">
+              <label for="f-presu" style="font-weight:600">Adjuntá el presupuesto</label>
+              <input type="file" id="f-presu" accept="image/*,application/pdf">
+              <span class="help">PDF o imagen, máximo 5 MB.</span>
+            </div>
+          </div>
+          <div class="field full">
+            <label for="f-fotos">Fotos de los daños <span class="help" style="display:inline;margin:0">(recomendado)</span></label>
+            <div class="file-box">
+              <input type="file" id="f-fotos" accept="image/*" multiple>
+              <span class="help">Hasta 6 imágenes, máximo 5 MB cada una.</span>
+              <div class="thumbs" id="thumbs"></div>
+            </div>
+          </div>
+          <div class="field full">
+            <span class="lbl">¿Cómo nos conociste? <span class="req">*</span></span>
+            <div class="choices">
+              <label><input type="radio" name="origen" value="Google" required> Google</label>
+              <label><input type="radio" name="origen" value="Recomendación de un abogado"> Recomendación de un abogado</label>
+              <label><input type="radio" name="origen" value="Productor de seguros"> Productor de seguros</label>
+              <label><input type="radio" name="origen" value="Taller"> Taller</label>
+              <label><input type="radio" name="origen" value="Otro"> Otro</label>
+            </div>
+          </div>
+          <div class="field full">
+            <label class="consent"><input type="checkbox" id="f-consent" name="consentimiento" required> <span>Acepto que usen estos datos solo para responder mi consulta <span class="req">*</span></span></label>
+          </div>
+          <div class="hp" aria-hidden="true"><label>No completar<input type="text" id="f-web" tabindex="-1" autocomplete="off"></label></div>
+        </div>
+        <p class="form-err" id="form-err" role="alert"></p>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary" id="btn-enviar">Enviar consulta</button>
+          <a class="btn btn-wa js-wa hidden" href="#" target="_blank" rel="noopener">Prefiero WhatsApp</a>
+        </div>
+      </form>
+      <div class="form-ok" id="form-ok" role="status">
+        <div class="big">✓</div>
+        <p>¡Gracias! Recibimos tu consulta. Te respondemos en 24/48 h hábiles para confirmarte si podemos tomar tu caso.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="closing">
+  <div class="wrap">
+    <h2>¿Querés saber si podemos ayudarte?</h2>
+    <p>Contanos tu caso y te respondemos en 24/48 h hábiles.</p>
+    <div class="btns">
+      <a class="btn btn-primary" href="#consulta">Hacer una consulta</a>
+      <a class="btn btn-wa js-wa hidden" href="#" target="_blank" rel="noopener">WhatsApp</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <p><strong>Estudio Patitucci</strong> — Valoración independiente de daños de vehículos</p>
+  <p class="js-tel-wrap hidden" style="margin-top:.35rem">Tel.: <a class="js-tel" href="#"></a></p>
+  <p style="margin-top:.35rem">© Todos los derechos reservados</p>
+</footer>
+
+<a class="wa-float js-wa js-wa-float hidden" href="#" target="_blank" rel="noopener" aria-label="Escribinos por WhatsApp">
+  <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff" aria-hidden="true"><path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.64.07-.3-.15-1.25-.46-2.38-1.47-.88-.79-1.47-1.76-1.65-2.06-.17-.3-.02-.46.13-.6.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.5h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.21 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.72 2-1.41.25-.69.25-1.29.17-1.41-.07-.13-.27-.2-.57-.35zM12.05 21.5h-.01a9.43 9.43 0 01-4.8-1.32l-.35-.2-3.57.93.95-3.48-.23-.36a9.43 9.43 0 01-1.45-5.03c0-5.2 4.24-9.44 9.46-9.44 2.53 0 4.9.99 6.69 2.78a9.38 9.38 0 012.77 6.68c0 5.21-4.24 9.44-9.46 9.44zm8.05-17.5A11.32 11.32 0 0012.05.67C5.78.67.67 5.77.67 12.05c0 2 .52 3.96 1.52 5.69L.57 23.33l5.72-1.5a11.36 11.36 0 005.76 1.47h.01c6.27 0 11.38-5.1 11.38-11.38 0-3.04-1.18-5.9-3.33-8.05z"/></svg>
+</a>
+
+<script>
+(function(){
+  'use strict';
+
+  // ═══ CONFIGURACIÓN (completa Mariano) ═══════════════════════════════════
+  // WhatsApp: número en formato internacional, solo dígitos. Ej: '5491112345678'.
+  // Mientras esté vacío, los botones de WhatsApp quedan ocultos.
+  var WA_NUMERO = '';
+  // Teléfono visible en la página. Ej: '11 1234-5678'. Vacío = no se muestra.
+  var TEL_VISIBLE = '';
+  // Backend (mismo Web App de Apps Script que usa el sitio).
+  var API = 'https://script.google.com/macros/s/AKfycbywk-SytIxiH7suDaIjfK9ZhQ6qOlAxxAM6hEoeqr8-PKWuk0-qDMmMMxQkOx3f8HMu/exec';
+  var WA_MSG = 'Hola, quiero consultar por una valoración de daños de mi vehículo.';
+  // ═════════════════════════════════════════════════════════════════════════
+
+  var MAX_FOTOS = 6, MAX_MB = 5, MAX_LADO = 1600, CALIDAD = 0.82;
+
+  function $(id){ return document.getElementById(id); }
+  function each(sel, fn){ Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
+
+  // WhatsApp + teléfono
+  var wa = String(WA_NUMERO).replace(/\D/g,'');
+  if (wa) {
+    var waUrl = 'https://wa.me/' + wa + '?text=' + encodeURIComponent(WA_MSG);
+    each('.js-wa', function(a){ a.href = waUrl; a.classList.remove('hidden'); });
+    each('.js-wa-float', function(a){ a.classList.add('on'); });
+  }
+  if (TEL_VISIBLE) {
+    var telHref = 'tel:' + String(TEL_VISIBLE).replace(/[^\d+]/g,'');
+    each('.js-tel', function(a){ a.href = telHref; a.textContent = TEL_VISIBLE; });
+    each('.js-tel-wrap', function(el){ el.classList.remove('hidden'); });
+  }
+
+  // Presupuesto: mostrar adjunto solo si responde "Sí"
+  each('input[name=tienePresupuesto]', function(r){
+    r.addEventListener('change', function(){
+      var si = document.querySelector('input[name=tienePresupuesto]:checked');
+      $('box-presu').classList.toggle('hidden', !(si && si.value === 'Sí'));
+      if (!(si && si.value === 'Sí')) $('f-presu').value = '';
+    });
+  });
+
+  // Miniaturas de fotos
+  $('f-fotos').addEventListener('change', function(){
+    var t = $('thumbs'); t.innerHTML = '';
+    var files = Array.prototype.slice.call(this.files || [], 0, MAX_FOTOS);
+    files.forEach(function(f){
+      if (!/^image\//.test(f.type)) return;
+      var img = document.createElement('img');
+      img.alt = f.name;
+      img.src = URL.createObjectURL(f);
+      img.onload = function(){ URL.revokeObjectURL(img.src); };
+      t.appendChild(img);
+    });
+  });
+
+  function leerDataURL(file){
+    return new Promise(function(res, rej){
+      var fr = new FileReader();
+      fr.onload = function(){ res(fr.result); };
+      fr.onerror = function(){ rej(new Error('No se pudo leer ' + file.name)); };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  // Reduce la imagen (lado mayor 1600 px, JPEG) para que el envío sea liviano.
+  function comprimirImagen(file){
+    return leerDataURL(file).then(function(url){
+      return new Promise(function(res){
+        var img = new Image();
+        img.onload = function(){
+          try {
+            var w = img.naturalWidth, h = img.naturalHeight;
+            var k = Math.min(1, MAX_LADO / Math.max(w, h));
+            var c = document.createElement('canvas');
+            c.width = Math.round(w * k); c.height = Math.round(h * k);
+            var ctx = c.getContext('2d');
+            ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            var out = c.toDataURL('image/jpeg', CALIDAD);
+            var nombre = file.name.replace(/\.[^.]+$/, '') + '.jpg';
+            res({ name: nombre, mime: 'image/jpeg', data: out.split(',')[1] });
+          } catch(e) {
+            res({ name: file.name, mime: file.type, data: url.split(',')[1] });
+          }
+        };
+        img.onerror = function(){ res({ name: file.name, mime: file.type, data: url.split(',')[1] }); };
+        img.src = url;
+      });
+    });
+  }
+
+  function adjunto(file){
+    if (/^image\//.test(file.type)) return comprimirImagen(file);
+    return leerDataURL(file).then(function(url){
+      return { name: file.name, mime: file.type || 'application/pdf', data: url.split(',')[1] };
+    });
+  }
+
+  function radio(name){ var r = document.querySelector('input[name="' + name + '"]:checked'); return r ? r.value : ''; }
+
+  function error(msg, foco){
+    var e = $('form-err'); e.textContent = msg; e.style.display = 'block';
+    if (foco && foco.focus) { foco.focus(); }
+    else { e.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+  }
+
+  $('form-part').addEventListener('submit', function(ev){
+    ev.preventDefault();
+    $('form-err').style.display = 'none';
+
+    var d = {
+      action: 'consultaParticular',
+      nombre: $('f-nombre').value.trim(),
+      telefono: $('f-tel').value.trim(),
+      email: $('f-mail').value.trim(),
+      relato: $('f-relato').value.trim(),
+      alcance: radio('alcance'),
+      companias: $('f-cias').value.trim(),
+      vehiculo: $('f-veh').value.trim(),
+      ubicacion: $('f-donde').value.trim(),
+      circula: radio('circula'),
+      servicio: radio('servicio'),
+      tienePresupuesto: radio('tienePresupuesto'),
+      origen: radio('origen'),
+      consentimiento: $('f-consent').checked,
+      web: $('f-web').value
+    };
+
+    if (!d.nombre) return error('Completá tu nombre y apellido.', $('f-nombre'));
+    if (d.telefono.replace(/\D/g,'').length < 6) return error('Completá un teléfono o WhatsApp válido.', $('f-tel'));
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.email)) return error('Completá un mail válido.', $('f-mail'));
+    if (!d.relato) return error('Contanos qué pasó y cuándo.', $('f-relato'));
+    if (!d.alcance) return error('Elegí qué necesitás valorar.');
+    if (!d.companias) return error('Indicá qué compañías de seguros intervienen (si no sabés, escribí "no sé").', $('f-cias'));
+    if (!d.vehiculo) return error('Completá marca, modelo y año del vehículo.', $('f-veh'));
+    if (!d.ubicacion) return error('Indicá dónde está el vehículo.', $('f-donde'));
+    if (!d.circula) return error('Indicá si el vehículo puede circular.');
+    if (!d.servicio) return error('Elegí el servicio que te interesa.');
+    if (!d.origen) return error('Contanos cómo nos conociste.');
+    if (!d.consentimiento) return error('Necesitamos tu consentimiento para responder la consulta.', $('f-consent'));
+
+    var fotos = Array.prototype.slice.call($('f-fotos').files || []);
+    if (fotos.length > MAX_FOTOS) return error('Podés adjuntar hasta ' + MAX_FOTOS + ' fotos.', $('f-fotos'));
+    for (var i = 0; i < fotos.length; i++) {
+      if (!/^image\//.test(fotos[i].type)) return error('"' + fotos[i].name + '" no es una imagen.', $('f-fotos'));
+      if (fotos[i].size > MAX_MB * 1048576) return error('"' + fotos[i].name + '" supera los ' + MAX_MB + ' MB.', $('f-fotos'));
+    }
+    var presu = (d.tienePresupuesto === 'Sí' && $('f-presu').files[0]) || null;
+    if (presu) {
+      if (!/^image\//.test(presu.type) && presu.type !== 'application/pdf') return error('El presupuesto tiene que ser PDF o imagen.', $('f-presu'));
+      if (presu.size > MAX_MB * 1048576) return error('El presupuesto supera los ' + MAX_MB + ' MB.', $('f-presu'));
+    }
+
+    var btn = $('btn-enviar');
+    btn.disabled = true; btn.textContent = 'Enviando...';
+
+    Promise.all(fotos.map(adjunto)).then(function(fs){
+      d.fotos = fs;
+      return presu ? adjunto(presu) : null;
+    }).then(function(p){
+      if (p) d.presupuesto = p;
+      var ctrl = ('AbortController' in window) ? new AbortController() : null;
+      var to = ctrl ? setTimeout(function(){ ctrl.abort(); }, 90000) : null;
+      return fetch(API, { method: 'POST', body: JSON.stringify(d), signal: ctrl ? ctrl.signal : undefined })
+        .then(function(r){ if (to) clearTimeout(to); return r.json(); });
+    }).then(function(r){
+      if (r && r.ok) {
+        $('form-part').style.display = 'none';
+        $('form-ok').style.display = 'block';
+        $('form-ok').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        btn.disabled = false; btn.textContent = 'Enviar consulta';
+        error((r && r.msg) || 'No se pudo enviar la consulta. Intentá de nuevo.');
+      }
+    }).catch(function(){
+      btn.disabled = false; btn.textContent = 'Enviar consulta';
+      error('No se pudo enviar la consulta. Revisá tu conexión e intentá de nuevo' + (wa ? ', o escribinos por WhatsApp.' : '.'));
+    });
+  });
+})();
+</script>
+<!-- ═══ EFECTOS (modernización) ═══ -->
+<style id="fx-css">
+.nav{transition:box-shadow .3s,background .3s}
+.nav.fx-scrolled{background:rgba(10,22,40,.95);backdrop-filter:saturate(160%) blur(14px);-webkit-backdrop-filter:saturate(160%) blur(14px);box-shadow:0 8px 30px rgba(2,8,23,.25)}
+.hero{isolation:isolate}
+.hero::after{content:'';position:absolute;width:480px;height:480px;right:-120px;bottom:-200px;border-radius:50%;background:radial-gradient(circle,#0ea5e9 0%,transparent 65%);filter:blur(70px);opacity:.35;animation:fx-float2 22s ease-in-out infinite alternate;z-index:-1}
+.hero::before{animation:fx-float1 18s ease-in-out infinite alternate}
+@keyframes fx-float1{to{transform:translate(120px,60px) scale(1.12)}}
+@keyframes fx-float2{to{transform:translate(-140px,-70px) scale(1.1)}}
+.hero .wrap>*{animation:fx-up .8s cubic-bezier(.2,.7,.2,1) both}
+.hero .wrap>*:nth-child(2){animation-delay:.08s}.hero .wrap>*:nth-child(3){animation-delay:.16s}.hero .wrap>*:nth-child(4){animation-delay:.26s}
+@keyframes fx-up{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+.btn-primary{position:relative;overflow:hidden}
+.btn-primary::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-20deg);transition:left .6s}
+.btn-primary:hover::after{left:120%}
+.svc,.steps li,.facts li,.inf-grid figure,.faq details{transition:transform .3s cubic-bezier(.2,.7,.2,1),box-shadow .3s,border-color .3s}
+.svc:hover,.steps li:hover,.facts li:hover{transform:translateY(-4px);box-shadow:0 16px 36px rgba(15,23,42,.10);border-color:#c7d7fe}
+.steps li::before{background:linear-gradient(90deg,#2563eb,#0ea5e9);-webkit-background-clip:text;background-clip:text;color:transparent}
+.faq details:hover{border-color:#c7d7fe}
+.faq details[open]{box-shadow:0 10px 28px rgba(15,23,42,.07);border-color:#c7d7fe}
+.faq summary::after{transition:transform .25s}
+.faq details[open] p{animation:fx-up .35s ease both}
+.fx-rv{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+.fx-rv.fx-in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){
+  .hero::before,.hero::after,.hero .wrap>*,.faq details[open] p{animation:none!important}
+  .fx-rv{opacity:1!important;transform:none!important;transition:none!important}
+}
+</style>
+<script id="fx-js">
+(function(){
+  var nav=document.querySelector('.nav');
+  function onScroll(){ if(nav) nav.classList.toggle('fx-scrolled', window.scrollY>10); }
+  window.addEventListener('scroll',onScroll,{passive:true}); onScroll();
+  var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce||!('IntersectionObserver' in window)) return;
+  var sel='main .sec-tag,main h2,main .sec-intro,.neutral,.svc,.extras,.seo-note,.steps li,.facts li,.faq details,.inf-grid figure,.inf-actions,.form-card,.closing .wrap>*';
+  var els=document.querySelectorAll(sel);
+  var io=new IntersectionObserver(function(en){en.forEach(function(x){if(x.isIntersecting){x.target.classList.add('fx-in');io.unobserve(x.target);}});},{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+  Array.prototype.forEach.call(els,function(el){
+    if(el.closest('.neutral')&&el!==document.querySelector('.neutral')) return;
+    var sib=Array.prototype.filter.call(el.parentNode.children,function(c){return c.matches(sel);});
+    el.style.transitionDelay=Math.min(sib.indexOf(el),5)*70+'ms';
+    el.classList.add('fx-rv'); io.observe(el);
+  });
+})();
+</script>
+</body>
+</html>
